@@ -40,7 +40,6 @@ struct LTVConfig {
     max_ltv: u64, // [SCALE]
 }
 
-#[inline(always)]
 fn assert_ltv_config(ltv_config: LTVConfig) {
     assert!(ltv_config.max_ltv.into() <= SCALE, "invalid-ltv-config");
 }

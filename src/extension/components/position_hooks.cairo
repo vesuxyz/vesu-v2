@@ -6,7 +6,6 @@ struct ShutdownConfig {
     subscription_period: u64, // [seconds]
 }
 
-#[inline(always)]
 fn assert_shutdown_config(shutdown_config: ShutdownConfig) {
     assert!(
         (shutdown_config.recovery_period == 0 && shutdown_config.subscription_period == 0)
@@ -20,7 +19,6 @@ struct LiquidationConfig {
     liquidation_factor: u64 // [SCALE]
 }
 
-#[inline(always)]
 fn assert_liquidation_config(liquidation_config: LiquidationConfig) {
     assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
 }

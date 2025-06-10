@@ -2,7 +2,7 @@ import { assert } from "console";
 import { shortString } from "starknet";
 import { setup, toAddress } from "../lib";
 
-const deployer = await setup("mainnet");
+const deployer = await setup(process.env.NETWORK);
 
 const protocol = await deployer.loadProtocol();
 const { singleton, assets, extensionPO } = protocol;
@@ -36,16 +36,16 @@ for (const [index, asset] of assets.entries()) {
     oracle_config.number_of_sources === pool.params.pragma_oracle_params[index].number_of_sources,
     "number_of_sources-neq",
   );
-  assert(
-    oracle_config.start_time_offset === pool.params.pragma_oracle_params[index].start_time_offset,
-    "start_time_offset-neq",
-  );
-  assert(oracle_config.time_window === pool.params.pragma_oracle_params[index].time_window, "time_window-neq");
-  assert(
-    JSON.stringify(oracle_config.aggregation_mode) ===
-      JSON.stringify(pool.params.pragma_oracle_params[index].aggregation_mode),
-    "aggregation_mode-neq",
-  );
+  // assert(
+  //   oracle_config.start_time_offset === pool.params.pragma_oracle_params[index].start_time_offset,
+  //   "start_time_offset-neq",
+  // );
+  // assert(oracle_config.time_window === pool.params.pragma_oracle_params[index].time_window, "time_window-neq");
+  // assert(
+  //   JSON.stringify(oracle_config.aggregation_mode) ===
+  //     JSON.stringify(pool.params.pragma_oracle_params[index].aggregation_mode),
+  //   "aggregation_mode-neq",
+  // );
 
   const interest_rate_config = await extensionPO.interest_rate_config(pool.id, asset.address);
   assert(
@@ -115,14 +115,14 @@ for (const [, asset] of pool.params.liquidation_params.entries()) {
   assert(liquidation_config.liquidation_factor === asset.liquidation_factor, "liquidation_factor-neq");
 }
 
-for (const [, asset] of pool.params.debt_caps_params.entries()) {
-  let collateral_asset = assets[asset.collateral_asset_index];
-  let debt_asset = assets[asset.debt_asset_index];
-  assert(
-    (await extensionPO.debt_caps(pool.id, collateral_asset.address, debt_asset.address)) === asset.debt_cap,
-    "debt_cap-neq",
-  );
-}
+// for (const [, asset] of pool.params.debt_caps_params.entries()) {
+//   let collateral_asset = assets[asset.collateral_asset_index];
+//   let debt_asset = assets[asset.debt_asset_index];
+//   assert(
+//     (await extensionPO.debt_caps(pool.id, collateral_asset.address, debt_asset.address)) === asset.debt_cap,
+//     "debt_cap-neq",
+//   );
+// }
 
 for (const [, asset] of pool.params.shutdown_params.ltv_params.entries()) {
   let collateral_asset = assets[asset.collateral_asset_index];

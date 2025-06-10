@@ -2,7 +2,7 @@ import { assert } from "console";
 import { CallData, shortString, uint256 } from "starknet";
 import { Amount, SCALE, UnsignedAmount, formatRate, newProfiler, setup, toAddress, toI257 } from "../lib";
 
-const deployer = await setup(undefined);
+const deployer = await setup("devnet");
 const protocol = await deployer.deployEnvAndProtocol();
 const { singleton, assets, extensionPO } = protocol;
 const profiler = newProfiler(deployer);

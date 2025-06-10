@@ -16,7 +16,6 @@ export interface PragmaContracts {
 export interface ProtocolContracts {
   singleton: Contract;
   extensionPO: Contract;
-  extensionCL: Contract;
   pragma: PragmaContracts;
   assets: Contract[];
 }
@@ -46,7 +45,7 @@ export class Deployer extends BaseDeployer {
     const contracts = { ...protocolContracts, ...envContracts };
     await this.setApprovals(contracts.singleton, contracts.assets);
     await this.setApprovals(contracts.extensionPO, contracts.assets);
-    await this.setApprovals(contracts.extensionCL, contracts.assets);
+    await this.setExtensionWhitelist(contracts.singleton, contracts.extensionPO);
     logAddresses("Deployed:", contracts);
     return Protocol.from(contracts, this);
   }
@@ -60,7 +59,6 @@ export class Deployer extends BaseDeployer {
     const contracts = {
       singleton: await this.loadContract(protocol.singleton!),
       extensionPO: await this.loadContract(protocol.extensionPO!),
-      extensionCL: await this.loadContract(protocol.extensionCL!),
       pragma: {
         oracle: await this.loadContract(protocol.pragma.oracle!),
         summary_stats: await this.loadContract(protocol.pragma.summary_stats!),
@@ -75,20 +73,28 @@ export class Deployer extends BaseDeployer {
     const [contracts, calls] = await this.deferProtocol(pragma);
     const response = await this.execute([...calls]);
     await this.waitForTransaction(response.transaction_hash);
+    await this.setExtensionWhitelist(contracts.singleton, contracts.extensionPO);
     return [contracts, response] as const;
   }
 
   async deployExtensions(singleton: string, pragma: PragmaConfig) {
-    const [extensionPO, extensionCL, extensionCalls] = await this.deferExtensions(singleton, pragma);
+    const [extensionPO, extensionCalls] = await this.deferExtensions(singleton, pragma);
     const response = await this.execute([...extensionCalls]);
     await this.waitForTransaction(response.transaction_hash);
-    return [extensionPO, extensionCL, response] as const;
+    return [extensionPO, response] as const;
   }
 
   async deferProtocol(pragma: PragmaConfig) {
-    const [singleton, calls1] = await this.deferContract("Singleton");
-    const [extensionPO, extensionCL, extensionCalls] = await this.deferExtensions(singleton.address, pragma);
-    return [{ singleton, extensionPO, extensionCL }, [...calls1, ...extensionCalls]] as const;
+    const [singleton, singletonCalls] = await this.deferContract(
+      "SingletonV2",
+      CallData.compile({
+        singleton_v1: "0x0",
+        migrator: "0x0",
+        owner: this.creator.address,
+      }),
+    );
+    const [extensionPO, extensionCalls] = await this.deferExtensions(singleton.address, pragma);
+    return [{ singleton, extensionPO }, [...singletonCalls, ...extensionCalls]] as const;
   }
 
   async deployEnv() {
@@ -130,20 +136,17 @@ export class Deployer extends BaseDeployer {
   }
 
   async deferExtensions(singleton: string, pragma: PragmaConfig) {
-    const v_token_class_hash = await this.declareCached("VToken");
     const calldataPO = CallData.compile({
       singleton: singleton,
       oracle_address: pragma.oracle!,
       summary_stats_address: pragma.summary_stats!,
-      v_token_class_hash: v_token_class_hash,
+      v_token_class_hash: await this.declareCached("VToken"),
+      v_token_v2_class_hash: await this.declareCached("VTokenV2"),
+      migrator: "0x0",
+      extension_utils_class_hash: await this.declareCached("DefaultExtensionPOV2Utils"),
     });
-    const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPO", calldataPO);
-    const calldataCL = CallData.compile({
-      singleton: singleton,
-      v_token_class_hash: v_token_class_hash,
-    });
-    const [extensionCL, calls3] = await this.deferContract("DefaultExtensionCL", calldataCL);
-    return [extensionPO, extensionCL, [...calls2, ...calls3]] as const;
+    const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPOV2", calldataPO);
+    return [extensionPO, [...calls2]] as const;
   }
 
   async setApprovals(contract: Contract, assets: Contract[]) {
@@ -163,6 +166,12 @@ export class Deployer extends BaseDeployer {
       return asset.populateTransaction.transfer(this.creator.address, 2000);
     });
     response = await this.lender.execute(transferCalls);
+    await this.waitForTransaction(response.transaction_hash);
+  }
+
+  async setExtensionWhitelist(contract: Contract, extension: Contract) {
+    const calldata = contract.populateTransaction.set_extension_whitelist(extension.address, true);
+    const response = await this.execute([calldata]);
     await this.waitForTransaction(response.transaction_hash);
   }
 }

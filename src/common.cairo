@@ -1,11 +1,10 @@
 use alexandria_math::i257::{i257, i257_new, U256IntoI257};
 use starknet::get_block_timestamp;
 use vesu::{
-    math::{pow_scale}, units::{SCALE, INFLATION_FEE_SHARES},
+    math::{pow_scale}, units::SCALE,
     data_model::{AmountType, AmountDenomination, Amount, Position, AssetConfig, Context},
 };
 
-#[inline(always)]
 /// Safe division of two u256 numbers
 /// # Arguments
 /// * `numerator` - numerator
@@ -399,11 +398,6 @@ fn apply_position_update_to_context(
         }
         context.position.collateral_shares -= collateral_shares_delta.abs;
         context.collateral_asset_config.total_collateral_shares -= collateral_shares_delta.abs;
-        // reset total collateral shares if it's less than the inflation fee,
-        // to reset the collateral shares conversion rate
-        if context.collateral_asset_config.total_collateral_shares <= INFLATION_FEE_SHARES {
-            context.collateral_asset_config.total_collateral_shares = 0;
-        }
         context.collateral_asset_config.reserve -= collateral_delta.abs;
     }
 

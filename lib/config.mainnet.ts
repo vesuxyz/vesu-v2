@@ -1,10 +1,7 @@
 import { CairoCustomEnum } from "starknet";
-import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
-// import CONFIG from "vesu_changelog/configurations/config_re7_usdc_sn_main.json" assert { type: "json" };
-// import CONFIG from "vesu_changelog/configurations/config_re7_xstrk_sn_main.json" assert { type: "json" };
-// import CONFIG from "vesu_changelog/configurations/config_re7_sstrk_sn_main.json" assert { type: "json" };
 import { Config, EnvAssetParams, SCALE, toScale, toUtilizationScale } from ".";
 
+import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
 import DEPLOYMENT from "vesu_changelog/deployments/deployment_sn_main.json" assert { type: "json" };
 
 const env = CONFIG.asset_parameters.map(
@@ -27,9 +24,8 @@ const env = CONFIG.asset_parameters.map(
 export const config: Config = {
   name: "mainnet",
   protocol: {
-    singleton: DEPLOYMENT.singleton || "0x0",
-    extensionPO: DEPLOYMENT.extension || "0x0",
-    extensionCL: DEPLOYMENT.extensionCL || "0x0",
+    singleton: DEPLOYMENT.singletonV2 || "0x0",
+    extensionPO: DEPLOYMENT.extensionPOV2 || "0x0",
     pragma: {
       oracle: DEPLOYMENT.pragma.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
       summary_stats: DEPLOYMENT.pragma.summary_stats || CONFIG.asset_parameters[0].pragma.summary_stats || "0x0",
@@ -41,11 +37,7 @@ export const config: Config = {
   env,
   pools: {
     "genesis-pool": {
-      // id: 1n,
-      id: 2198503327643286920898110335698706244522220458610657370981979460625005526824n, // Genesis Pool
-      // id: 3592370751539490711610556844458488648008775713878064059760995781404350938653n, // Re7 USDC
-      // id: 2345856225134458665876812536882617294246962319062565703131100435311373119841n, // Re7 xSTRK
-      // id: 1301140954640322725373945719229815062445705809076381949099585786202465661889n, // Re7 sSTRK
+      id: 2198503327643286920898110335698706244522220458610657370981979460625005526824n,
       description: "",
       type: "",
       params: {

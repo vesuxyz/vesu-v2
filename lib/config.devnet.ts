@@ -1,6 +1,7 @@
 import { CairoCustomEnum } from "starknet";
-import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
 import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
+
+import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
 
 function price(symbol: string) {
   switch (symbol) {
@@ -43,7 +44,6 @@ export const config: Config = {
   protocol: {
     singleton: "0x0",
     extensionPO: "0x0",
-    extensionCL: "0x0",
     pragma: {
       oracle: "0x0",
       summary_stats: "0x0",

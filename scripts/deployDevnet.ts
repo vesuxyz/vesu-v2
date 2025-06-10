@@ -8,7 +8,6 @@ const protocol = await deployer.deployEnvAndProtocol();
 const deployment = {
   singleton: protocol.singleton.address,
   extensionPO: protocol.extensionPO.address,
-  extensionCL: protocol.extensionCL.address,
   pragma: {
     oracle: protocol.pragma.oracle.address,
     summary_stats: protocol.pragma.summary_stats.address,

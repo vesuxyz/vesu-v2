@@ -8,7 +8,6 @@ const deployer = await setup("mainnet");
 const [contracts] = await deployer.deployProtocol(deployer.config.protocol.pragma);
 deployer.config.protocol.singleton = contracts.singleton.address;
 deployer.config.protocol.extensionPO = contracts.extensionPO.address;
-deployer.config.protocol.extensionCL = contracts.extensionCL.address;
 
 const protocol = await deployer.loadProtocol();
 const { singleton, assets, extensionPO } = protocol;
@@ -101,7 +100,6 @@ for (const [index, asset] of assets.entries()) {
 const deployment = {
   singleton: protocol.singleton.address,
   extensionPO: protocol.extensionPO.address,
-  extensionCL: protocol.extensionCL.address,
   oracle: protocol.pragma.oracle.address,
   assets: protocol.assets.map((asset) => asset.address),
   pools: [pool.id.toString()],

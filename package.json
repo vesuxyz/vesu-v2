@@ -9,13 +9,14 @@
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.10.5",
     "bignumber.js": "9.1.2",
-    "vesu_changelog": "https://github.com/vesuxyz/changelog.git#f92e5212de3808d61a0635bca1d09bff16747fab",
     "dotenv": "^16.3.1",
     "lodash-es": "^4.17.21",
     "prettier": "^3.1.1",
     "prettier-plugin-organize-imports": "^3.2.4",
-    "starknet": "v6.5.0",
+    "starknet": "6.5.0",
+    "starknet-devnet": "^0.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vesu_changelog": "https://github.com/vesuxyz/changelog.git#f871b7ba099ecb6a8dcf6395bbd14f961dcdd31b"
   }
 }

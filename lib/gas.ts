@@ -105,7 +105,7 @@ async function profileGasUsage(transactionHash: string, provider: RpcProvider, a
 
   const eventGas = Math.floor(
     receipt.events.reduce(
-      (sum, { keys, data }) =>
+      (sum: any, { keys, data }: any) =>
         sum + keys.length * l2PayloadsWeights.eventKey + data.length * l2PayloadsWeights.eventData,
       0,
     ),

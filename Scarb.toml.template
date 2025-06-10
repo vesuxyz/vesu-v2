@@ -22,7 +22,7 @@ sort-module-level-items = true
 [[tool.snforge.fork]]
 name = "Mainnet"
 url = "MAINNET_RPC_URL"
-block_id.number = "652612" # "700000"
+block_id.number = "1443429"
 
 [tool.voyager]
 singleton = { path = "src/singleton.cairo" }

@@ -25,11 +25,19 @@ mod extension {
     }
 }
 
+mod v2 {
+    mod default_extension_po_v2;
+    mod migration_extension;
+    mod singleton_v2;
+    mod v_token_v2;
+}
+
 mod vendor {
     mod chainlink;
     mod ekubo;
     mod erc20;
     mod erc20_component;
+    mod ownable;
     mod pragma;
 }
 
@@ -63,4 +71,21 @@ mod test {
     mod test_singleton;
     mod test_transfer_position;
     mod test_v_token;
+    mod v2 {
+        mod mock_singleton_upgrade;
+        mod setup_v2;
+        mod test_asset_retrieval_v2;
+        mod test_default_extension_po_v2;
+        mod test_flash_loan_v2;
+        mod test_forking_v2;
+        mod test_liquidate_position_v2;
+        mod test_migration_extension;
+        mod test_modify_position_v2;
+        mod test_pool_donations_v2;
+        mod test_reentrancy_v2;
+        mod test_shutdown_v2;
+        mod test_singleton_v2;
+        mod test_transfer_position_v2;
+        mod test_v_token_v2;
+    }
 }

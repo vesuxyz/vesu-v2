@@ -77,7 +77,6 @@ impl InterestRateConfigPacking of starknet::StorePacking<InterestRateConfig, (fe
     }
 }
 
-#[inline(always)]
 fn assert_interest_rate_config(interest_rate_config: InterestRateConfig) {
     let InterestRateConfig { min_target_utilization,
     max_target_utilization,
@@ -235,7 +234,6 @@ mod interest_rate_model_component {
         /// # Returns
         /// * `rate_accumulator` - new interest rate accumulator [SCALE]
         /// * `full_utilization_rate` - new interest rate at full utilization [SCALE]
-        #[inline(always)]
         fn rate_accumulator(
             self: @ComponentState<TContractState>,
             pool_id: felt252,

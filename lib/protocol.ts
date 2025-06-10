@@ -6,15 +6,14 @@ export class Protocol implements ProtocolContracts {
   constructor(
     public singleton: Contract,
     public extensionPO: Contract,
-    public extensionCL: Contract,
     public pragma: PragmaContracts,
     public assets: Contract[],
     public deployer: Deployer,
   ) {}
 
   static from(contracts: ProtocolContracts, deployer: Deployer) {
-    const { singleton, extensionPO, extensionCL, pragma, assets } = contracts;
-    return new Protocol(singleton, extensionPO, extensionCL, pragma, assets, deployer);
+    const { singleton, extensionPO, pragma, assets } = contracts;
+    return new Protocol(singleton, extensionPO, pragma, assets, deployer);
   }
 
   async createPool(name: string, { devnetEnv = false, printParams = false } = {}) {
@@ -33,7 +32,7 @@ export class Protocol implements ProtocolContracts {
     const { singleton, extensionPO, deployer } = this;
     const nonce = await singleton.creator_nonce(extensionPO.address);
     const poolId = await singleton.calculate_pool_id(extensionPO.address, nonce + 1n);
-    assert((await singleton.extension(poolId)) === 0n, "extension should be set");
+    assert((await singleton.extension(poolId)) === 0n, "pool with id already exists");
 
     extensionPO.connect(deployer.creator);
     const response = await extensionPO.create_pool(
@@ -51,7 +50,7 @@ export class Protocol implements ProtocolContracts {
     );
     await deployer.waitForTransaction(response.transaction_hash);
 
-    assert((await singleton.extension(poolId)) !== 0n, "extension should be set");
+    assert((await singleton.extension(poolId)) !== 0n, "pool not created");
     const pool = new Pool(poolId, this, params);
 
     return [pool, response] as const;
