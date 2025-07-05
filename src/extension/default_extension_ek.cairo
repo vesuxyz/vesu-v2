@@ -40,12 +40,6 @@ trait IDefaultExtensionEK<TContractState> {
     fn pairs(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
     ) -> Pair;
-    fn violation_timestamp_for_pair(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
-    ) -> u64;
-    fn violation_timestamp_count(self: @TContractState, pool_id: felt252, violation_timestamp: u64) -> u128;
-    fn oldest_violation_timestamp(self: @TContractState, pool_id: felt252) -> u64;
-    fn next_violation_timestamp(self: @TContractState, pool_id: felt252, violation_timestamp: u64) -> u64;
     fn v_token_for_collateral_asset(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress
     ) -> ContractAddress;
@@ -134,7 +128,6 @@ mod DefaultExtensionEK {
     };
     use vesu::extension::components::position_hooks::position_hooks_component::Trait;
     use vesu::{
-        map_list::{map_list_component, map_list_component::MapListTrait},
         data_model::{
             Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig, ModifyPositionParams,
             AmountDenomination, AmountType, DebtCapParams
@@ -143,8 +136,8 @@ mod DefaultExtensionEK {
         extension::{
             interface::IExtension,
             default_extension_po::{
-                IDefaultExtensionCallback, ITokenizationCallback, ITimestampManagerCallback, FeeParams, VTokenParams,
-                LiquidationParams, ShutdownParams
+                IDefaultExtensionCallback, ITokenizationCallback, FeeParams, VTokenParams, LiquidationParams,
+                ShutdownParams
             },
             components::{
                 ekubo_oracle::{ekubo_oracle_component, EkuboOracleConfig, ekubo_oracle_component::EkuboOracleTrait},
@@ -166,7 +159,6 @@ mod DefaultExtensionEK {
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
     component!(path: ekubo_oracle_component, storage: ekubo_oracle, event: EkuboOracleEvents);
-    component!(path: map_list_component, storage: timestamp_manager, event: MapListEvents);
     component!(path: fee_model_component, storage: fee_model, event: FeeModelEvents);
     component!(path: tokenization_component, storage: tokenization, event: TokenizationEvents);
 
@@ -187,9 +179,6 @@ mod DefaultExtensionEK {
         // storage for the ekubo oracle component
         #[substorage(v0)]
         ekubo_oracle: ekubo_oracle_component::Storage,
-        // storage for the timestamp manager component
-        #[substorage(v0)]
-        timestamp_manager: map_list_component::Storage,
         // storage for the fee model component
         #[substorage(v0)]
         fee_model: fee_model_component::Storage,
@@ -211,7 +200,6 @@ mod DefaultExtensionEK {
     enum Event {
         PositionHooksEvents: position_hooks_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
-        MapListEvents: map_list_component::Event,
         FeeModelEvents: fee_model_component::Event,
         TokenizationEvents: tokenization_component::Event,
         EkuboOracleEvents: ekubo_oracle_component::Event,
@@ -240,36 +228,6 @@ mod DefaultExtensionEK {
         }
     }
 
-    impl TimestampManagerCallbackImpl of ITimestampManagerCallback<ContractState> {
-        /// See timestamp_manager.contains()
-        fn contains(self: @ContractState, pool_id: felt252, item: u64) -> bool {
-            self.timestamp_manager.contains(pool_id, item)
-        }
-        /// See timestamp_manager.push_front()
-        fn push_front(ref self: ContractState, pool_id: felt252, item: u64) {
-            self.timestamp_manager.push_front(pool_id, item)
-        }
-        /// See timestamp_manager.remove()
-        fn remove(ref self: ContractState, pool_id: felt252, item: u64) {
-            self.timestamp_manager.remove(pool_id, item)
-        }
-        /// See timestamp_manager.first()
-        fn first(self: @ContractState, pool_id: felt252) -> u64 {
-            self.timestamp_manager.first(pool_id)
-        }
-        /// See timestamp_manager.last()
-        fn last(self: @ContractState, pool_id: felt252) -> u64 {
-            self.timestamp_manager.last(pool_id)
-        }
-        /// See timestamp_manager.previous()
-        fn previous(self: @ContractState, pool_id: felt252, item: u64) -> u64 {
-            self.timestamp_manager.previous(pool_id, item)
-        }
-        /// See timestamp_manager.all()
-        fn all(self: @ContractState, pool_id: felt252) -> Array<u64> {
-            self.timestamp_manager.all(pool_id)
-        }
-    }
     impl TokenizationCallbackImpl of ITokenizationCallback<ContractState> {
         /// See tokenization.v_token_for_collateral_asset()
         fn v_token_for_collateral_asset(
@@ -426,48 +384,6 @@ mod DefaultExtensionEK {
             self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
         ) -> Pair {
             self.position_hooks.pairs.read((pool_id, collateral_asset, debt_asset))
-        }
-
-        /// Returns the timestamp at which a given pair in a given pool transitioned to recovery mode
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// # Returns
-        /// * `violation_timestamp` - timestamp at which the pair transitioned to recovery mode
-        fn violation_timestamp_for_pair(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
-        ) -> u64 {
-            self.position_hooks.violation_timestamps.read((pool_id, collateral_asset, debt_asset))
-        }
-
-        /// Returns the count of how many pairs in a given pool transitioned to recovery mode at a given timestamp
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `violation_timestamp` - timestamp at which the pair transitioned to recovery mode
-        /// # Returns
-        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs transitioned to recovery mode at that timestamp
-        fn violation_timestamp_count(self: @ContractState, pool_id: felt252, violation_timestamp: u64) -> u128 {
-            self.position_hooks.violation_timestamp_counts.read((pool_id, violation_timestamp))
-        }
-
-        /// Returns the oldest timestamp at which a pair in a given pool transitioned to recovery mode
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// # Returns
-        /// * `oldest_violation_timestamp` - oldest timestamp at which a pair transitioned to recovery mode
-        fn oldest_violation_timestamp(self: @ContractState, pool_id: felt252) -> u64 {
-            self.timestamp_manager.last(pool_id)
-        }
-
-        /// Returns the next (older) violation timestamp for a given violation timestamp for a given pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `violation_timestamp` - violation timestamp
-        /// # Returns
-        /// * `next_violation_timestamp` - next (older) violation timestamp
-        fn next_violation_timestamp(self: @ContractState, pool_id: felt252, violation_timestamp: u64) -> u64 {
-            self.timestamp_manager.next(pool_id, violation_timestamp.into())
         }
 
         /// Returns the address of the vToken deployed for the collateral asset for a given pool

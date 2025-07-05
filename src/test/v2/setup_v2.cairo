@@ -147,16 +147,13 @@ fn setup_env(
 
     let v_token_class_hash = declare("VToken").class_hash;
     let v_token_v2_class_hash = declare("VTokenV2").class_hash;
-    let extension_utils_class_hash = declare("DefaultExtensionPOV2Utils").class_hash;
 
     let args = array![
         singleton.contract_address.into(),
         mock_pragma_oracle.contract_address.into(),
         mock_pragma_summary.contract_address.into(),
         v_token_class_hash.into(),
-        v_token_v2_class_hash.into(),
-        users.migrator.into(),
-        extension_utils_class_hash.into()
+        v_token_v2_class_hash.into()
     ];
     let extension = IDefaultExtensionPOV2Dispatcher {
         contract_address: deploy_with_args("DefaultExtensionPOV2", args)

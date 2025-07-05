@@ -1,7 +1,6 @@
 mod common;
 mod data_model;
 
-mod map_list;
 mod math;
 mod packing;
 mod singleton;
@@ -27,7 +26,6 @@ mod extension {
 
 mod v2 {
     mod default_extension_po_v2;
-    mod migration_extension;
     mod singleton_v2;
     mod v_token_v2;
 }
@@ -60,7 +58,6 @@ mod test {
     mod test_forking;
     mod test_interest_rate_model;
     mod test_liquidate_position;
-    mod test_map_list;
     mod test_math;
     mod test_modify_position;
     mod test_packing;
@@ -79,7 +76,6 @@ mod test {
         mod test_flash_loan_v2;
         mod test_forking_v2;
         mod test_liquidate_position_v2;
-        mod test_migration_extension;
         mod test_modify_position_v2;
         mod test_pool_donations_v2;
         mod test_reentrancy_v2;

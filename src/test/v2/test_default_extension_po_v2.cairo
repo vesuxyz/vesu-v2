@@ -1160,18 +1160,4 @@ mod TestDefaultExtensionPOV2 {
         let new_classhash = declare("MockSingletonUpgradeWrongName").class_hash;
         extension.upgrade(new_classhash);
     }
-
-    #[test]
-    #[should_panic(expected: ('Caller is not singleton owner',))]
-    fn test_default_extension_po_v2_set_extension_utils_class_hash_only_owner() {
-        let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
-        start_prank(CheatTarget::One(extension.contract_address), contract_address_const::<'not_owner'>());
-        extension.set_extension_utils_class_hash(1.try_into().unwrap());
-    }
-
-    #[test]
-    fn test_default_extension_po_v2_set_extension_utils_class_hash() {
-        let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
-        extension.set_extension_utils_class_hash(1.try_into().unwrap());
-    }
 }
