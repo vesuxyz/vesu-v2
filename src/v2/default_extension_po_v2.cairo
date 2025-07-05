@@ -192,10 +192,6 @@ mod DefaultExtensionPOV2 {
         // storage for the tokenization component
         #[substorage(v0)]
         tokenization: tokenization_component::Storage,
-        // tracks the class hash of the vTokenV2 contract
-        v_token_v2_class_hash: felt252,
-        // tracks the migrator address
-        migrator: ContractAddress,
         // tracks the address that can transition the shutdown mode of a pool
         shutdown_mode_agent: LegacyMap::<felt252, ContractAddress>,
     }
@@ -249,14 +245,12 @@ mod DefaultExtensionPOV2 {
         singleton: ContractAddress,
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
-        v_token_class_hash: felt252,
-        v_token_v2_class_hash: felt252
+        v_token_class_hash: felt252
     ) {
         self.singleton.write(singleton);
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
         self.tokenization.set_v_token_class_hash(v_token_class_hash);
-        self.v_token_v2_class_hash.write(v_token_v2_class_hash);
     }
 
     /// Helper method for transferring an amount of an asset from one address to another. Reverts if the transfer fails.
@@ -283,7 +277,7 @@ mod DefaultExtensionPOV2 {
     impl InternalFunctions of InternalFunctionsTrait {
         fn assert_singleton_owner(ref self: ContractState) {
             let owner = IOwnableDispatcher { contract_address: self.singleton.read() }.owner();
-            assert!(get_caller_address() == owner, "Caller is not singleton owner");
+            assert!(get_caller_address() == owner, "caller-not-singleton-owner");
         }
 
         fn burn_inflation_fee(ref self: ContractState, pool_id: felt252, asset: ContractAddress, is_legacy: bool) {
@@ -903,7 +897,7 @@ mod DefaultExtensionPOV2 {
             replace_class_syscall(new_implementation).unwrap();
             // Check to prevent mistakes when upgrading the contract
             let new_name = IDefaultExtensionPOV2Dispatcher { contract_address: get_contract_address() }.upgrade_name();
-            assert!(new_name == self.upgrade_name(), "invalid upgrade name");
+            assert!(new_name == self.upgrade_name(), "invalid-upgrade-name");
             self.emit(ContractUpgraded { new_implementation });
         }
     }
