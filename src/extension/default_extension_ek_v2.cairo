@@ -1,4 +1,3 @@
-use alexandria_math::i257::i257;
 use starknet::{ContractAddress, ClassHash};
 use vesu::{
     data_model::{AssetParams, LTVParams, LTVConfig, DebtCapParams},
@@ -6,24 +5,24 @@ use vesu::{
         components::{
             interest_rate_model::InterestRateConfig,
             position_hooks::{ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, Pair},
-            fee_model::FeeConfig, pragma_oracle::OracleConfig,
+            fee_model::FeeConfig, ekubo_oracle::EkuboOracleConfig,
         },
-        default_extension_po::{
-            LiquidationParams, ShutdownParams, PragmaOracleParams, IDefaultExtension, FeeParams, VTokenParams,
-            IDefaultExtensionCallback, ITokenizationCallback
-        }
-    },
-    vendor::pragma::AggregationMode
+        default_extension_po_v2::{FeeParams, ShutdownParams, LiquidationParams, VTokenParams}
+    }
 };
 
+#[derive(PartialEq, Copy, Drop, Serde)]
+struct EkuboOracleParams {
+    period: u64 // [seconds]
+}
+
 #[starknet::interface]
-trait IDefaultExtensionPOV2<TContractState> {
+trait IDefaultExtensionEKV2<TContractState> {
     fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
     fn shutdown_mode_agent(self: @TContractState, pool_id: felt252) -> ContractAddress;
-    fn pragma_oracle(self: @TContractState) -> ContractAddress;
-    fn pragma_summary(self: @TContractState) -> ContractAddress;
-    fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
+    fn ekubo_oracle(self: @TContractState) -> ContractAddress;
+    fn ekubo_oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> EkuboOracleConfig;
     fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
     fn debt_caps(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
@@ -55,7 +54,7 @@ trait IDefaultExtensionPOV2<TContractState> {
         v_token_params: Span<VTokenParams>,
         ltv_params: Span<LTVParams>,
         interest_rate_configs: Span<InterestRateConfig>,
-        pragma_oracle_params: Span<PragmaOracleParams>,
+        ekubo_oracle_params: Span<EkuboOracleParams>,
         liquidation_params: Span<LiquidationParams>,
         debt_caps: Span<DebtCapParams>,
         shutdown_params: ShutdownParams,
@@ -68,7 +67,7 @@ trait IDefaultExtensionPOV2<TContractState> {
         asset_params: AssetParams,
         v_token_params: VTokenParams,
         interest_rate_config: InterestRateConfig,
-        pragma_oracle_params: PragmaOracleParams
+        ekubo_oracle_params: EkuboOracleParams,
     );
     fn set_asset_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
@@ -83,7 +82,7 @@ trait IDefaultExtensionPOV2<TContractState> {
     fn set_interest_rate_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
-    fn set_oracle_parameter(
+    fn set_ekubo_oracle_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252
     );
     fn set_liquidation_config(
@@ -123,29 +122,28 @@ trait IDefaultExtensionPOV2<TContractState> {
 }
 
 #[starknet::contract]
-mod DefaultExtensionPOV2 {
+mod DefaultExtensionEKV2 {
     use alexandria_math::i257::{i257, i257_new};
     use starknet::{
         ClassHash, ContractAddress, get_contract_address, get_caller_address, event::EventEmitter,
         contract_address_const, deploy_syscall, syscalls::{replace_class_syscall, call_contract_syscall}
     };
+    use super::{
+        IDefaultExtensionEKV2, IDefaultExtensionEKV2Dispatcher, IDefaultExtensionEKV2DispatcherTrait, EkuboOracleParams
+    };
     use vesu::{
+        units::INFLATION_FEE,
         data_model::{
             Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig, ModifyPositionParams,
             AmountDenomination, AmountType, DebtCapParams
         },
-        v2::{
-            singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-            default_extension_po_v2::{
-                LiquidationParams, ShutdownParams, PragmaOracleParams, IDefaultExtension, FeeParams, VTokenParams,
-                IDefaultExtensionCallback, ITokenizationCallback, IDefaultExtensionPOV2,
-                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait
-            },
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        vendor::{
+            erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
+            ownable::{IOwnableDispatcher, IOwnableDispatcherTrait},
         },
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, units::INFLATION_FEE,
-        vendor::ownable::{IOwnableDispatcher, IOwnableDispatcherTrait},
         extension::{
-            interface::{IExtension},
+            interface::IExtension,
             components::{
                 interest_rate_model::{
                     InterestRateConfig, interest_rate_model_component,
@@ -155,19 +153,23 @@ mod DefaultExtensionPOV2 {
                     position_hooks_component, position_hooks_component::PositionHooksTrait, ShutdownStatus,
                     ShutdownMode, ShutdownConfig, LiquidationConfig, Pair
                 },
-                pragma_oracle::{pragma_oracle_component, pragma_oracle_component::PragmaOracleTrait, OracleConfig},
+                ekubo_oracle::{ekubo_oracle_component, EkuboOracleConfig, ekubo_oracle_component::EkuboOracleTrait},
                 fee_model::{fee_model_component, fee_model_component::FeeModelTrait, FeeConfig},
                 tokenization::{tokenization_component, tokenization_component::TokenizationTrait}
-            }
+            },
+            default_extension_po_v2::{
+                LiquidationParams, ShutdownParams, PragmaOracleParams, FeeParams, VTokenParams,
+                IDefaultExtensionCallback, ITokenizationCallback, IDefaultExtensionPOV2,
+                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait
+            },
         },
     };
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
-    component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
+    component!(path: ekubo_oracle_component, storage: ekubo_oracle, event: EkuboOracleEvents);
     component!(path: fee_model_component, storage: fee_model, event: FeeModelEvents);
     component!(path: tokenization_component, storage: tokenization, event: TokenizationEvents);
-
 
     #[storage]
     struct Storage {
@@ -183,9 +185,9 @@ mod DefaultExtensionPOV2 {
         // storage for the interest rate model component
         #[substorage(v0)]
         interest_rate_model: interest_rate_model_component::Storage,
-        // storage for the pragma oracle component
+        // storage for the ekubo oracle component
         #[substorage(v0)]
-        pragma_oracle: pragma_oracle_component::Storage,
+        ekubo_oracle: ekubo_oracle_component::Storage,
         // storage for the fee model component
         #[substorage(v0)]
         fee_model: fee_model_component::Storage,
@@ -225,14 +227,13 @@ mod DefaultExtensionPOV2 {
     enum Event {
         PositionHooksEvents: position_hooks_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
-        PragmaOracleEvents: pragma_oracle_component::Event,
+        EkuboOracleEvents: ekubo_oracle_component::Event,
         FeeModelEvents: fee_model_component::Event,
         TokenizationEvents: tokenization_component::Event,
         SetAssetParameter: SetAssetParameter,
         SetPoolOwner: SetPoolOwner,
         CreateVToken: tokenization_component::CreateVToken,
         SetInterestRateConfig: interest_rate_model_component::SetInterestRateConfig,
-        SetOracleConfig: pragma_oracle_component::SetOracleConfig,
         SetLiquidationConfig: position_hooks_component::SetLiquidationConfig,
         SetDebtCap: position_hooks_component::SetDebtCap,
         SetShutdownLTVConfig: position_hooks_component::SetShutdownLTVConfig,
@@ -243,15 +244,18 @@ mod DefaultExtensionPOV2 {
     fn constructor(
         ref self: ContractState,
         singleton: ContractAddress,
+        core: ContractAddress,
         oracle_address: ContractAddress,
-        summary_address: ContractAddress,
+        quote_asset: ContractAddress,
         v_token_class_hash: felt252
     ) {
         self.singleton.write(singleton);
-        self.pragma_oracle.set_oracle(oracle_address);
-        self.pragma_oracle.set_summary_address(summary_address);
+        self.ekubo_oracle.set_core(core);
+        self.ekubo_oracle.set_oracle(oracle_address);
+        self.ekubo_oracle.set_quote_asset(quote_asset);
         self.tokenization.set_v_token_class_hash(v_token_class_hash);
     }
+
 
     /// Helper method for transferring an amount of an asset from one address to another. Reverts if the transfer fails.
     /// # Arguments
@@ -334,7 +338,7 @@ mod DefaultExtensionPOV2 {
     }
 
     #[abi(embed_v0)]
-    impl DefaultExtensionPOV2Impl of IDefaultExtensionPOV2<ContractState> {
+    impl DefaultExtensionEKV2Impl of IDefaultExtensionEKV2<ContractState> {
         /// Returns the name of a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
@@ -362,28 +366,21 @@ mod DefaultExtensionPOV2 {
             self.shutdown_mode_agent.read(pool_id)
         }
 
-        /// Returns the address of the pragma oracle contract
+        /// Returns the address of the Ekubo oracle extension contract
         /// # Returns
-        /// * `oracle_address` - address of the pragma oracle contract
-        fn pragma_oracle(self: @ContractState) -> ContractAddress {
-            self.pragma_oracle.oracle_address()
+        /// * `oracle_address` - address of the Ekubo oracle extension contract
+        fn ekubo_oracle(self: @ContractState) -> ContractAddress {
+            self.ekubo_oracle.oracle_address()
         }
 
-        /// Returns the address of the pragma summary contract
-        /// # Returns
-        /// * `summary_address` - address of the pragma summary contract
-        fn pragma_summary(self: @ContractState) -> ContractAddress {
-            self.pragma_oracle.summary_address()
-        }
-
-        /// Returns the oracle configuration for a given pool and asset
+        /// Returns the Ekubo oracle configuration for a given pool and asset
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// # Returns
         /// * `oracle_config` - oracle configuration
-        fn oracle_config(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig {
-            self.pragma_oracle.oracle_configs.read((pool_id, asset))
+        fn ekubo_oracle_config(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> EkuboOracleConfig {
+            self.ekubo_oracle.ekubo_oracle_configs.read((pool_id, asset))
         }
 
         /// Returns the fee configuration for a given pool
@@ -480,7 +477,7 @@ mod DefaultExtensionPOV2 {
             self.tokenization.v_token_for_collateral_asset(pool_id, collateral_asset)
         }
 
-        /// Returns the default pairing (collateral asset, debt asset) used for 
+        /// Returns the default pairing (collateral asset, debt asset) used for
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `v_token` - address of the vToken
@@ -500,7 +497,7 @@ mod DefaultExtensionPOV2 {
         /// * `v_token_params` - vToken parameters
         /// * `ltv_params` - loan-to-value parameters
         /// * `interest_rate_params` - interest rate model parameters
-        /// * `pragma_oracle_params` - pragma oracle parameters
+        /// * `ekubo_oracle_params` - Ekubo oracle parameters
         /// * `liquidation_params` - liquidation parameters
         /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
@@ -514,7 +511,7 @@ mod DefaultExtensionPOV2 {
             mut v_token_params: Span<VTokenParams>,
             mut ltv_params: Span<LTVParams>,
             mut interest_rate_configs: Span<InterestRateConfig>,
-            mut pragma_oracle_params: Span<PragmaOracleParams>,
+            mut ekubo_oracle_params: Span<EkuboOracleParams>,
             mut liquidation_params: Span<LiquidationParams>,
             mut debt_caps: Span<DebtCapParams>,
             shutdown_params: ShutdownParams,
@@ -522,9 +519,9 @@ mod DefaultExtensionPOV2 {
             owner: ContractAddress
         ) -> felt252 {
             assert!(asset_params.len() > 0, "empty-asset-params");
-            // assert! that all arrays have equal length
+            // assert that all arrays have equal length
             assert!(asset_params.len() == interest_rate_configs.len(), "interest-rate-params-mismatch");
-            assert!(asset_params.len() == pragma_oracle_params.len(), "pragma-oracle-params-mismatch");
+            assert!(asset_params.len() == ekubo_oracle_params.len(), "ekubo-oracle-params-mismatch");
             assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
 
             // create the pool in the singleton
@@ -543,24 +540,16 @@ mod DefaultExtensionPOV2 {
                 .is_empty() {
                     let asset_params = *asset_params_copy.pop_front().unwrap();
                     let asset = asset_params.asset;
+                    assert!(asset != self.ekubo_oracle.quote_asset(), "add-quote-asset-disallowed");
+                    let asset_decimals = IERC20Dispatcher { contract_address: asset }.decimals();
 
                     // set the oracle config
-                    let params = *pragma_oracle_params.pop_front().unwrap();
-                    let PragmaOracleParams { pragma_key,
-                    timeout,
-                    number_of_sources,
-                    start_time_offset,
-                    time_window,
-                    aggregation_mode } =
-                        params;
+                    let params = *ekubo_oracle_params.pop_front().unwrap();
+                    let EkuboOracleParams { period } = params;
                     self
-                        .pragma_oracle
-                        .set_oracle_config(
-                            pool_id,
-                            asset,
-                            OracleConfig {
-                                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode
-                            }
+                        .ekubo_oracle
+                        .set_ekubo_oracle_config(
+                            pool_id, asset, EkuboOracleConfig { decimals: asset_decimals, period }
                         );
 
                     // set the interest rate model configuration
@@ -636,32 +625,25 @@ mod DefaultExtensionPOV2 {
         /// * `asset_params` - asset parameters
         /// * `v_token_params` - vToken parameters
         /// * `interest_rate_model` - interest rate model
-        /// * `pragma_oracle_params` - pragma oracle parameters
+        /// * `ekubo_oracle_params` - Ekubo oracle parameters
         fn add_asset(
             ref self: ContractState,
             pool_id: felt252,
             asset_params: AssetParams,
             v_token_params: VTokenParams,
             interest_rate_config: InterestRateConfig,
-            pragma_oracle_params: PragmaOracleParams
+            ekubo_oracle_params: EkuboOracleParams
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             let asset = asset_params.asset;
+            assert!(asset != self.ekubo_oracle.quote_asset(), "add-quote-asset-disallowed");
+            let asset_decimals = IERC20Dispatcher { contract_address: asset }.decimals();
 
             // set the oracle config
             self
-                .pragma_oracle
-                .set_oracle_config(
-                    pool_id,
-                    asset,
-                    OracleConfig {
-                        pragma_key: pragma_oracle_params.pragma_key,
-                        timeout: pragma_oracle_params.timeout,
-                        number_of_sources: pragma_oracle_params.number_of_sources,
-                        start_time_offset: pragma_oracle_params.start_time_offset,
-                        time_window: pragma_oracle_params.time_window,
-                        aggregation_mode: pragma_oracle_params.aggregation_mode
-                    }
+                .ekubo_oracle
+                .set_ekubo_oracle_config(
+                    pool_id, asset, EkuboOracleConfig { decimals: asset_decimals, period: ekubo_oracle_params.period }
                 );
 
             // set the interest rate model configuration
@@ -708,17 +690,17 @@ mod DefaultExtensionPOV2 {
             self.interest_rate_model.set_interest_rate_parameter(pool_id, asset, parameter, value);
         }
 
-        /// Sets a parameter for a given oracle configuration of an asset in a pool
+        /// Sets a parameter for a given Ekubo oracle configuration of an asset in a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
-        fn set_oracle_parameter(
+        fn set_ekubo_oracle_parameter(
             ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.pragma_oracle.set_oracle_parameter(pool_id, asset, parameter, value);
+            self.ekubo_oracle.set_ekubo_oracle_parameter(pool_id, asset, parameter, value);
         }
 
         /// Sets the loan-to-value configuration between two assets (pair) in the pool in the singleton
@@ -761,7 +743,7 @@ mod DefaultExtensionPOV2 {
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
-        /// * `value` - value of the parameter 
+        /// * `value` - value of the parameter
         fn set_asset_parameter(
             ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
         ) {
@@ -886,7 +868,7 @@ mod DefaultExtensionPOV2 {
         /// # Returns
         /// * `name` - the name of the contract
         fn upgrade_name(self: @ContractState) -> felt252 {
-            'Vesu DefaultExtensionPOV2'
+            'Vesu DefaultExtensionEKV2'
         }
 
         /// Upgrades the contract to a new implementation
@@ -918,11 +900,11 @@ mod DefaultExtensionPOV2 {
         /// # Returns
         /// * `AssetPrice` - latest price of the asset and its validity
         fn price(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> AssetPrice {
-            let (value, is_valid) = self.pragma_oracle.price(pool_id, asset);
+            let (value, is_valid) = self.ekubo_oracle.price(pool_id, asset);
             AssetPrice { value, is_valid }
         }
 
-        /// Returns the current interest rate for a given asset in a given pool, given it"s utilization
+        /// Returns the current interest rate for a given asset in a given pool, given it's utilization
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
@@ -945,7 +927,7 @@ mod DefaultExtensionPOV2 {
             interest_rate
         }
 
-        /// Returns the current rate accumulator for a given asset in a given pool, given it"s utilization
+        /// Returns the current rate accumulator for a given asset in a given pool, given it's utilization
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset

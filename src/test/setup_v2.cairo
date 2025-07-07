@@ -4,18 +4,20 @@ use snforge_std::{
 };
 use starknet::{ClassHash, ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
 use vesu::{
-    units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
-    data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams, DebtCapParams},
-    extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-    v2::{
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+    math::pow_10, units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
+    data_model::{AssetParams, LTVParams, DebtCapParams},
+    singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+    extension::{
+        interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
         default_extension_po_v2::{
             IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
             PragmaOracleParams, LiquidationParams, ShutdownParams, FeeParams, VTokenParams
-        }
+        },
     },
-    vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, math::{pow_10},
-    vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode},
+    vendor::{
+        erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
+        pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode}
+    },
     test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
         IMockPragmaSummaryDispatcherTrait

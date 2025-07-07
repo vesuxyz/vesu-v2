@@ -1,16 +1,16 @@
 #[cfg(test)]
-mod TestReentrancy {
+mod TestReentrancyV2 {
     use snforge_std::{
         start_prank, stop_prank, start_warp, CheatTarget, ContractClassTrait, ContractClass, get_class_hash
     };
     use starknet::{ContractAddress, get_contract_address, get_block_timestamp};
     use vesu::{
-        test::setup::{setup_env, TestConfig, LendingTerms, deploy_with_args, Env},
-        extension::interface::{IExtensionDispatcherTrait, IExtensionDispatcher},
         units::{SCALE, PERCENT, DAY_IN_SECONDS}, math::pow_10,
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, ModifyPositionParams},
         data_model::{AssetParams, LTVParams, Amount, AmountType, AmountDenomination},
-        vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait}
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, ModifyPositionParams},
+        extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
+        vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait},
+        test::setup_v2::{setup_env, TestConfig, deploy_with_args, Env},
     };
 
     #[test]
@@ -23,6 +23,8 @@ mod TestReentrancy {
 
         let args = array![singleton.contract_address.into()];
         let extension = IExtensionDispatcher { contract_address: deploy_with_args("MockExtension", args) };
+
+        singleton.set_extension_whitelist(extension.contract_address, true);
 
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -54,7 +56,7 @@ mod TestReentrancy {
         let ltv_params = array![ltv_params_0, ltv_params_1].span();
 
         start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
-        let pool_id = ISingletonDispatcher { contract_address: singleton.contract_address }
+        let pool_id = ISingletonV2Dispatcher { contract_address: singleton.contract_address }
             .create_pool(asset_params, ltv_params, extension.contract_address);
         stop_prank(CheatTarget::One(singleton.contract_address));
 
@@ -86,6 +88,8 @@ mod TestReentrancy {
         let args = array![singleton.contract_address.into()];
         let extension = IExtensionDispatcher { contract_address: deploy_with_args("MockExtension", args) };
 
+        singleton.set_extension_whitelist(extension.contract_address, true);
+
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
             floor: SCALE / 10_000,
@@ -116,7 +120,7 @@ mod TestReentrancy {
         let ltv_params = array![ltv_params_0, ltv_params_1].span();
 
         start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
-        let pool_id = ISingletonDispatcher { contract_address: singleton.contract_address }
+        let pool_id = ISingletonV2Dispatcher { contract_address: singleton.contract_address }
             .create_pool(asset_params, ltv_params, extension.contract_address);
         stop_prank(CheatTarget::One(singleton.contract_address));
 

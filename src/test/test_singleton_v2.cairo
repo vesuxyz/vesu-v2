@@ -4,20 +4,22 @@ mod TestSingletonV2 {
     use starknet::{get_contract_address, get_block_timestamp, contract_address_const};
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
-        test::v2::setup_v2::{
-            setup, setup_env, create_pool, TestConfig, deploy_assets, deploy_asset, COLL_PRAGMA_KEY,
-            deploy_asset_with_decimals, test_interest_rate_config, LendingTerms, Env
-        },
-        test::v2::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait},
         data_model::{AssetParams, LTVParams, LTVConfig, ModifyPositionParams, Amount, AmountType, AmountDenomination},
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        vendor::ownable::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait},
-        v2::{
-            singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-            default_extension_po_v2::{
-                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
-                PragmaOracleParams, LiquidationParams, ShutdownParams, FeeParams, LiquidationConfig, ShutdownConfig
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        extension::default_extension_po_v2::{
+            IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
+            PragmaOracleParams, LiquidationParams, ShutdownParams, FeeParams, LiquidationConfig, ShutdownConfig
+        },
+        vendor::{
+            erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
+            ownable::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait},
+        },
+        test::{
+            setup_v2::{
+                setup, setup_env, create_pool, TestConfig, deploy_assets, deploy_asset, COLL_PRAGMA_KEY,
+                deploy_asset_with_decimals, test_interest_rate_config, LendingTerms, Env
             },
+            mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait},
         },
     };
 

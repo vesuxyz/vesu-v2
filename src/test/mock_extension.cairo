@@ -6,7 +6,8 @@ mod MockExtension {
         data_model::{
             Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, ModifyPositionParams, Context, LTVConfig
         },
-        units::SCALE, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait}, extension::interface::IExtension,
+        units::SCALE, singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        extension::interface::IExtension,
     };
 
     #[storage]
@@ -30,7 +31,7 @@ mod MockExtension {
         }
 
         fn price(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> AssetPrice {
-            ISingletonDispatcher { contract_address: self.singleton.read() }
+            ISingletonV2Dispatcher { contract_address: self.singleton.read() }
                 .context(pool_id, asset, Zeroable::zero(), Zeroable::zero());
             AssetPrice { value: SCALE, is_valid: true }
         }
@@ -43,7 +44,7 @@ mod MockExtension {
             last_updated: u64,
             last_full_utilization_rate: u256,
         ) -> u256 {
-            ISingletonDispatcher { contract_address: self.singleton.read() }
+            ISingletonV2Dispatcher { contract_address: self.singleton.read() }
                 .context(pool_id, asset, Zeroable::zero(), Zeroable::zero());
             SCALE
         }
@@ -57,7 +58,7 @@ mod MockExtension {
             last_rate_accumulator: u256,
             last_full_utilization_rate: u256,
         ) -> (u256, u256) {
-            ISingletonDispatcher { contract_address: self.singleton.read() }.asset_config(pool_id, asset);
+            ISingletonV2Dispatcher { contract_address: self.singleton.read() }.asset_config(pool_id, asset);
             (SCALE, SCALE)
         }
 

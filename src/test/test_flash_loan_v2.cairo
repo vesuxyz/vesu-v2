@@ -6,7 +6,7 @@ trait IFlashLoanGeneric<TContractState> {
 #[starknet::contract]
 mod FlashLoanreceiver {
     use starknet::{get_block_timestamp, ContractAddress};
-    use vesu::singleton::IFlashloanReceiver;
+    use vesu::singleton_v2::IFlashloanReceiver;
 
     #[storage]
     struct Storage {
@@ -34,8 +34,7 @@ mod FlashLoanreceiver {
 #[starknet::contract]
 mod MaliciousFlashLoanReceiver {
     use starknet::{get_block_timestamp, ContractAddress, contract_address_const};
-    use vesu::singleton::IFlashloanReceiver;
-    use vesu::vendor::erc20::{ERC20ABIDispatcherTrait, ERC20ABIDispatcher};
+    use vesu::{singleton_v2::IFlashloanReceiver, vendor::erc20::{ERC20ABIDispatcherTrait, ERC20ABIDispatcher}};
 
     #[storage]
     struct Storage {}
@@ -55,14 +54,14 @@ mod FlashLoans {
     use snforge_std::{start_prank, stop_prank, CheatTarget};
     use starknet::{contract_address};
     use super::{IFlashLoanGenericDispatcherTrait, IFlashLoanGenericDispatcher};
-    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
     use vesu::{
-        math::pow_10, test::setup::{setup, deploy_contract, TestConfig, LendingTerms},
-        singleton::{
-            ISingletonDispatcher, ISingletonDispatcherTrait, IFlashloanReceiverDispatcher,
+        data_model::{Amount, AmountType, AmountDenomination},
+        singleton_v2::{
+            ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, IFlashloanReceiverDispatcher,
             IFlashloanReceiverDispatcherTrait, ModifyPositionParams
         },
-        data_model::{Amount, AmountType, AmountDenomination}
+        vendor::erc20::ERC20ABIDispatcherTrait, math::pow_10,
+        test::setup_v2::{setup, deploy_contract, TestConfig, LendingTerms},
     };
 
     #[test]

@@ -82,10 +82,10 @@ mod position_hooks_component {
     use vesu::{
         units::SCALE, math::pow_10,
         data_model::{Amount, Context, Position, LTVConfig, assert_ltv_config, UnsignedAmount},
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
         common::{calculate_collateral, is_collateralized, calculate_collateral_and_debt_value, calculate_debt},
         extension::{
-            default_extension_po::{IDefaultExtensionCallback, ITokenizationCallback},
+            default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback},
             components::position_hooks::{
                 ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, LiquidationData, Pair,
                 assert_shutdown_config, assert_liquidation_config, ShutdownState
@@ -331,7 +331,7 @@ mod position_hooks_component {
             if shutdown_mode == ShutdownMode::Redemption {
                 // set max_utilization to 100% if it's not already set
                 if collateral_asset_config.max_utilization != SCALE {
-                    ISingletonDispatcher { contract_address: self.get_contract().singleton() }
+                    ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                         .set_asset_parameter(pool_id, collateral_asset, 'max_utilization', SCALE);
                 }
             }
@@ -397,7 +397,9 @@ mod position_hooks_component {
                 "shutdown-mode-subscription-period"
             );
 
-            let shutdown_state = ShutdownState { shutdown_mode, last_updated: get_block_timestamp() };
+            let shutdown_state = ShutdownState {
+                shutdown_mode: new_shutdown_mode, last_updated: get_block_timestamp()
+            };
             self.fixed_shutdown_mode.write(pool_id, shutdown_state);
 
             self.emit(SetShutdownMode { pool_id, shutdown_mode, last_updated: shutdown_state.last_updated });
@@ -522,7 +524,7 @@ mod position_hooks_component {
             caller: ContractAddress
         ) -> (UnsignedAmount, UnsignedAmount) {
             if from_context.debt_asset == Zeroable::zero() && from_context.user == get_contract_address() {
-                ISingletonDispatcher { contract_address: self.get_contract().singleton() }
+                ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                     .modify_delegation(from_context.pool_id, caller, true);
             }
             (collateral, debt)
@@ -604,7 +606,7 @@ mod position_hooks_component {
             // burn vTokens if collateral shares are transferred from the corresponding vToken pairing
             if from_context.debt_asset == Zeroable::zero() && from_context.user == get_contract_address() {
                 assert!(from_context.collateral_asset == to_context.collateral_asset, "v-token-from-asset-mismatch");
-                ISingletonDispatcher { contract_address: self.get_contract().singleton() }
+                ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                     .modify_delegation(from_context.pool_id, caller, false);
                 let mut tokenization = self.get_contract_mut();
                 tokenization

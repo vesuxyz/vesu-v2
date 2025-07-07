@@ -15,15 +15,13 @@ mod TestVTokenV2 {
             calculate_collateral, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
             apply_position_update_to_context, calculate_rate_accumulator, calculate_collateral_and_debt_value
         },
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        extension::default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
+        v_token_v2::{
+            IVTokenV2Dispatcher, IVTokenV2DispatcherTrait, IERC4626Dispatcher, IERC4626DispatcherTrait, VTokenV2
+        },
         vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        test::v2::setup_v2::{deploy_contract, deploy_asset, setup, TestConfig, LendingTerms, deploy_with_args},
-        v2::{
-            singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-            v_token_v2::{
-                IVTokenV2Dispatcher, IVTokenV2DispatcherTrait, IERC4626Dispatcher, IERC4626DispatcherTrait, VTokenV2
-            },
-            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
-        }
+        test::setup_v2::{deploy_contract, deploy_asset, setup, TestConfig, LendingTerms, deploy_with_args},
     };
 
     fn deploy_v_token() -> ContractAddress {

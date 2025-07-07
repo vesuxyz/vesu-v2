@@ -4,8 +4,9 @@ mod tokenization_component {
     use integer::BoundedInt;
     use starknet::{ContractAddress, get_contract_address, deploy_syscall};
     use vesu::{
-        units::SCALE, data_model::Amount, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
-        extension::default_extension_po::IDefaultExtensionCallback, v_token::{IVTokenDispatcher, IVTokenDispatcherTrait}
+        units::SCALE, data_model::Amount, singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        extension::default_extension_po_v2::IDefaultExtensionCallback,
+        v_token::{IVTokenDispatcher, IVTokenDispatcherTrait}
     };
 
     #[storage]
@@ -109,7 +110,7 @@ mod tokenization_component {
             self.v_token_for_collateral_asset.write((pool_id, collateral_asset), v_token);
             self.collateral_asset_for_v_token.write((pool_id, v_token), collateral_asset);
 
-            ISingletonDispatcher { contract_address: self.get_contract().singleton() }
+            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                 .modify_delegation(pool_id, v_token, true);
 
             self.emit(CreateVToken { v_token, pool_id, collateral_asset });

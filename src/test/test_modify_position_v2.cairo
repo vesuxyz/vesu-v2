@@ -1,17 +1,19 @@
 #[cfg(test)]
-mod TestModifyPosition {
+mod TestModifyV2Position {
     use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
     use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use vesu::{
         units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS},
         data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams, Context, AssetConfig, Position},
-        singleton::ISingletonDispatcherTrait,
-        test::{setup::{setup, TestConfig, LendingTerms}, mock_asset::{IMintableDispatcher, IMintableDispatcherTrait}},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
         extension::{
-            default_extension_po::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait},
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-        }
+            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
+        },
+        vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
+        test::{
+            setup_v2::{setup, TestConfig, LendingTerms}, mock_asset::{IMintableDispatcher, IMintableDispatcherTrait}
+        },
     };
 
     #[test]

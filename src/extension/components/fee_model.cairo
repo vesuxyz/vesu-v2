@@ -10,13 +10,16 @@ mod fee_model_component {
     use alexandria_math::i257::{i257, i257_new};
     use starknet::{ContractAddress, get_contract_address, contract_address_const};
     use vesu::{
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, ModifyPositionParams, UpdatePositionResponse},
+        singleton_v2::{
+            ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, ModifyPositionParams, UpdatePositionResponse
+        },
         data_model::{Amount, AmountDenomination, AmountType},
         extension::{
-            components::fee_model::FeeConfig, default_extension_po::{IDefaultExtensionCallback, ITokenizationCallback}
+            components::fee_model::FeeConfig,
+            default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback}
         },
         vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        v2::v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait}
+        v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait}
     };
 
     #[storage]
@@ -88,7 +91,7 @@ mod fee_model_component {
         fn claim_fees(ref self: ComponentState<TContractState>, pool_id: felt252, collateral_asset: ContractAddress) {
             let singleton = self.get_contract().singleton();
 
-            let (position, _, _) = ISingletonDispatcher { contract_address: singleton }
+            let (position, _, _) = ISingletonV2Dispatcher { contract_address: singleton }
                 .position(pool_id, collateral_asset, Zeroable::zero(), get_contract_address());
 
             let v_token = IERC20Dispatcher {
@@ -106,7 +109,7 @@ mod fee_model_component {
 
             let amount = position.collateral_shares - (v_token.total_supply() - unmigrated);
 
-            let UpdatePositionResponse { collateral_delta, .. } = ISingletonDispatcher { contract_address: singleton }
+            let UpdatePositionResponse { collateral_delta, .. } = ISingletonV2Dispatcher { contract_address: singleton }
                 .modify_position(
                     ModifyPositionParams {
                         pool_id,

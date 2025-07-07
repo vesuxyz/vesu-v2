@@ -8,24 +8,22 @@ mod TestLiquidateV2Position {
             Amount, AmountType, AmountDenomination, ModifyPositionParams, LiquidatePositionParams, AssetConfig,
             Position, Context
         },
-        test::{
-            mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
-            v2::setup_v2::{setup, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY},
-            mock_asset::{IMintableDispatcherTrait, IMintableDispatcher},
-        },
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
         extension::{
             components::position_hooks::{LiquidationData, LiquidationConfig},
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
+            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait}
+        },
+        test::{
+            mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
+            setup_v2::{setup, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY},
+            mock_asset::{IMintableDispatcherTrait, IMintableDispatcher},
         },
         vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
-        v2::{
-            singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
-        }
     };
 
     #[test]
-    #[should_panic(expected: 'caller-not-singleton')]
+    #[should_panic(expected: "caller-not-singleton")]
     fn test_before_liquidate_position_caller_not_singleton() {
         let (_, extension, _, _, _) = setup();
 
@@ -70,7 +68,7 @@ mod TestLiquidateV2Position {
     // before_liquidate_position: invalid-liquidation-data
 
     #[test]
-    #[should_panic(expected: 'caller-not-singleton')]
+    #[should_panic(expected: "caller-not-singleton")]
     fn test_after_liquidate_position_caller_not_singleton() {
         let (_, extension, _, _, _) = setup();
 

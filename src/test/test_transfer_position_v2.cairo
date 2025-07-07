@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod TestTransferPosition {
+mod TestTransferPositionV2 {
     use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget, CheatSpan, prank};
     use starknet::{contract_address_const, get_block_timestamp};
     use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
@@ -8,8 +8,9 @@ mod TestTransferPosition {
         data_model::{
             UnsignedAmount, Amount, AmountDenomination, AmountType, ModifyPositionParams, TransferPositionParams
         },
-        singleton::ISingletonDispatcherTrait, extension::default_extension_po::{IDefaultExtensionDispatcherTrait},
-        v_token::{IVTokenDispatcher, IVTokenDispatcherTrait}, test::setup::{setup, TestConfig, LendingTerms},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        extension::default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
+        v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait}, test::setup_v2::{setup, TestConfig, LendingTerms},
     };
 
     #[test]
