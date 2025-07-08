@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod TestPoolDonationV2 {
+mod TestPoolDonation {
     use snforge_std::{
         start_prank, stop_prank, CheatTarget, ContractClassTrait, ContractClass, get_class_hash, start_warp
     };

@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod TestLiquidateV2Position {
+mod TestLiquidatePosition {
     use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
     use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
     use vesu::{

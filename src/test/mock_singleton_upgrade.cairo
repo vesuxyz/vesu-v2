@@ -46,6 +46,25 @@ mod MockExtensionPOV2Upgrade {
 }
 
 #[starknet::contract]
+mod MockExtensionEKV2Upgrade {
+    use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
+        fn upgrade_name(ref self: ContractState) -> felt252 {
+            'Vesu DefaultExtensionEKV2'
+        }
+
+        fn tag(ref self: ContractState) -> felt252 {
+            'MockExtensionEKV2Upgrade'
+        }
+    }
+}
+
+#[starknet::contract]
 mod MockSingletonUpgradeWrongName {
     use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
 

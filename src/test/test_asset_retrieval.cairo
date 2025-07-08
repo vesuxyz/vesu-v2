@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod TestAssetRetrievalV2 {
+mod TestAssetRetrieval {
     use snforge_std::{start_prank, stop_prank, CheatTarget, start_warp};
     use starknet::{contract_address_const, get_block_timestamp};
     use vesu::{

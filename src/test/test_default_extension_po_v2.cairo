@@ -61,7 +61,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -77,7 +77,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -110,7 +110,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -130,7 +130,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -163,7 +163,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -183,7 +183,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -223,7 +223,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![collateral_asset_oracle_params].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -243,7 +243,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -1133,7 +1133,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-singleton-owner")]
-    fn test_default_extension_po_v2_upgrade_only_owner() {
+    fn test_extension_upgrade_only_owner() {
         let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let new_classhash = declare("MockExtensionPOV2Upgrade").class_hash;
         start_prank(CheatTarget::One(extension.contract_address), contract_address_const::<'not_owner'>());
@@ -1141,7 +1141,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_default_extension_po_v2_upgrade() {
+    fn test_extension_upgrade() {
         let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
 
         let new_classhash = declare("MockExtensionPOV2Upgrade").class_hash;
@@ -1152,7 +1152,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "invalid-upgrade-name")]
-    fn test_default_extension_po_v2_upgrade_wrong_name() {
+    fn test_extension_upgrade_wrong_name() {
         let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let new_classhash = declare("MockSingletonUpgradeWrongName").class_hash;
         extension.upgrade(new_classhash);

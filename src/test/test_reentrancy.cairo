@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod TestReentrancyV2 {
+mod TestReentrancy {
     use snforge_std::{
         start_prank, stop_prank, start_warp, CheatTarget, ContractClassTrait, ContractClass, get_class_hash
     };

@@ -50,7 +50,7 @@ mod MaliciousFlashLoanReceiver {
 }
 
 #[cfg(test)]
-mod FlashLoans {
+mod FlashLoan {
     use snforge_std::{start_prank, stop_prank, CheatTarget};
     use starknet::{contract_address};
     use super::{IFlashLoanGenericDispatcherTrait, IFlashLoanGenericDispatcher};

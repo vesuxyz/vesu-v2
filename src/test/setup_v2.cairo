@@ -13,14 +13,21 @@ use vesu::{
             IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
             PragmaOracleParams, LiquidationParams, ShutdownParams, FeeParams, VTokenParams
         },
+        default_extension_ek_v2::{
+            IDefaultExtensionEKV2Dispatcher, IDefaultExtensionEKV2DispatcherTrait, EkuboOracleParams
+        }
     },
     vendor::{
         erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode}
+        pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode}, ekubo::construct_oracle_pool_key,
     },
-    test::mock_oracle::{
-        IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
-        IMockPragmaSummaryDispatcherTrait
+    test::{
+        mock_oracle::{
+            IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
+            IMockPragmaSummaryDispatcherTrait
+        },
+        mock_ekubo_core::{IMockEkuboCoreDispatcher, IMockEkuboCoreDispatcherTrait},
+        mock_ekubo_oracle::{IMockEkuboOracleDispatcher, IMockEkuboOracleDispatcherTrait}
     }
 };
 
@@ -58,6 +65,16 @@ struct Env {
 }
 
 #[derive(Copy, Drop, Serde)]
+struct EnvEK {
+    singleton: ISingletonV2Dispatcher,
+    extension: IDefaultExtensionEKV2Dispatcher,
+    ekubo_core: IMockEkuboCoreDispatcher,
+    ekubo_oracle: IMockEkuboOracleDispatcher,
+    config: TestConfigEK,
+    users: Users
+}
+
+#[derive(Copy, Drop, Serde)]
 struct TestConfig {
     pool_id: felt252,
     collateral_asset: IERC20Dispatcher,
@@ -67,6 +84,21 @@ struct TestConfig {
     debt_scale: u256,
     third_scale: u256
 }
+
+#[derive(Copy, Drop, Serde)]
+struct TestConfigEK {
+    pool_id: felt252,
+    collateral_asset: IERC20Dispatcher,
+    debt_asset: IERC20Dispatcher,
+    third_asset: IERC20Dispatcher,
+    quote_asset: IERC20Dispatcher,
+    collateral_scale: u256,
+    debt_scale: u256,
+    third_scale: u256,
+    quote_scale: u256
+}
+
+const EKUBO_TWAP_PERIOD: u64 = 5 * 60; // 5 minutes
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     declare(name).deploy(@array![]).unwrap()
@@ -234,6 +266,121 @@ fn setup_env(
     };
 
     Env { singleton, extension, config, users, v_token_class_hash }
+}
+
+fn setup_env_ek(
+    oracle_address: ContractAddress,
+    collateral_address: ContractAddress,
+    debt_address: ContractAddress,
+    third_address: ContractAddress,
+    quote_address: ContractAddress,
+    ekubo_core_address: ContractAddress,
+    ekubo_oracle_address: ContractAddress
+) -> EnvEK {
+    let env = setup_env(oracle_address, collateral_address, debt_address, third_address);
+    let TestConfig { collateral_asset, debt_asset, third_asset, .. } = env.config;
+
+    let mock_ekubo_core = IMockEkuboCoreDispatcher {
+        contract_address: if ekubo_core_address.is_non_zero() {
+            ekubo_core_address
+        } else {
+            deploy_contract("MockEkuboCore")
+        }
+    };
+
+    let mock_ekubo_oracle = IMockEkuboOracleDispatcher {
+        contract_address: if ekubo_oracle_address.is_non_zero() {
+            ekubo_oracle_address
+        } else {
+            deploy_contract("MockEkuboOracle")
+        }
+    };
+
+    let erc20_class_hash = get_class_hash(collateral_asset.contract_address);
+
+    let quote_asset = if quote_address.is_non_zero() {
+        IERC20Dispatcher { contract_address: quote_address }
+    } else {
+        let quote_asset_decimals = 6;
+        deploy_asset_with_decimals(
+            ContractClass { class_hash: erc20_class_hash }, env.users.lender.into(), quote_asset_decimals
+        )
+    };
+
+    let args = array![
+        env.singleton.contract_address.into(),
+        mock_ekubo_core.contract_address.into(),
+        mock_ekubo_oracle.contract_address.into(),
+        quote_asset.contract_address.into(),
+        env.v_token_class_hash.into()
+    ];
+    let extension = IDefaultExtensionEKV2Dispatcher {
+        contract_address: deploy_with_args("DefaultExtensionEKV2", args)
+    };
+
+    env.singleton.set_extension_whitelist(extension.contract_address, true);
+
+    // approve Extension and ExtensionV2 to transfer assets on behalf of creator
+    start_prank(CheatTarget::One(collateral_asset.contract_address), env.users.creator);
+    collateral_asset.approve(extension.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(collateral_asset.contract_address));
+    start_prank(CheatTarget::One(debt_asset.contract_address), env.users.creator);
+    debt_asset.approve(extension.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(debt_asset.contract_address));
+    start_prank(CheatTarget::One(third_asset.contract_address), env.users.creator);
+    third_asset.approve(extension.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(third_asset.contract_address));
+
+    let debt_asset_pool_key = construct_oracle_pool_key(
+        debt_asset.contract_address, quote_asset.contract_address, mock_ekubo_oracle.contract_address
+    );
+    let collateral_asset_pool_key = construct_oracle_pool_key(
+        collateral_asset.contract_address, quote_asset.contract_address, mock_ekubo_oracle.contract_address
+    );
+    let third_asset_pool_key = construct_oracle_pool_key(
+        third_asset.contract_address, quote_asset.contract_address, mock_ekubo_oracle.contract_address
+    );
+
+    mock_ekubo_core.set_pool_liquidity(debt_asset_pool_key, integer::BoundedInt::max());
+    mock_ekubo_core.set_pool_liquidity(collateral_asset_pool_key, integer::BoundedInt::max());
+    mock_ekubo_core.set_pool_liquidity(third_asset_pool_key, integer::BoundedInt::max());
+
+    if ekubo_oracle_address.is_zero() {
+        start_warp(CheatTarget::All, get_block_timestamp() + EKUBO_TWAP_PERIOD);
+        mock_ekubo_oracle.set_earliest_observation_time(debt_asset.contract_address, quote_asset.contract_address, 1);
+        mock_ekubo_oracle
+            .set_earliest_observation_time(collateral_asset.contract_address, quote_asset.contract_address, 1);
+        mock_ekubo_oracle.set_earliest_observation_time(third_asset.contract_address, quote_asset.contract_address, 1);
+
+        mock_ekubo_oracle.set_price_x128(debt_asset.contract_address, quote_asset.contract_address, SCALE_128.into());
+        mock_ekubo_oracle
+            .set_price_x128(collateral_asset.contract_address, quote_asset.contract_address, SCALE_128.into());
+        mock_ekubo_oracle.set_price_x128(third_asset.contract_address, quote_asset.contract_address, SCALE_128.into());
+    }
+
+    // create pool config
+    let pool_id = env.singleton.calculate_pool_id(extension.contract_address, 1);
+    let quote_scale = pow_10(quote_asset.decimals().into());
+    let config = TestConfigEK {
+        pool_id,
+        collateral_asset,
+        debt_asset,
+        third_asset,
+        quote_asset,
+        collateral_scale: env.config.collateral_scale,
+        debt_scale: env.config.debt_scale,
+        third_scale: env.config.third_scale,
+        quote_scale
+    };
+
+    EnvEK {
+        singleton: env.singleton,
+        extension,
+        ekubo_core: mock_ekubo_core,
+        ekubo_oracle: mock_ekubo_oracle,
+        config,
+        users: env.users
+    }
 }
 
 fn test_interest_rate_config() -> InterestRateConfig {
@@ -414,6 +561,149 @@ fn create_pool(
     );
 
     assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPOV2', "pool name not set");
+}
+
+fn create_pool_ek(
+    extension: IDefaultExtensionEKV2Dispatcher,
+    config: TestConfigEK,
+    creator: ContractAddress,
+    interest_rate_config: Option<InterestRateConfig>,
+) {
+    let interest_rate_config = interest_rate_config.unwrap_or(test_interest_rate_config());
+
+    let collateral_asset_params = AssetParams {
+        asset: config.collateral_asset.contract_address,
+        floor: SCALE / 10_000,
+        initial_rate_accumulator: SCALE,
+        initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
+        max_utilization: SCALE,
+        is_legacy: true,
+        fee_rate: 0
+    };
+    let debt_asset_params = AssetParams {
+        asset: config.debt_asset.contract_address,
+        floor: SCALE / 10_000,
+        initial_rate_accumulator: SCALE,
+        initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
+        max_utilization: SCALE,
+        is_legacy: false,
+        fee_rate: 0
+    };
+    let third_asset_params = AssetParams {
+        asset: config.third_asset.contract_address,
+        floor: SCALE / 10_000,
+        initial_rate_accumulator: SCALE,
+        initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
+        max_utilization: SCALE,
+        is_legacy: false,
+        fee_rate: 1 * PERCENT
+    };
+
+    let oracle_params = EkuboOracleParams { period: EKUBO_TWAP_PERIOD };
+
+    let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
+    let debt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT' };
+    let third_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Third', v_token_symbol: 'vTHIRD' };
+
+    // create ltv config for collateral and borrow assets
+    let max_position_ltv_params_0 = LTVParams {
+        collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap()
+    };
+    let max_position_ltv_params_1 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap()
+    };
+    let max_position_ltv_params_2 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 2, max_ltv: (85 * PERCENT).try_into().unwrap()
+    };
+    let max_position_ltv_params_3 = LTVParams {
+        collateral_asset_index: 2, debt_asset_index: 1, max_ltv: (85 * PERCENT).try_into().unwrap()
+    };
+
+    let liquidation_params_0 = LiquidationParams {
+        collateral_asset_index: 0, debt_asset_index: 1, liquidation_factor: 0
+    };
+    let liquidation_params_1 = LiquidationParams {
+        collateral_asset_index: 1, debt_asset_index: 0, liquidation_factor: 0
+    };
+    let liquidation_params_2 = LiquidationParams {
+        collateral_asset_index: 0, debt_asset_index: 2, liquidation_factor: 0
+    };
+    let liquidation_params_3 = LiquidationParams {
+        collateral_asset_index: 2, debt_asset_index: 1, liquidation_factor: 0
+    };
+
+    let debt_cap_params_0 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0 };
+    let debt_cap_params_1 = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+    let debt_cap_params_2 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 2, debt_cap: 0 };
+    let debt_cap_params_3 = DebtCapParams { collateral_asset_index: 2, debt_asset_index: 1, debt_cap: 0 };
+
+    let shutdown_ltv_params_0 = LTVParams {
+        collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params_1 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params_2 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 2, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params_3 = LTVParams {
+        collateral_asset_index: 2, debt_asset_index: 1, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params = array![
+        shutdown_ltv_params_0, shutdown_ltv_params_1, shutdown_ltv_params_2, shutdown_ltv_params_3
+    ]
+        .span();
+
+    let asset_params = array![collateral_asset_params, debt_asset_params, third_asset_params].span();
+    let v_token_params = array![collateral_asset_v_token_params, debt_asset_v_token_params, third_asset_v_token_params]
+        .span();
+    let max_position_ltv_params = array![
+        max_position_ltv_params_0, max_position_ltv_params_1, max_position_ltv_params_2, max_position_ltv_params_3
+    ]
+        .span();
+    let interest_rate_configs = array![interest_rate_config, interest_rate_config, interest_rate_config].span();
+    let ekubo_oracle_params = array![oracle_params, oracle_params, oracle_params].span();
+    let liquidation_params = array![
+        liquidation_params_0, liquidation_params_1, liquidation_params_2, liquidation_params_3
+    ]
+        .span();
+    let debt_caps = array![debt_cap_params_0, debt_cap_params_1, debt_cap_params_2, debt_cap_params_3].span();
+    let shutdown_params = ShutdownParams {
+        recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
+    };
+
+    prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
+    extension
+        .create_pool(
+            'DefaultExtensionEKV2',
+            asset_params,
+            v_token_params,
+            max_position_ltv_params,
+            interest_rate_configs,
+            ekubo_oracle_params,
+            liquidation_params,
+            debt_caps,
+            shutdown_params,
+            FeeParams { fee_recipient: creator },
+            creator
+        );
+    stop_prank(CheatTarget::One(extension.contract_address));
+
+    let coll_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.collateral_asset.contract_address);
+    let debt_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.debt_asset.contract_address);
+    let third_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.third_asset.contract_address);
+
+    assert!(coll_v_token != Zeroable::zero(), "vToken not set");
+    assert!(debt_v_token != Zeroable::zero(), "vToken not set");
+    assert!(third_v_token != Zeroable::zero(), "vToken not set");
+
+    assert!(extension.collateral_asset_for_v_token(config.pool_id, coll_v_token) != Zeroable::zero(), "vToken not set");
+    assert!(extension.collateral_asset_for_v_token(config.pool_id, debt_v_token) != Zeroable::zero(), "vToken not set");
+    assert!(
+        extension.collateral_asset_for_v_token(config.pool_id, third_v_token) != Zeroable::zero(), "vToken not set"
+    );
+
+    assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionEKV2', "pool name not set");
 }
 
 fn setup_pool(

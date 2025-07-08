@@ -11,7 +11,7 @@ fn to_percent(value: u256) -> u64 {
 }
 
 #[cfg(test)]
-mod TestForkingV2 {
+mod TestForking {
     use snforge_std::{
         start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, prank, CheatSpan
     };

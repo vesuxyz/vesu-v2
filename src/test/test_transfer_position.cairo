@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod TestTransferPositionV2 {
+mod TestTransferPosition {
     use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget, CheatSpan, prank};
     use starknet::{contract_address_const, get_block_timestamp};
     use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
