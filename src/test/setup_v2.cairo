@@ -756,15 +756,10 @@ fn setup_pool(
     }
 
     start_prank(CheatTarget::One(extension.contract_address), users.creator);
-    extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', 0);
-    extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', 0);
-    extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', 0);
-    stop_prank(CheatTarget::One(extension.contract_address));
-
-    start_prank(CheatTarget::One(extension.contract_address), users.creator);
     extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', SCALE / 10_000);
     extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', SCALE / 10_000);
     extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', SCALE / 10_000);
+    extension.set_shutdown_mode_agent(pool_id, get_contract_address());
     stop_prank(CheatTarget::One(extension.contract_address));
 
     (singleton, extension, config, users, terms)
