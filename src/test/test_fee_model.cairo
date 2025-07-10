@@ -26,7 +26,6 @@ mod TestFeeModel {
             >()
         };
 
-        // replace_bytecode(singleton.contract_address, declare("Singleton").class_hash);
         let extension = IDefaultExtensionPOV2Dispatcher { contract_address: singleton.extension(pool_id) };
         replace_bytecode(extension.contract_address, declare("DefaultExtensionPOV2").class_hash);
 
@@ -35,20 +34,21 @@ mod TestFeeModel {
 
     #[test]
     #[fork("Mainnet")]
-    fn test_fee_model() {
+    fn test_claim_fees() {
         let pool_id = 0x6febb313566c48e30614ddab092856a9ab35b80f359868ca69b2649ca5d148d;
-        let (singleton, extension) = setup(pool_id);
+        let (_, extension) = setup(pool_id);
         let asset = IERC20ABIDispatcher {
             contract_address: contract_address_const::<0x075afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87>()
         };
 
-        singleton.claim_fee_shares(pool_id, asset.contract_address);
-        
         let owner = extension.pool_owner(pool_id);
         let fee_recipient = extension.fee_config(pool_id).fee_recipient;
-        println!("balanceOf: {}", asset.balance_of(fee_recipient));
+        let initial_balance = asset.balance_of(fee_recipient);
+        
         prank(CheatTarget::One(extension.contract_address), owner, CheatSpan::TargetCalls(1));
         extension.claim_fees(pool_id, asset.contract_address);
-        println!("balanceOf: {}", asset.balance_of(fee_recipient));
+
+        assert!(asset.balance_of(fee_recipient) > initial_balance);
+        assert!(asset.balance_of(fee_recipient) - initial_balance < SCALE);
     }
 }

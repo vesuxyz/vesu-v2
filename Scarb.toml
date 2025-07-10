@@ -23,7 +23,7 @@ sort-module-level-items = true
 name = "Mainnet"
 url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
 # block_id.number = "1443429"
-block_id.number = "1564582"
+block_id.number = "1565065"
 
 [tool.voyager]
 singleton = { path = "src/singleton.cairo" }
