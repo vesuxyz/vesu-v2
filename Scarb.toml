@@ -22,7 +22,8 @@ sort-module-level-items = true
 [[tool.snforge.fork]]
 name = "Mainnet"
 url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
-block_id.number = "1443429"
+# block_id.number = "1443429"
+block_id.number = "1564582"
 
 [tool.voyager]
 singleton = { path = "src/singleton.cairo" }
@@ -44,4 +45,4 @@ verifyPool = "scarb --profile release build && node --loader ts-node/esm ./scrip
 checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
 updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
 print-contract-size = "scarb --profile release build && node --loader ts-node/esm ./scripts/print-contract-size.ts"
-test = "snforge test --max-n-steps 100000000"
+test = "snforge test --max-n-steps 100000000 'TestFeeModel'"

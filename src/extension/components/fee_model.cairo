@@ -102,12 +102,26 @@ mod fee_model_component {
                 let v_token_v1 = IERC20Dispatcher {
                     contract_address: IVTokenV2Dispatcher { contract_address: v_token.contract_address }.v_token_v1()
                 };
+
+                println!("v_token.contract_address:   {:?}", v_token.contract_address);
+                println!("v_token_v1.contract_address: {:?}", v_token_v1.contract_address);
+
+                println!("position.collateral_shares: {}", position.collateral_shares);
+                println!("v_token.total_supply():     {}", v_token.total_supply());
+                println!("v_token_v1.total_supply():  {}", v_token_v1.total_supply());
+                println!("v_token_v1.balance_of():    {}", v_token_v1.balance_of(contract_address_const::<'0x0'>()));
+
                 v_token_v1.total_supply() - v_token_v1.balance_of(contract_address_const::<'0x0'>())
             } else {
                 0
             };
 
-            let amount = position.collateral_shares - (v_token.total_supply() - unmigrated);
+                println!("position.collateral_shares: {}", position.collateral_shares);
+                println!("v_token.total_supply():     {}", v_token.total_supply());
+                println!("unmigrated:                 {}", unmigrated);
+                println!("sub:                        {}", v_token.total_supply() + unmigrated);
+
+            let amount = position.collateral_shares - (v_token.total_supply() + unmigrated);
 
             let UpdatePositionResponse { collateral_delta, .. } = ISingletonV2Dispatcher { contract_address: singleton }
                 .modify_position(
