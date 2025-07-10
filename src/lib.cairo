@@ -45,8 +45,8 @@ mod test {
     mod test_default_extension_ek_v2;
     mod test_default_extension_po_v2;
     mod test_ekubo_oracle;
-    mod test_flash_loan;
     mod test_fee_model;
+    mod test_flash_loan;
     mod test_forking;
     mod test_interest_rate_model;
     mod test_liquidate_position;
