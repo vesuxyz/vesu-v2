@@ -937,7 +937,7 @@ mod DefaultExtensionPOV2 {
         /// # Returns
         /// * `name` - the name of the contract
         fn upgrade_name(self: @ContractState) -> felt252 {
-            'Vesu DefaultExtensionPOV2'
+            'Vesu default extension po v2'
         }
 
         /// Upgrades the contract to a new implementation

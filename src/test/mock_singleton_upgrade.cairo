@@ -36,7 +36,7 @@ mod MockExtensionPOV2Upgrade {
     #[abi(embed_v0)]
     impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
         fn upgrade_name(ref self: ContractState) -> felt252 {
-            'Vesu DefaultExtensionPOV2'
+            'Vesu default extension po v2'
         }
 
         fn tag(ref self: ContractState) -> felt252 {
