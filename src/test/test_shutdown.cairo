@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod TestShutdownV2 {
+mod TestShutdown {
     use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
     use starknet::{contract_address_const, get_block_timestamp, get_contract_address};
     use vesu::{
@@ -25,6 +25,27 @@ mod TestShutdownV2 {
         v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait, IERC4626Dispatcher, IERC4626DispatcherTrait},
         vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     };
+
+    #[test]
+    fn test_set_shutdown_mode_recovery() {
+        let (_, extension, config, _, _) = setup();
+        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+
+        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+
+        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
+    }
+
+    #[test]
+    #[should_panic(expected: "shutdown-mode-not-recovery")]
+    fn test_set_shutdown_mode_not_recovery() {
+        let (_, extension, config, _, _) = setup();
+        let TestConfig { pool_id, .. } = config;
+
+        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+    }
 
     #[test]
     #[should_panic(expected: "in-recovery")]
@@ -431,7 +452,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -453,7 +476,9 @@ mod TestShutdownV2 {
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -534,7 +559,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -544,7 +571,9 @@ mod TestShutdownV2 {
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -637,7 +666,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -647,7 +678,9 @@ mod TestShutdownV2 {
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -732,7 +765,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -742,7 +777,9 @@ mod TestShutdownV2 {
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -826,7 +863,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -836,7 +875,9 @@ mod TestShutdownV2 {
         let shutdown_config = extension.shutdown_config(pool_id);
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -867,7 +908,9 @@ mod TestShutdownV2 {
         let shutdown_config = extension.shutdown_config(pool_id);
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -946,7 +989,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -957,7 +1002,9 @@ mod TestShutdownV2 {
 
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -989,7 +1036,9 @@ mod TestShutdownV2 {
 
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
 
@@ -1089,7 +1138,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1100,7 +1151,9 @@ mod TestShutdownV2 {
 
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -1134,7 +1187,9 @@ mod TestShutdownV2 {
 
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -1217,7 +1272,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1228,7 +1285,9 @@ mod TestShutdownV2 {
 
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -1260,7 +1319,9 @@ mod TestShutdownV2 {
 
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
 
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -1345,7 +1406,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1354,7 +1417,9 @@ mod TestShutdownV2 {
 
         let shutdown_config = extension.shutdown_config(pool_id);
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -1363,7 +1428,9 @@ mod TestShutdownV2 {
 
         let shutdown_config = extension.shutdown_config(pool_id);
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -1482,7 +1549,9 @@ mod TestShutdownV2 {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1490,8 +1559,12 @@ mod TestShutdownV2 {
         // Subscription
 
         let shutdown_config = extension.shutdown_config(pool_id);
+
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -1526,8 +1599,13 @@ mod TestShutdownV2 {
         stop_prank(CheatTarget::One(singleton.contract_address));
 
         let shutdown_config = extension.shutdown_config(pool_id);
+
         start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        stop_prank(CheatTarget::One(extension.contract_address));
+
         extension.update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
@@ -1788,7 +1866,9 @@ mod TestShutdownV2 {
         assert!(context.debt_asset_config.last_rate_accumulator > 18 * SCALE);
 
         // Recovery
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1906,7 +1986,9 @@ mod TestShutdownV2 {
         // warp such that next violation is at a different timestamp
         start_warp(CheatTarget::All, get_block_timestamp() + 1);
         // update shutdown mode
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');

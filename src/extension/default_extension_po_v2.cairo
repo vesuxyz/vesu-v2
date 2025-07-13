@@ -871,10 +871,14 @@ mod DefaultExtensionPOV2 {
         /// * `pool_id` - id of the pool
         /// * `shutdown_mode` - shutdown mode
         fn set_shutdown_mode(ref self: ContractState, pool_id: felt252, shutdown_mode: ShutdownMode) {
+            let shutdown_mode_agent = self.shutdown_mode_agent.read(pool_id);
             assert!(
-                get_caller_address() == self.owner.read(pool_id)
-                    || get_caller_address() == self.shutdown_mode_agent.read(pool_id),
+                get_caller_address() == self.owner.read(pool_id) || get_caller_address() == shutdown_mode_agent,
                 "caller-not-owner-or-agent"
+            );
+            assert!(
+                get_caller_address() != shutdown_mode_agent || shutdown_mode == ShutdownMode::Recovery,
+                "shutdown-mode-not-recovery"
             );
             self.position_hooks.set_shutdown_mode(pool_id, shutdown_mode);
         }
