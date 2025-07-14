@@ -281,12 +281,6 @@ mod DefaultExtensionPOV2 {
         TokenizationEvents: tokenization_component::Event,
         SetAssetParameter: SetAssetParameter,
         SetPoolOwner: SetPoolOwner,
-        CreateVToken: tokenization_component::CreateVToken,
-        SetInterestRateConfig: interest_rate_model_component::SetInterestRateConfig,
-        SetOracleConfig: pragma_oracle_component::SetOracleConfig,
-        SetLiquidationConfig: position_hooks_component::SetLiquidationConfig,
-        SetDebtCap: position_hooks_component::SetDebtCap,
-        SetShutdownLTVConfig: position_hooks_component::SetShutdownLTVConfig,
         ContractUpgraded: ContractUpgraded,
     }
 
