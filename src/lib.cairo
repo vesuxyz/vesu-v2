@@ -10,7 +10,6 @@ mod v_token;
 mod v_token_v2;
 
 mod extension {
-    mod default_extension_ek_v2;
     mod default_extension_po_v2;
     mod interface;
     mod components {
@@ -42,9 +41,7 @@ mod test {
     mod setup_v2;
     mod test_asset_retrieval;
     mod test_common;
-    mod test_default_extension_ek_v2;
     mod test_default_extension_po_v2;
-    mod test_ekubo_oracle;
     mod test_fee_model;
     mod test_flash_loan;
     mod test_forking;
