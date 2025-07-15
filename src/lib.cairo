@@ -56,6 +56,7 @@ mod test {
     mod test_shutdown;
     mod test_singleton_v2;
     mod test_transfer_position;
+    mod test_upgrade;
     mod test_v_token;
     mod test_v_token_v2;
 }
