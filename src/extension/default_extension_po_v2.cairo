@@ -13,47 +13,47 @@ use vesu::{
 };
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct VTokenParams {
-    v_token_name: felt252,
-    v_token_symbol: felt252
+pub struct VTokenParams {
+    pub v_token_name: felt252,
+    pub v_token_symbol: felt252
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct PragmaOracleParams {
-    pragma_key: felt252,
-    timeout: u64, // [seconds]
-    number_of_sources: u32,
-    start_time_offset: u64, // [seconds]
-    time_window: u64, // [seconds]
-    aggregation_mode: AggregationMode
+pub struct PragmaOracleParams {
+    pub pragma_key: felt252,
+    pub timeout: u64, // [seconds]
+    pub number_of_sources: u32,
+    pub start_time_offset: u64, // [seconds]
+    pub time_window: u64, // [seconds]
+    pub aggregation_mode: AggregationMode
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct ShutdownParams {
-    recovery_period: u64, // [seconds]
-    subscription_period: u64, // [seconds]
-    ltv_params: Span<LTVParams>,
+pub struct ShutdownParams {
+    pub recovery_period: u64, // [seconds]
+    pub subscription_period: u64, // [seconds]
+    pub ltv_params: Span<LTVParams>,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct LiquidationParams {
-    collateral_asset_index: usize,
-    debt_asset_index: usize,
-    liquidation_factor: u64 // [SCALE]
+pub struct LiquidationParams {
+    pub collateral_asset_index: usize,
+    pub debt_asset_index: usize,
+    pub liquidation_factor: u64 // [SCALE]
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct FeeParams {
-    fee_recipient: ContractAddress
+pub struct FeeParams {
+    pub fee_recipient: ContractAddress
 }
 
 #[starknet::interface]
-trait IDefaultExtensionCallback<TContractState> {
+pub trait IDefaultExtensionCallback<TContractState> {
     fn singleton(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::interface]
-trait ITokenizationCallback<TContractState> {
+pub trait ITokenizationCallback<TContractState> {
     fn v_token_for_collateral_asset(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress
     ) -> ContractAddress;
@@ -67,7 +67,7 @@ trait ITokenizationCallback<TContractState> {
 }
 
 #[starknet::interface]
-trait IDefaultExtensionPOV2<TContractState> {
+pub trait IDefaultExtensionPOV2<TContractState> {
     fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
     fn shutdown_mode_agent(self: @TContractState, pool_id: felt252) -> ContractAddress;
@@ -225,9 +225,9 @@ mod DefaultExtensionPOV2 {
         // address of the singleton contract
         singleton: ContractAddress,
         // tracks the owner for each pool
-        owner: LegacyMap::<felt252, ContractAddress>,
+        owner: starknet::storage::map::Map::<felt252, ContractAddress>,
         // tracks the name for each pool
-        pool_names: LegacyMap::<felt252, felt252>,
+        pool_names: starknet::storage::map::Map::<felt252, felt252>,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
@@ -244,7 +244,7 @@ mod DefaultExtensionPOV2 {
         #[substorage(v0)]
         tokenization: tokenization_component::Storage,
         // tracks the address that can transition the shutdown mode of a pool
-        shutdown_mode_agent: LegacyMap::<felt252, ContractAddress>,
+        shutdown_mode_agent: starknet::storage::map::Map::<felt252, ContractAddress>,
     }
 
     #[derive(Drop, starknet::Event)]

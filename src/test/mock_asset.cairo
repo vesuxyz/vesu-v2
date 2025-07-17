@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 #[starknet::interface]
-trait IMintable<TContractState> {
+pub trait IMintable<TContractState> {
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
 }
 #[starknet::contract]

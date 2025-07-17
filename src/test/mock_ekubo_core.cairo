@@ -1,7 +1,7 @@
 use vesu::vendor::ekubo::PoolKey;
 
 #[starknet::interface]
-trait IMockEkuboCore<TContractState> {
+pub trait IMockEkuboCore<TContractState> {
     fn get_pool_liquidity(self: @TContractState, pool_key: PoolKey) -> u128;
     fn set_pool_liquidity(ref self: TContractState, pool_key: PoolKey, liquidity: u128);
 }

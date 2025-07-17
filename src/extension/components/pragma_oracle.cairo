@@ -1,13 +1,13 @@
 use vesu::vendor::pragma::AggregationMode;
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-struct OracleConfig {
-    pragma_key: felt252,
-    timeout: u64, // [seconds]
-    number_of_sources: u32, // [0, 255]
-    start_time_offset: u64, // [seconds]
-    time_window: u64, // [seconds]
-    aggregation_mode: AggregationMode
+pub struct OracleConfig {
+    pub pragma_key: felt252,
+    pub timeout: u64, // [seconds]
+    pub number_of_sources: u32, // [0, 255]
+    pub start_time_offset: u64, // [seconds]
+    pub time_window: u64, // [seconds]
+    pub aggregation_mode: AggregationMode
 }
 
 fn assert_oracle_config(oracle_config: OracleConfig) {
@@ -34,7 +34,7 @@ mod pragma_oracle_component {
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
         // (pool_id, asset) -> oracle configuration
-        oracle_configs: LegacyMap::<(felt252, ContractAddress), OracleConfig>,
+        oracle_configs: starknet::storage::map::Map::<(felt252, ContractAddress), OracleConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

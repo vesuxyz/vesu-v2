@@ -3,7 +3,7 @@ use starknet::ContractAddress;
 use vesu::data_model::{UnsignedAmount, Amount, Context, AssetPrice};
 
 #[starknet::interface]
-trait IExtension<TContractState> {
+pub trait IExtension<TContractState> {
     fn singleton(self: @TContractState) -> ContractAddress;
     fn price(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> AssetPrice;
     fn interest_rate(

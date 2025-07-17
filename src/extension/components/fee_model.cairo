@@ -1,8 +1,8 @@
 use starknet::ContractAddress;
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-struct FeeConfig {
-    fee_recipient: ContractAddress
+pub struct FeeConfig {
+    pub fee_recipient: ContractAddress
 }
 
 #[starknet::component]
@@ -25,7 +25,7 @@ mod fee_model_component {
     #[storage]
     struct Storage {
         // pool_id -> fee configuration
-        fee_configs: LegacyMap::<felt252, FeeConfig>,
+        fee_configs: starknet::storage::map::Map::<felt252, FeeConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

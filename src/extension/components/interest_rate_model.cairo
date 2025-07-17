@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: ISC
-// This implementation is inspired by https://github.com/FraxFinance/fraxlend/blob/main/src/contracts/VariableInterestRate.sol”
+// This implementation is inspired by
+// https://github.com/FraxFinance/fraxlend/blob/main/src/contracts/VariableInterestRate.sol
 
 use vesu::{units::SCALE, packing::{SHIFT_32, SHIFT_64, split_32, split_64}};
 
 const UTILIZATION_SCALE: u256 = 100_000; // 1e5
 const UTILIZATION_SCALE_TO_SCALE: u256 = 10_000_000_000_000; // 1e13
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::StorePacking)]
-struct InterestRateConfig {
-    min_target_utilization: u256, // [utilization-scale]
-    max_target_utilization: u256, // [utilization-scale]
-    target_utilization: u256, // [utilization-scale]
-    min_full_utilization_rate: u256, // [SCALE]
-    max_full_utilization_rate: u256, // [SCALE]
-    zero_utilization_rate: u256, // [SCALE]
-    rate_half_life: u256, // [seconds]
-    target_rate_percent: u256, // [SCALE]
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct InterestRateConfig {
+    pub min_target_utilization: u256, // [utilization-scale]
+    pub max_target_utilization: u256, // [utilization-scale]
+    pub target_utilization: u256, // [utilization-scale]
+    pub min_full_utilization_rate: u256, // [SCALE]
+    pub max_full_utilization_rate: u256, // [SCALE]
+    pub zero_utilization_rate: u256, // [SCALE]
+    pub rate_half_life: u256, // [seconds]
+    pub target_rate_percent: u256, // [SCALE]
 }
 
 impl InterestRateConfigPacking of starknet::StorePacking<InterestRateConfig, (felt252, felt252)> {
@@ -116,7 +117,7 @@ mod interest_rate_model_component {
     #[storage]
     struct Storage {
         // (pool_id, asset) -> interest rate configuration
-        interest_rate_configs: LegacyMap::<(felt252, ContractAddress), InterestRateConfig>,
+        interest_rate_configs: starknet::storage::map::Map::<(felt252, ContractAddress), InterestRateConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

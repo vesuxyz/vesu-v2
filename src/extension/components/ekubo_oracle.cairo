@@ -1,9 +1,9 @@
 use starknet::ContractAddress;
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-struct EkuboOracleConfig {
-    decimals: u8,
-    period: u64 // [seconds]
+pub struct EkuboOracleConfig {
+    pub decimals: u8,
+    pub period: u64 // [seconds]
 }
 
 #[starknet::component]

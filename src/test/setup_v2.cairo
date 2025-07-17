@@ -2,7 +2,7 @@ use snforge_std::{
     declare, ContractClass, ContractClassTrait, start_prank, stop_prank, start_warp, stop_warp, CheatTarget, prank,
     CheatSpan, get_class_hash
 };
-use starknet::{ClassHash, ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
+use starknet::{ClassHash, ContractAddress, contract_address_const, get_block_timestamp, get_contract_address, Zero};
 use vesu::{
     math::pow_10, units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
     data_model::{AssetParams, LTVParams, DebtCapParams},
@@ -409,14 +409,14 @@ fn create_pool(
     let debt_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.debt_asset.contract_address);
     let third_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.third_asset.contract_address);
 
-    assert!(coll_v_token != Zeroable::zero(), "vToken not set");
-    assert!(debt_v_token != Zeroable::zero(), "vToken not set");
-    assert!(third_v_token != Zeroable::zero(), "vToken not set");
+    assert!(coll_v_token != Zero::zero(), "vToken not set");
+    assert!(debt_v_token != Zero::zero(), "vToken not set");
+    assert!(third_v_token != Zero::zero(), "vToken not set");
 
-    assert!(extension.collateral_asset_for_v_token(config.pool_id, coll_v_token) != Zeroable::zero(), "vToken not set");
-    assert!(extension.collateral_asset_for_v_token(config.pool_id, debt_v_token) != Zeroable::zero(), "vToken not set");
+    assert!(extension.collateral_asset_for_v_token(config.pool_id, coll_v_token) != Zero::zero(), "vToken not set");
+    assert!(extension.collateral_asset_for_v_token(config.pool_id, debt_v_token) != Zero::zero(), "vToken not set");
     assert!(
-        extension.collateral_asset_for_v_token(config.pool_id, third_v_token) != Zeroable::zero(), "vToken not set"
+        extension.collateral_asset_for_v_token(config.pool_id, third_v_token) != Zero::zero(), "vToken not set"
     );
 
     assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPOV2', "pool name not set");
@@ -482,5 +482,5 @@ fn setup_pool(
 }
 
 fn setup() -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher, TestConfig, Users, LendingTerms) {
-    setup_pool(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), true, Option::None)
+    setup_pool(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::None)
 }

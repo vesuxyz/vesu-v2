@@ -1,7 +1,7 @@
 use vesu::vendor::pragma::{PragmaPricesResponse, DataType, AggregationMode};
 
 #[starknet::interface]
-trait IMockPragmaSummary<TContractState> {
+pub trait IMockPragmaSummary<TContractState> {
     fn calculate_twap(
         self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
     ) -> (u128, u32);
@@ -39,7 +39,7 @@ mod MockPragmaSummary {
 }
 
 #[starknet::interface]
-trait IMockPragmaOracle<TContractState> {
+pub trait IMockPragmaOracle<TContractState> {
     fn get_data(
         ref self: TContractState, data_type: DataType, aggregation_mode: AggregationMode
     ) -> PragmaPricesResponse;

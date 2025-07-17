@@ -51,7 +51,7 @@ trait ISafeAllowanceCamel<TState> {
 }
 
 #[starknet::interface]
-trait ERC20ABI<TState> {
+pub trait ERC20ABI<TState> {
     // IERC20
     fn total_supply(self: @TState) -> u256;
     fn balance_of(self: @TState, account: ContractAddress) -> u256;

@@ -1,9 +1,9 @@
 use vesu::{units::{SCALE, DAY_IN_SECONDS}, packing::{into_u123, SHIFT_128, split_128}};
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-struct ShutdownConfig {
-    recovery_period: u64, // [seconds]
-    subscription_period: u64, // [seconds]
+pub struct ShutdownConfig {
+    pub recovery_period: u64, // [seconds]
+    pub subscription_period: u64, // [seconds]
 }
 
 fn assert_shutdown_config(shutdown_config: ShutdownConfig) {
@@ -23,7 +23,7 @@ fn assert_liquidation_config(liquidation_config: LiquidationConfig) {
     assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
 }
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::StorePacking)]
+#[derive(PartialEq, Copy, Drop, Serde)]
 struct Pair {
     total_collateral_shares: u256, // packed as u128 [SCALE] 
     total_nominal_debt: u256 // packed as u123 [SCALE]
@@ -97,21 +97,23 @@ mod position_hooks_component {
     struct Storage {
         // contains the shutdown configuration for each pool
         // pool_id -> shutdown configuration
-        shutdown_configs: LegacyMap::<felt252, ShutdownConfig>,
+        shutdown_configs: starknet::storage::map::Map::<felt252, ShutdownConfig>,
         // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
         // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
-        shutdown_ltv_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        shutdown_ltv_configs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // contains the current shutdown mode for a pool
         // pool_id -> shutdown mode
-        fixed_shutdown_mode: LegacyMap::<felt252, ShutdownState>,
+        fixed_shutdown_mode: starknet::storage::map::Map::<felt252, ShutdownState>,
         // contains the liquidation configuration for each pair in a pool
         // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
-        liquidation_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
+        liquidation_configs: starknet::storage::map::Map::<
+            (felt252, ContractAddress, ContractAddress), LiquidationConfig
+        >,
         // tracks the total collateral shares and the total nominal debt for each pair
         // (pool_id, collateral asset, debt asset) -> pair configuration
-        pairs: LegacyMap::<(felt252, ContractAddress, ContractAddress), Pair>,
+        pairs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), Pair>,
         // tracks the debt caps for each asset
-        debt_caps: LegacyMap::<(felt252, ContractAddress, ContractAddress), u256>
+        debt_caps: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), u256>
     }
 
     #[derive(Drop, starknet::Event)]

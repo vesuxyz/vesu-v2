@@ -5,7 +5,7 @@ trait IFlashLoanGeneric<TContractState> {
 
 #[starknet::contract]
 mod FlashLoanreceiver {
-    use starknet::{get_block_timestamp, ContractAddress};
+    use starknet::{get_block_timestamp, ContractAddress, storage::{StoragePointerReadAccess, StoragePointerWriteAccess}};
     use vesu::singleton_v2::IFlashloanReceiver;
 
     #[storage]

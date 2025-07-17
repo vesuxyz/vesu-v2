@@ -2,7 +2,7 @@ use starknet::{ContractAddress};
 use vesu::data_model::{AssetConfig, Position};
 
 #[starknet::interface]
-trait IMockSingleton<TContractState> {
+pub trait IMockSingleton<TContractState> {
     fn asset_config(ref self: TContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256);
     fn position(
         ref self: TContractState,

@@ -1,8 +1,8 @@
 [package]
 name = "vesu"
 version = "0.1.0"
-cairo-version = "=2.6.3"
-edition = "2023_01"
+cairo-version = "=2.11.4"
+edition = "2024_07"
 
 [lib]
 
@@ -11,9 +11,9 @@ casm = true
 sierra = true
 
 [dependencies]
-starknet = "2.5.4"
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.21.0" }
-alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "e7b6957" }
+starknet = "2.11.4"
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.46.0" }
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "c804e98" }
 
 [tool.fmt]
 max-line-length = 120

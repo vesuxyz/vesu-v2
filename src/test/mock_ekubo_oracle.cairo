@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IMockEkuboOracle<TContractState> {
+pub trait IMockEkuboOracle<TContractState> {
     fn get_earliest_observation_time(
         self: @TContractState, token_a: ContractAddress, token_b: ContractAddress
     ) -> Option<u64>;
