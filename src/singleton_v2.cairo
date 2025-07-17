@@ -1857,7 +1857,7 @@ mod SingletonV2 {
             self.lock.write(true);
 
             assert!(get_caller_address() == self.extensions.read(pool_id), "caller-not-extension");
-            assert!(self.asset_configs.read((pool_id, params.asset)).last_updated == 0, "asset-config-already-exists");
+            assert!(self.asset_configs.read((pool_id, params.asset)).scale == 0, "asset-config-already-exists");
 
             let asset_config = AssetConfig {
                 total_collateral_shares: 0,
