@@ -1,26 +1,25 @@
 #[cfg(test)]
 mod TestVToken {
-    use alexandria_math::i257::{i257, i257_new, U256IntoI257};
+    use alexandria_math::i257::{U256IntoI257, i257, i257_new};
     use integer::BoundedInt;
-    use snforge_std::{
-        cheatcodes::{start_warp, stop_warp, CheatTarget, start_prank, stop_prank, CheatSpan, prank}, declare
+    use snforge_std::cheatcodes::{CheatSpan, CheatTarget, prank, start_prank, start_warp, stop_prank, stop_warp};
+    use snforge_std::declare;
+    use starknet::{ContractAddress, contract_address_const, deploy_syscall, get_caller_address, get_contract_address};
+    use vesu::common::{
+        apply_position_update_to_context, calculate_collateral, calculate_collateral_and_debt_value,
+        calculate_collateral_shares, calculate_debt, calculate_nominal_debt, calculate_rate_accumulator,
+        calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
     };
-    use starknet::{ContractAddress, get_contract_address, get_caller_address, deploy_syscall, contract_address_const};
-    use vesu::{
-        extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait,
-        units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS},
-        data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination, ModifyPositionParams},
-        math::pow_10,
-        common::{
-            calculate_nominal_debt, calculate_debt, calculate_utilization, calculate_collateral_shares,
-            calculate_collateral, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
-            apply_position_update_to_context, calculate_rate_accumulator, calculate_collateral_and_debt_value
-        },
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        v_token::{IVTokenDispatcher, IVTokenDispatcherTrait, IERC4626Dispatcher, IERC4626DispatcherTrait, VToken},
-        test::setup_v2::{deploy_contract, deploy_asset, setup, TestConfig, LendingTerms, deploy_with_args},
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, AssetConfig, Context, ModifyPositionParams, Position,
     };
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
+    use vesu::math::pow_10;
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_asset, deploy_contract, deploy_with_args, setup};
+    use vesu::units::{DAY_IN_SECONDS, SCALE, YEAR_IN_SECONDS};
+    use vesu::v_token::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenDispatcher, IVTokenDispatcherTrait, VToken};
+    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 
     fn deploy_v_token() -> ContractAddress {
         let pool_id = '1';
@@ -37,7 +36,7 @@ mod TestVToken {
             v_token_class_hash.try_into().unwrap(),
             0,
             array!['v' + name, 'v' + symbol, 18, pool_id, extension.into(), asset.contract_address.into()].span(),
-            true
+            true,
         ))
             .unwrap();
 
@@ -68,9 +67,9 @@ mod TestVToken {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == scale,
-            'room neq 1'
+            'room neq 1',
         );
 
         assert(
@@ -88,10 +87,10 @@ mod TestVToken {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 2
                 * scale,
-            'room neq 2'
+            'room neq 2',
         );
 
         assert(
@@ -109,9 +108,9 @@ mod TestVToken {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 0,
-            'room neq 3'
+            'room neq 3',
         );
 
         assert(
@@ -129,9 +128,9 @@ mod TestVToken {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 0,
-            'room neq 4'
+            'room neq 4',
         );
 
         assert(
@@ -149,10 +148,10 @@ mod TestVToken {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 5
                 * scale,
-            'room neq 5'
+            'room neq 5',
         );
     }
 
@@ -181,7 +180,7 @@ mod TestVToken {
 
         assert(
             IERC20Dispatcher { contract_address: v_token.contract_address }.balance_of(get_contract_address()) == 100,
-            'v_token not minted'
+            'v_token not minted',
         );
 
         IERC20Dispatcher { contract_address: v_token.contract_address }.approve(v_token.extension(), 50.into());
@@ -192,7 +191,7 @@ mod TestVToken {
 
         assert(
             IERC20Dispatcher { contract_address: v_token.contract_address }.balance_of(get_contract_address()) == 50,
-            'amount not burned'
+            'amount not burned',
         );
     }
 
@@ -207,7 +206,7 @@ mod TestVToken {
 
         assert(
             IERC20Dispatcher { contract_address: v_token.contract_address }.balance_of(get_contract_address()) == 100,
-            'v_token not minted'
+            'v_token not minted',
         );
 
         IERC20Dispatcher { contract_address: v_token.contract_address }.approve(v_token.contract_address, 50.into());
@@ -221,7 +220,7 @@ mod TestVToken {
         let (_, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.asset() == collateral_asset.contract_address, 'asset not set');
     }
@@ -232,7 +231,7 @@ mod TestVToken {
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.total_assets() == 0, 'total_assets');
 
@@ -246,7 +245,7 @@ mod TestVToken {
             v_token
                 .total_assets() == singleton
                 .calculate_collateral(pool_id, collateral_asset.contract_address, shares.into()),
-            'total_assets neq'
+            'total_assets neq',
         );
     }
 
@@ -255,13 +254,13 @@ mod TestVToken {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = v_token.convert_to_shares(assets);
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into()),
-            'shares neq'
+            'shares neq',
         );
     }
 
@@ -270,13 +269,13 @@ mod TestVToken {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let shares = 100000;
         let assets = v_token.convert_to_assets(shares);
         assert(
             assets == singleton.calculate_collateral(pool_id, collateral_asset.contract_address, -shares.into()),
-            'assets neq'
+            'assets neq',
         );
     }
 
@@ -285,7 +284,7 @@ mod TestVToken {
         let (_, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.max_deposit(Zeroable::zero()) > 0, 'max_deposit not set');
     }
@@ -295,13 +294,13 @@ mod TestVToken {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = v_token.preview_deposit(assets);
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into()),
-            'shares neq'
+            'shares neq',
         );
     }
 
@@ -310,7 +309,7 @@ mod TestVToken {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
 
@@ -322,7 +321,7 @@ mod TestVToken {
 
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into()),
-            'shares neq'
+            'shares neq',
         );
 
         assert(balance_of(v_token.contract_address, users.lender) == shares, 'v_token not minted');
@@ -333,7 +332,7 @@ mod TestVToken {
         let (_, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.max_mint(Zeroable::zero()) > 0, 'max_mint not set');
     }
@@ -343,7 +342,7 @@ mod TestVToken {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
@@ -355,7 +354,7 @@ mod TestVToken {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
@@ -374,7 +373,7 @@ mod TestVToken {
         let (_, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.max_withdraw(users.lender) == Zeroable::zero(), 'max_withdraw not zero');
 
@@ -394,13 +393,13 @@ mod TestVToken {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = v_token.preview_withdraw(assets);
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, -assets.into()),
-            'shares neq'
+            'shares neq',
         );
     }
 
@@ -409,7 +408,7 @@ mod TestVToken {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
@@ -436,7 +435,7 @@ mod TestVToken {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
@@ -459,7 +458,7 @@ mod TestVToken {
         let (_, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.max_redeem(users.lender) == Zeroable::zero(), 'max_redeem not zero');
 
@@ -479,7 +478,7 @@ mod TestVToken {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, -assets.into());
@@ -491,7 +490,7 @@ mod TestVToken {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
@@ -516,7 +515,7 @@ mod TestVToken {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());

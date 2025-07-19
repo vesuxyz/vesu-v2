@@ -1,17 +1,14 @@
 use alexandria_math::i257::i257;
-use starknet::{ContractAddress, ClassHash};
-use vesu::{
-    data_model::{
-        Context, AssetConfig, Position, LTVParams, LTVConfig, assert_ltv_config, Amount, AssetParams,
-        AmountDenomination, UpdatePositionResponse, ModifyPositionParams, LiquidatePositionParams,
-        TransferPositionParams
-    }
+use starknet::{ClassHash, ContractAddress};
+use vesu::data_model::{
+    Amount, AssetConfig, AssetParams, Context, LTVConfig, LTVParams, LiquidatePositionParams, ModifyPositionParams,
+    Position, TransferPositionParams, UpdatePositionResponse,
 };
 
 #[starknet::interface]
 pub trait IFlashloanReceiver<TContractState> {
     fn on_flash_loan(
-        ref self: TContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>
+        ref self: TContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>,
     );
 }
 
@@ -22,57 +19,57 @@ pub trait ISingletonV2<TContractState> {
     fn asset_config_unsafe(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256);
     fn asset_config(ref self: TContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256);
     fn ltv_config(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
+        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> LTVConfig;
     fn position_unsafe(
         self: @TContractState,
         pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
-        user: ContractAddress
+        user: ContractAddress,
     ) -> (Position, u256, u256);
     fn position(
         ref self: TContractState,
         pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
-        user: ContractAddress
+        user: ContractAddress,
     ) -> (Position, u256, u256);
     fn check_collateralization_unsafe(
         self: @TContractState,
         pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
-        user: ContractAddress
+        user: ContractAddress,
     ) -> (bool, u256, u256);
     fn check_collateralization(
         ref self: TContractState,
         pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
-        user: ContractAddress
+        user: ContractAddress,
     ) -> (bool, u256, u256);
     fn rate_accumulator_unsafe(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
     fn rate_accumulator(ref self: TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
     fn utilization_unsafe(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
     fn utilization(ref self: TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
     fn delegation(
-        self: @TContractState, pool_id: felt252, delegator: ContractAddress, delegatee: ContractAddress
+        self: @TContractState, pool_id: felt252, delegator: ContractAddress, delegatee: ContractAddress,
     ) -> bool;
     fn calculate_pool_id(self: @TContractState, caller_address: ContractAddress, nonce: felt252) -> felt252;
     fn calculate_debt(self: @TContractState, nominal_debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256;
     fn calculate_nominal_debt(self: @TContractState, debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256;
     fn calculate_collateral_shares_unsafe(
-        self: @TContractState, pool_id: felt252, asset: ContractAddress, collateral: i257
+        self: @TContractState, pool_id: felt252, asset: ContractAddress, collateral: i257,
     ) -> u256;
     fn calculate_collateral_shares(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, collateral: i257
+        ref self: TContractState, pool_id: felt252, asset: ContractAddress, collateral: i257,
     ) -> u256;
     fn calculate_collateral_unsafe(
-        self: @TContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257
+        self: @TContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257,
     ) -> u256;
     fn calculate_collateral(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257
+        ref self: TContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257,
     ) -> u256;
     fn deconstruct_collateral_amount_unsafe(
         self: @TContractState,
@@ -124,7 +121,7 @@ pub trait ISingletonV2<TContractState> {
         ref self: TContractState,
         asset_params: Span<AssetParams>,
         ltv_params: Span<LTVParams>,
-        extension: ContractAddress
+        extension: ContractAddress,
     ) -> felt252;
     fn modify_position(ref self: TContractState, params: ModifyPositionParams) -> UpdatePositionResponse;
     fn transfer_position(ref self: TContractState, params: TransferPositionParams);
@@ -135,12 +132,12 @@ pub trait ISingletonV2<TContractState> {
         asset: ContractAddress,
         amount: u256,
         is_legacy: bool,
-        data: Span<felt252>
+        data: Span<felt252>,
     );
     fn modify_delegation(ref self: TContractState, pool_id: felt252, delegatee: ContractAddress, delegation: bool);
     fn donate_to_reserve(ref self: TContractState, pool_id: felt252, asset: ContractAddress, amount: u256);
     fn retrieve_from_reserve(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, receiver: ContractAddress, amount: u256
+        ref self: TContractState, pool_id: felt252, asset: ContractAddress, receiver: ContractAddress, amount: u256,
     );
     fn set_asset_config(ref self: TContractState, pool_id: felt252, params: AssetParams);
     fn set_ltv_config(
@@ -148,10 +145,10 @@ pub trait ISingletonV2<TContractState> {
         pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
-        ltv_config: LTVConfig
+        ltv_config: LTVConfig,
     );
     fn set_asset_parameter(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
+        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256,
     );
     fn set_extension(ref self: TContractState, pool_id: felt252, extension: ContractAddress);
     fn set_extension_whitelist(ref self: TContractState, extension: ContractAddress, approved: bool);
@@ -163,7 +160,7 @@ pub trait ISingletonV2<TContractState> {
         extension: ContractAddress,
         creator: ContractAddress,
         asset_configs: Span<(ContractAddress, AssetConfig)>,
-        ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>
+        ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
     );
     fn migrate_position(
         ref self: TContractState,
@@ -181,55 +178,56 @@ pub trait ISingletonV2<TContractState> {
 
 #[starknet::contract]
 mod SingletonV2 {
-    use alexandria_math::i257::{i257, i257_new};
-    use starknet::{
-        ContractAddress, ClassHash, get_caller_address, get_contract_address, get_block_timestamp,
-        syscalls::{replace_class_syscall, call_contract_syscall}
+    use alexandria_math::i257::{I257Trait, i257};
+    use core::num::traits::Zero;
+    use core::poseidon;
+    use starknet::storage::{
+        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
-    use vesu::{
-        math::pow_10, units::SCALE,
-        common::{
-            calculate_nominal_debt, calculate_debt, calculate_utilization, calculate_collateral_shares,
-            calculate_collateral, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
-            apply_position_update_to_context, calculate_collateral_and_debt_value, calculate_fee_shares
-        },
-        data_model::{
-            Position, AssetConfig, AmountType, AmountDenomination, Amount, AssetPrice, AssetParams, LTVParams, Context,
-            assert_asset_config_exists, LTVConfig, assert_ltv_config, assert_asset_config, UpdatePositionResponse,
-            ModifyPositionParams, LiquidatePositionParams, TransferPositionParams
-        },
-        units::INFLATION_FEE_SHARES, packing::{PositionPacking, AssetConfigPacking, assert_storable_asset_config},
-        singleton_v2::{
-            ISingletonV2, ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, IFlashloanReceiverDispatcher,
-            IFlashloanReceiverDispatcherTrait
-        },
-        extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-        vendor::{
-            erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-            ownable::{OwnableComponent, OwnableComponent::InternalImpl}
-        }
+    use starknet::syscalls::replace_class_syscall;
+    use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
+    use vesu::common::{
+        apply_position_update_to_context, calculate_collateral, calculate_collateral_and_debt_value,
+        calculate_collateral_shares, calculate_debt, calculate_fee_shares, calculate_nominal_debt,
+        calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
     };
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LTVParams,
+        LiquidatePositionParams, ModifyPositionParams, Position, TransferPositionParams, UpdatePositionResponse,
+        assert_asset_config, assert_asset_config_exists, assert_ltv_config,
+    };
+    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
+    use vesu::math::pow_10;
+    use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
+    use vesu::singleton_v2::{
+        IFlashloanReceiverDispatcher, IFlashloanReceiverDispatcherTrait, ISingletonV2, ISingletonV2Dispatcher,
+        ISingletonV2DispatcherTrait,
+    };
+    use vesu::units::INFLATION_FEE_SHARES;
+    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use vesu::vendor::ownable::OwnableComponent;
+    use vesu::vendor::ownable::OwnableComponent::InternalImpl;
 
     #[storage]
     struct Storage {
         // tracks a nonce for each creator of a pool to deterministically derive the pool_id from it
         // creator -> nonce
-        creator_nonce: starknet::storage::map::Map::<ContractAddress, felt252>,
+        creator_nonce: starknet::storage::Map<ContractAddress, felt252>,
         // tracks the address of the extension contract for each pool
         // pool_id -> extension
-        extensions: starknet::storage::map::Map::<felt252, ContractAddress>,
+        extensions: starknet::storage::Map<felt252, ContractAddress>,
         // tracks the configuration / state of each asset in each pool
         // (pool_id, asset) -> asset configuration
-        asset_configs: starknet::storage::map::Map::<(felt252, ContractAddress), AssetConfig>,
+        asset_configs: starknet::storage::Map<(felt252, ContractAddress), AssetConfig>,
         // tracks the max. allowed loan-to-value ratio for each asset pairing in each pool
-        // (pool_id, collateral_asset, debt_asset) -> ltv configuration 
-        ltv_configs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        // (pool_id, collateral_asset, debt_asset) -> ltv configuration
+        ltv_configs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // tracks the state of each position in each pool
         // (pool_id, collateral_asset, debt_asset, user) -> position
-        positions: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress, ContractAddress), Position>,
+        positions: starknet::storage::Map<(felt252, ContractAddress, ContractAddress, ContractAddress), Position>,
         // tracks the delegation status for each delegator to a delegatee for a specific pool
         // (pool_id, delegator, delegatee) -> delegation
-        delegations: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), bool>,
+        delegations: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), bool>,
         // tracks the reentrancy lock status to prohibit reentrancy when loading the context or the asset config
         lock: bool,
         // tracks the singleton v1 address
@@ -238,11 +236,11 @@ mod SingletonV2 {
         migrator: ContractAddress,
         // tracks the migrated positions
         // (pool_id, collateral_asset, debt_asset, user) -> migrated
-        migrated_positions: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress, ContractAddress), bool>,
+        migrated_positions: starknet::storage::Map<(felt252, ContractAddress, ContractAddress, ContractAddress), bool>,
         // tracks the whitelisted extensions
-        whitelisted_extensions: starknet::storage::map::Map::<ContractAddress, bool>,
+        whitelisted_extensions: starknet::storage::Map<ContractAddress, bool>,
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage
+        ownable: OwnableComponent::Storage,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -252,7 +250,7 @@ mod SingletonV2 {
         #[key]
         extension: ContractAddress,
         #[key]
-        creator: ContractAddress
+        creator: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -268,7 +266,7 @@ mod SingletonV2 {
         collateral_delta: i257,
         collateral_shares_delta: i257,
         debt_delta: i257,
-        nominal_debt_delta: i257
+        nominal_debt_delta: i257,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -290,7 +288,7 @@ mod SingletonV2 {
         collateral_delta: i257,
         collateral_shares_delta: i257,
         debt_delta: i257,
-        nominal_debt_delta: i257
+        nominal_debt_delta: i257,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -309,7 +307,7 @@ mod SingletonV2 {
         collateral_shares_delta: i257,
         debt_delta: i257,
         nominal_debt_delta: i257,
-        bad_debt: u256
+        bad_debt: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -345,7 +343,7 @@ mod SingletonV2 {
         receiver: ContractAddress,
         #[key]
         asset: ContractAddress,
-        amount: u256
+        amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -356,7 +354,7 @@ mod SingletonV2 {
         delegator: ContractAddress,
         #[key]
         delegatee: ContractAddress,
-        delegation: bool
+        delegation: bool,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -365,7 +363,7 @@ mod SingletonV2 {
         pool_id: felt252,
         #[key]
         asset: ContractAddress,
-        amount: u256
+        amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -386,7 +384,7 @@ mod SingletonV2 {
         collateral_asset: ContractAddress,
         #[key]
         debt_asset: ContractAddress,
-        ltv_config: LTVConfig
+        ltv_config: LTVConfig,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -394,7 +392,7 @@ mod SingletonV2 {
         #[key]
         pool_id: felt252,
         #[key]
-        asset: ContractAddress
+        asset: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -405,7 +403,7 @@ mod SingletonV2 {
         asset: ContractAddress,
         #[key]
         parameter: felt252,
-        value: u256
+        value: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -413,7 +411,7 @@ mod SingletonV2 {
         #[key]
         pool_id: felt252,
         #[key]
-        extension: ContractAddress
+        extension: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -429,7 +427,7 @@ mod SingletonV2 {
         #[key]
         to: ContractAddress,
         collateral_shares: u256,
-        nominal_debt: u256
+        nominal_debt: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -457,7 +455,7 @@ mod SingletonV2 {
         SetAssetParameter: SetAssetParameter,
         SetExtension: SetExtension,
         MigratePosition: MigratePosition,
-        ContractUpgraded: ContractUpgraded
+        ContractUpgraded: ContractUpgraded,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -467,7 +465,7 @@ mod SingletonV2 {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, singleton_v1: ContractAddress, migrator: ContractAddress, owner: ContractAddress
+        ref self: ContractState, singleton_v1: ContractAddress, migrator: ContractAddress, owner: ContractAddress,
     ) {
         self.singleton_v1.write(singleton_v1);
         self.migrator.write(migrator);
@@ -482,7 +480,7 @@ mod SingletonV2 {
     /// # Returns
     /// * `asset_config` - asset config containing the updated last rate accumulator and full utilization rate
     fn rate_accumulator(
-        pool_id: felt252, extension: ContractAddress, asset: ContractAddress, mut asset_config: AssetConfig
+        pool_id: felt252, extension: ContractAddress, asset: ContractAddress, mut asset_config: AssetConfig,
     ) -> AssetConfig {
         let AssetConfig { total_nominal_debt, scale, .. } = asset_config;
         let AssetConfig { last_rate_accumulator, last_full_utilization_rate, last_updated, .. } = asset_config;
@@ -509,7 +507,7 @@ mod SingletonV2 {
     /// * `utilization` - current utilization [SCALE]
     fn utilization(asset_config: AssetConfig) -> u256 {
         let total_debt = calculate_debt(
-            asset_config.total_nominal_debt, asset_config.last_rate_accumulator, asset_config.scale, false
+            asset_config.total_nominal_debt, asset_config.last_rate_accumulator, asset_config.scale, false,
         );
         calculate_utilization(asset_config.reserve, total_debt)
     }
@@ -522,7 +520,7 @@ mod SingletonV2 {
     /// * `amount` - amount of assets to transfer [asset scale]
     /// * `is_legacy` - whether the asset is a legacy ERC20 (only supporting camelCase instead of snake_case)
     fn transfer_asset(
-        asset: ContractAddress, sender: ContractAddress, to: ContractAddress, amount: u256, is_legacy: bool
+        asset: ContractAddress, sender: ContractAddress, to: ContractAddress, amount: u256, is_legacy: bool,
     ) {
         let erc20 = IERC20Dispatcher { contract_address: asset };
         if sender == get_contract_address() {
@@ -553,12 +551,12 @@ mod SingletonV2 {
     impl InternalFunctions of InternalFunctionsTrait {
         /// Asserts that the delegatee has the delegate of the delegator for a specific pool
         fn assert_ownership(
-            ref self: ContractState, pool_id: felt252, extension: ContractAddress, delegator: ContractAddress
+            ref self: ContractState, pool_id: felt252, extension: ContractAddress, delegator: ContractAddress,
         ) {
             let has_delegation = self.delegations.read((pool_id, delegator, get_caller_address()));
             assert!(
                 delegator == get_caller_address() || extension == get_caller_address() || has_delegation,
-                "no-delegation"
+                "no-delegation",
             );
         }
 
@@ -569,55 +567,55 @@ mod SingletonV2 {
 
         /// Asserts that the collateralization of a position is not above the max. loan-to-value ratio
         fn assert_collateralization(
-            ref self: ContractState, collateral_value: u256, debt_value: u256, max_ltv_ratio: u256
+            ref self: ContractState, collateral_value: u256, debt_value: u256, max_ltv_ratio: u256,
         ) {
             assert!(is_collateralized(collateral_value, debt_value, max_ltv_ratio), "not-collateralized");
         }
 
         /// Asserts invariants a position has to fulfill at all times (excluding liquidations)
         fn assert_position_invariants(
-            ref self: ContractState, context: Context, collateral_delta: i257, debt_delta: i257
+            ref self: ContractState, context: Context, collateral_delta: i257, debt_delta: i257,
         ) {
-            if collateral_delta < Zeroable::zero() || debt_delta > Zeroable::zero() {
+            if collateral_delta < Zero::zero() || debt_delta > Zero::zero() {
                 // position is collateralized
                 let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(
-                    context, context.position
+                    context, context.position,
                 );
                 self.assert_collateralization(collateral_value, debt_value, context.max_ltv.into());
                 // caller owns the position or has a delegate for modifying it
                 self.assert_ownership(context.pool_id, context.extension, context.user);
-                if collateral_delta < Zeroable::zero() {
+                if collateral_delta < Zero::zero() {
                     // max. utilization of the collateral is not exceed
                     self.assert_max_utilization(context.collateral_asset_config);
                 }
-                if debt_delta > Zeroable::zero() {
+                if debt_delta > Zero::zero() {
                     // max. utilization of the collateral is not exceed
                     self.assert_max_utilization(context.debt_asset_config);
                 }
             }
         }
 
-        /// Asserts that the deltas are either both zero or non-zero for collateral and debt 
+        /// Asserts that the deltas are either both zero or non-zero for collateral and debt
         fn assert_delta_invariants(
             ref self: ContractState,
             collateral_delta: i257,
             collateral_shares_delta: i257,
             debt_delta: i257,
-            nominal_debt_delta: i257
+            nominal_debt_delta: i257,
         ) {
             // collateral shares delta has to be non-zero if the collateral delta is non-zero
             assert!(
-                collateral_delta.abs == 0
-                    && collateral_shares_delta.abs == 0 || collateral_delta.abs != 0
-                    && collateral_shares_delta.abs != 0,
-                "zero-collateral"
+                collateral_delta.abs() == 0
+                    && collateral_shares_delta.abs() == 0 || collateral_delta.abs() != 0
+                    && collateral_shares_delta.abs() != 0,
+                "zero-collateral",
             );
             // nominal debt delta has to be non-zero if the debt delta is non-zero
             assert!(
-                debt_delta.abs == 0
-                    && nominal_debt_delta.abs == 0 || debt_delta.abs != 0
-                    && nominal_debt_delta.abs != 0,
-                "zero-debt"
+                debt_delta.abs() == 0
+                    && nominal_debt_delta.abs() == 0 || debt_delta.abs() != 0
+                    && nominal_debt_delta.abs() != 0,
+                "zero-debt",
             );
         }
 
@@ -629,7 +627,7 @@ mod SingletonV2 {
                 // value of the collateral is either zero or above the floor
                 assert!(
                     collateral_value == 0 || collateral_value > context.collateral_asset_config.floor,
-                    "dusty-collateral-balance"
+                    "dusty-collateral-balance",
                 );
             }
 
@@ -644,7 +642,7 @@ mod SingletonV2 {
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             from: ContractAddress,
-            to: ContractAddress
+            to: ContractAddress,
         ) {
             if !_is_v1_pool(pool_id) || self.migrated_positions.read((pool_id, collateral_asset, debt_asset, from)) {
                 return;
@@ -659,8 +657,8 @@ mod SingletonV2 {
                     (pool_id, collateral_asset, debt_asset, to),
                     Position {
                         collateral_shares: positionV1.collateral_shares + positionV2.collateral_shares,
-                        nominal_debt: positionV1.nominal_debt + positionV2.nominal_debt
-                    }
+                        nominal_debt: positionV1.nominal_debt + positionV2.nominal_debt,
+                    },
                 );
             self.migrated_positions.write((pool_id, collateral_asset, debt_asset, from), true);
 
@@ -673,8 +671,8 @@ mod SingletonV2 {
                         from,
                         to,
                         collateral_shares: positionV1.collateral_shares,
-                        nominal_debt: positionV1.nominal_debt
-                    }
+                        nominal_debt: positionV1.nominal_debt,
+                    },
                 );
         }
 
@@ -696,24 +694,24 @@ mod SingletonV2 {
             collateral_delta: i257,
             debt_asset: ContractAddress,
             debt_delta: i257,
-            bad_debt: u256
+            bad_debt: u256,
         ) {
             let (contract, caller) = (get_contract_address(), get_caller_address());
 
-            if collateral_delta < Zeroable::zero() {
+            if collateral_delta < Zero::zero() {
                 let (asset_config, _) = self.asset_config(pool_id, collateral_asset);
-                transfer_asset(collateral_asset, contract, caller, collateral_delta.abs, asset_config.is_legacy);
-            } else if collateral_delta > Zeroable::zero() {
+                transfer_asset(collateral_asset, contract, caller, collateral_delta.abs(), asset_config.is_legacy);
+            } else if collateral_delta > Zero::zero() {
                 let (asset_config, _) = self.asset_config(pool_id, collateral_asset);
-                transfer_asset(collateral_asset, caller, contract, collateral_delta.abs, asset_config.is_legacy);
+                transfer_asset(collateral_asset, caller, contract, collateral_delta.abs(), asset_config.is_legacy);
             }
 
-            if debt_delta < Zeroable::zero() {
+            if debt_delta < Zero::zero() {
                 let (asset_config, _) = self.asset_config(pool_id, debt_asset);
-                transfer_asset(debt_asset, caller, contract, debt_delta.abs - bad_debt, asset_config.is_legacy);
-            } else if debt_delta > Zeroable::zero() {
+                transfer_asset(debt_asset, caller, contract, debt_delta.abs() - bad_debt, asset_config.is_legacy);
+            } else if debt_delta > Zero::zero() {
                 let (asset_config, _) = self.asset_config(pool_id, debt_asset);
-                transfer_asset(debt_asset, contract, caller, debt_delta.abs, asset_config.is_legacy);
+                transfer_asset(debt_asset, contract, caller, debt_delta.abs(), asset_config.is_legacy);
             }
         }
 
@@ -723,39 +721,39 @@ mod SingletonV2 {
             pool_id: felt252,
             extension: ContractAddress,
             asset: ContractAddress,
-            fee_shares: u256
+            fee_shares: u256,
         ) {
             if fee_shares == 0 {
                 return;
             }
-            let mut position = self.positions.read((pool_id, asset, Zeroable::zero(), extension));
+            let mut position = self.positions.read((pool_id, asset, Zero::zero(), extension));
             position.collateral_shares += fee_shares;
-            self.positions.write((pool_id, asset, Zeroable::zero(), extension), position);
+            self.positions.write((pool_id, asset, Zero::zero(), extension), position);
             self.emit(AccrueFees { pool_id, asset, recipient: extension, fee_shares });
         }
 
         /// Updates the state of a position and the corresponding collateral and debt asset
         fn update_position(
-            ref self: ContractState, ref context: Context, collateral: Amount, debt: Amount, bad_debt: u256
+            ref self: ContractState, ref context: Context, collateral: Amount, debt: Amount, bad_debt: u256,
         ) -> UpdatePositionResponse {
             let initial_total_collateral_shares = context.collateral_asset_config.total_collateral_shares;
 
             // apply the position modification to the context
             let (collateral_delta, mut collateral_shares_delta, debt_delta, nominal_debt_delta) =
                 apply_position_update_to_context(
-                ref context, collateral, debt, bad_debt
+                ref context, collateral, debt, bad_debt,
             );
 
             let Context { pool_id, collateral_asset, debt_asset, user, .. } = context;
 
             // charge the inflation fee for the first depositor for that asset in the pool
-            let inflation_fee = if initial_total_collateral_shares == 0 && !collateral_shares_delta.is_negative {
-                assert!(user != Zeroable::zero(), "zero-user-not-allowed");
+            let inflation_fee = if initial_total_collateral_shares == 0 && !collateral_shares_delta.is_negative() {
+                assert!(user != Zero::zero(), "zero-user-not-allowed");
                 self
                     .positions
                     .write(
-                        (pool_id, collateral_asset, debt_asset, Zeroable::zero()),
-                        Position { collateral_shares: INFLATION_FEE_SHARES, nominal_debt: 0 }
+                        (pool_id, collateral_asset, debt_asset, Zero::zero()),
+                        Position { collateral_shares: INFLATION_FEE_SHARES, nominal_debt: 0 },
                     );
                 context.position.collateral_shares -= INFLATION_FEE_SHARES;
                 INFLATION_FEE_SHARES
@@ -778,13 +776,13 @@ mod SingletonV2 {
                         debt_asset_config: context.debt_asset_config,
                         collateral_asset_price: context.collateral_asset_price,
                         debt_asset_price: context.debt_asset_price,
-                    }
+                    },
                 );
 
             // mint fee shares to the recipient
             self
                 .attribute_fee_shares(
-                    pool_id, context.extension, collateral_asset, context.collateral_asset_fee_shares
+                    pool_id, context.extension, collateral_asset, context.collateral_asset_fee_shares,
                 );
             self.attribute_fee_shares(pool_id, context.extension, debt_asset, context.debt_asset_fee_shares);
 
@@ -793,12 +791,12 @@ mod SingletonV2 {
             self.assert_floor_invariant(context);
 
             // deduct inflation fee from the collateral shares delta
-            assert!(collateral_shares_delta.abs >= inflation_fee, "inflation-fee-gt-collateral-shares-delta");
+            assert!(collateral_shares_delta.abs() >= inflation_fee, "inflation-fee-gt-collateral-shares-delta");
             collateral_shares_delta =
-                i257_new(collateral_shares_delta.abs - inflation_fee, collateral_shares_delta.is_negative);
+                I257Trait::new(collateral_shares_delta.abs() - inflation_fee, collateral_shares_delta.is_negative());
 
             UpdatePositionResponse {
-                collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta, bad_debt
+                collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta, bad_debt,
             }
         }
     }
@@ -839,7 +837,7 @@ mod SingletonV2 {
             let mut asset_config = self.asset_configs.read((pool_id, asset));
             let mut fee_shares = 0;
 
-            if asset_config.last_updated != get_block_timestamp() && asset != Zeroable::zero() {
+            if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
                 let new_asset_config = rate_accumulator(pool_id, extension, asset, asset_config);
                 fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
                 asset_config = new_asset_config;
@@ -872,7 +870,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `ltv_config` - ltv configuration
         fn ltv_config(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
+            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> LTVConfig {
             self.ltv_configs.read((pool_id, collateral_asset, debt_asset))
         }
@@ -892,7 +890,7 @@ mod SingletonV2 {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            user: ContractAddress
+            user: ContractAddress,
         ) -> (Position, u256, u256) {
             let context = self.context_unsafe(pool_id, collateral_asset, debt_asset, user);
             let (collateral, _, debt, _) = calculate_collateral_and_debt_value(context, context.position);
@@ -914,7 +912,7 @@ mod SingletonV2 {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            user: ContractAddress
+            user: ContractAddress,
         ) -> (Position, u256, u256) {
             assert!(!self.lock.read(), "position-reentrancy");
             let context = self.context(pool_id, collateral_asset, debt_asset, user);
@@ -937,7 +935,7 @@ mod SingletonV2 {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            user: ContractAddress
+            user: ContractAddress,
         ) -> (bool, u256, u256) {
             let context = self.context_unsafe(pool_id, collateral_asset, debt_asset, user);
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
@@ -959,7 +957,7 @@ mod SingletonV2 {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            user: ContractAddress
+            user: ContractAddress,
         ) -> (bool, u256, u256) {
             assert!(!self.lock.read(), "check-collateralization-reentrancy");
             self.lock.write(true);
@@ -1027,7 +1025,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `delegation` - delegation status (true = delegate, false = undelegate)
         fn delegation(
-            self: @ContractState, pool_id: felt252, delegator: ContractAddress, delegatee: ContractAddress
+            self: @ContractState, pool_id: felt252, delegator: ContractAddress, delegatee: ContractAddress,
         ) -> bool {
             self.delegations.read((pool_id, delegator, delegatee))
         }
@@ -1054,7 +1052,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `debt` - computed debt [asset scale]
         fn calculate_debt(self: @ContractState, nominal_debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
-            calculate_debt(nominal_debt.abs, rate_accumulator, asset_scale, nominal_debt.is_negative)
+            calculate_debt(nominal_debt.abs(), rate_accumulator, asset_scale, nominal_debt.is_negative())
         }
 
         /// Calculates the nominal debt for a given amount of debt, the current rate accumulator and debt asset's scale
@@ -1065,21 +1063,21 @@ mod SingletonV2 {
         /// # Returns
         /// * `nominal_debt` - computed nominal debt [asset scale]
         fn calculate_nominal_debt(self: @ContractState, debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
-            calculate_nominal_debt(debt.abs, rate_accumulator, asset_scale, !debt.is_negative)
+            calculate_nominal_debt(debt.abs(), rate_accumulator, asset_scale, !debt.is_negative())
         }
 
-        /// Calculates the number of collateral shares (that would be e.g. minted) for a given amount of collateral assets
-        /// # Arguments
+        /// Calculates the number of collateral shares (that would be e.g. minted) for a given amount of collateral
+        /// assets # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `collateral` - amount of collateral [asset scale]
         /// # Returns
         /// * `collateral_shares` - computed collateral shares [SCALE]
         fn calculate_collateral_shares_unsafe(
-            self: @ContractState, pool_id: felt252, asset: ContractAddress, collateral: i257
+            self: @ContractState, pool_id: felt252, asset: ContractAddress, collateral: i257,
         ) -> u256 {
             let (asset_config, _) = self.asset_config_unsafe(pool_id, asset);
-            calculate_collateral_shares(collateral.abs, asset_config, collateral.is_negative)
+            calculate_collateral_shares(collateral.abs(), asset_config, collateral.is_negative())
         }
 
         /// Wrapper around calculate_collateral_shares() that prevents reentrancy
@@ -1090,7 +1088,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `collateral_shares` - computed collateral shares [SCALE]
         fn calculate_collateral_shares(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, collateral: i257
+            ref self: ContractState, pool_id: felt252, asset: ContractAddress, collateral: i257,
         ) -> u256 {
             assert!(!self.lock.read(), "calculate-collateral-shares-reentrancy");
             self.lock.write(true);
@@ -1099,18 +1097,18 @@ mod SingletonV2 {
             collateral_shares
         }
 
-        /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral shares
-        /// # Arguments
+        /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral
+        /// shares # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `collateral_shares` - amount of collateral shares
         /// # Returns
         /// * `collateral` - computed collateral [asset scale]
         fn calculate_collateral_unsafe(
-            self: @ContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257
+            self: @ContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257,
         ) -> u256 {
             let (asset_config, _) = self.asset_config_unsafe(pool_id, asset);
-            calculate_collateral(collateral_shares.abs, asset_config, !collateral_shares.is_negative)
+            calculate_collateral(collateral_shares.abs(), asset_config, !collateral_shares.is_negative())
         }
 
         /// Wrapper around calculate_collateral() that prevents reentrancy
@@ -1121,7 +1119,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `collateral` - computed collateral [asset scale]
         fn calculate_collateral(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257
+            ref self: ContractState, pool_id: felt252, asset: ContractAddress, collateral_shares: i257,
         ) -> u256 {
             assert!(!self.lock.read(), "calculate-collateral-reentrancy");
             self.lock.write(true);
@@ -1198,7 +1196,10 @@ mod SingletonV2 {
         ) -> (i257, i257) {
             let context = self.context_unsafe(pool_id, collateral_asset, debt_asset, user);
             deconstruct_debt_amount(
-                debt, context.position, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale
+                debt,
+                context.position,
+                context.debt_asset_config.last_rate_accumulator,
+                context.debt_asset_config.scale,
             )
         }
 
@@ -1262,12 +1263,12 @@ mod SingletonV2 {
                 debt_asset,
                 collateral_asset_config: collateral_asset_config,
                 debt_asset_config: debt_asset_config,
-                collateral_asset_price: if collateral_asset == Zeroable::zero() {
+                collateral_asset_price: if collateral_asset == Zero::zero() {
                     AssetPrice { value: 0, is_valid: true }
                 } else {
                     extension.price(pool_id, collateral_asset)
                 },
-                debt_asset_price: if debt_asset == Zeroable::zero() {
+                debt_asset_price: if debt_asset == Zero::zero() {
                     AssetPrice { value: 0, is_valid: true }
                 } else {
                     extension.price(pool_id, debt_asset)
@@ -1283,7 +1284,7 @@ mod SingletonV2 {
                     let (position, _, _) = ISingletonV2Dispatcher { contract_address: self.singleton_v1.read() }
                         .position(pool_id, collateral_asset, debt_asset, user);
                     position
-                }
+                },
             };
 
             context
@@ -1323,7 +1324,7 @@ mod SingletonV2 {
             ref self: ContractState,
             asset_params: Span<AssetParams>,
             mut ltv_params: Span<LTVParams>,
-            extension: ContractAddress
+            extension: ContractAddress,
         ) -> felt252 {
             // derive pool id from the address of the creator and the creator's nonce
             let mut nonce = self.creator_nonce.read(get_caller_address());
@@ -1336,20 +1337,18 @@ mod SingletonV2 {
 
             // store all asset configurations
             let mut asset_params_copy = asset_params;
-            while !asset_params_copy
-                .is_empty() {
-                    let params = *asset_params_copy.pop_front().unwrap();
-                    self.set_asset_config(pool_id, params);
-                };
+            while !asset_params_copy.is_empty() {
+                let params = *asset_params_copy.pop_front().unwrap();
+                self.set_asset_config(pool_id, params);
+            }
 
             // store all loan-to-value configurations for each asset pair
-            while !ltv_params
-                .is_empty() {
-                    let params = *ltv_params.pop_front().unwrap();
-                    let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                    let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                    self.set_ltv_config(pool_id, collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
-                };
+            while !ltv_params.is_empty() {
+                let params = *ltv_params.pop_front().unwrap();
+                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                self.set_ltv_config(pool_id, collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
+            }
 
             self.emit(CreatePool { pool_id, extension, creator: get_caller_address() });
 
@@ -1376,12 +1375,9 @@ mod SingletonV2 {
 
             // update the position
             let response = self.update_position(ref context, collateral, debt, 0);
-            let UpdatePositionResponse { collateral_delta,
-            collateral_shares_delta,
-            debt_delta,
-            nominal_debt_delta,
-            .. } =
-                response;
+            let UpdatePositionResponse {
+                collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta, ..,
+            } = response;
 
             // verify invariants
             self.assert_position_invariants(context, collateral_delta, debt_delta);
@@ -1396,9 +1392,9 @@ mod SingletonV2 {
                         debt_delta,
                         nominal_debt_delta,
                         data,
-                        get_caller_address()
+                        get_caller_address(),
                     ),
-                "after-modify-position-failed"
+                "after-modify-position-failed",
             );
 
             self
@@ -1411,14 +1407,14 @@ mod SingletonV2 {
                         collateral_delta,
                         collateral_shares_delta,
                         debt_delta,
-                        nominal_debt_delta
-                    }
+                        nominal_debt_delta,
+                    },
                 );
 
             // settle collateral and debt balances
             self
                 .settle_position(
-                    params.pool_id, params.collateral_asset, collateral_delta, params.debt_asset, debt_delta, 0
+                    params.pool_id, params.collateral_asset, collateral_delta, params.debt_asset, debt_delta, 0,
                 );
 
             response
@@ -1430,29 +1426,30 @@ mod SingletonV2 {
         /// # Arguments
         /// * `params` - see TransferPositionParams
         fn transfer_position(ref self: ContractState, params: TransferPositionParams) {
-            let TransferPositionParams { pool_id,
-            from_collateral_asset,
-            from_debt_asset,
-            to_collateral_asset,
-            to_debt_asset,
-            from_user,
-            to_user,
-            collateral,
-            debt,
-            from_data,
-            to_data } =
-                params;
+            let TransferPositionParams {
+                pool_id,
+                from_collateral_asset,
+                from_debt_asset,
+                to_collateral_asset,
+                to_debt_asset,
+                from_user,
+                to_user,
+                collateral,
+                debt,
+                from_data,
+                to_data,
+            } = params;
 
             // ensure that it is not a transfer to the same position
             assert!(
                 !(from_collateral_asset == to_collateral_asset
                     && from_debt_asset == to_debt_asset
                     && from_user == to_user),
-                "same-position"
+                "same-position",
             );
 
             assert!(
-                from_collateral_asset != from_debt_asset && to_collateral_asset != to_debt_asset, "identical-assets"
+                from_collateral_asset != from_debt_asset && to_collateral_asset != to_debt_asset, "identical-assets",
             );
 
             let extension = IExtensionDispatcher { contract_address: self.extensions.read(pool_id) };
@@ -1478,7 +1475,7 @@ mod SingletonV2 {
                 // attribute the fee shares to the extension
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, from_collateral_asset, collateral_asset_fee_shares
+                        pool_id, extension.contract_address, from_collateral_asset, collateral_asset_fee_shares,
                     );
 
                 let (mut collateral_delta, mut collateral_shares_delta) = deconstruct_collateral_amount(
@@ -1486,32 +1483,32 @@ mod SingletonV2 {
                         amount_type: collateral.amount_type,
                         denomination: collateral.denomination,
                         value: if collateral.amount_type == AmountType::Delta {
-                            i257_new(collateral.value, true)
+                            I257Trait::new(collateral.value, true)
                         } else {
-                            i257_new(collateral.value, false)
-                        }
+                            I257Trait::new(collateral.value, false)
+                        },
                     },
                     from_position,
                     collateral_asset_config,
                 );
 
                 // ensure that the transfer amount is zero or negative if the collateral assets matchs
-                assert!(collateral_shares_delta <= Zeroable::zero(), "invalid-collateral-amount");
+                assert!(collateral_shares_delta <= Zero::zero(), "invalid-collateral-amount");
 
                 // limit the collateral_shares_delta to the available collateral_shares
-                if collateral_shares_delta.abs > from_position.collateral_shares {
+                if collateral_shares_delta.abs() > from_position.collateral_shares {
                     collateral_shares_delta =
-                        i257_new(from_position.collateral_shares, collateral_shares_delta.is_negative);
+                        I257Trait::new(from_position.collateral_shares, collateral_shares_delta.is_negative());
                     collateral_delta =
-                        i257_new(
-                            calculate_collateral(collateral_shares_delta.abs, collateral_asset_config, false),
-                            collateral_delta.is_negative
+                        I257Trait::new(
+                            calculate_collateral(collateral_shares_delta.abs(), collateral_asset_config, false),
+                            collateral_delta.is_negative(),
                         );
                 }
 
                 // transfer the collateral shares between the positions
-                from_position.collateral_shares -= collateral_shares_delta.abs;
-                to_position.collateral_shares += collateral_shares_delta.abs;
+                from_position.collateral_shares -= collateral_shares_delta.abs();
+                to_position.collateral_shares += collateral_shares_delta.abs();
 
                 // store the updated positions and asset configuration
                 self.positions.write((pool_id, from_collateral_asset, from_debt_asset, from_user), from_position);
@@ -1530,18 +1527,18 @@ mod SingletonV2 {
                 // attribute the fee shares to the extension
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, from_collateral_asset, _from_collateral_asset_fee_shares
+                        pool_id, extension.contract_address, from_collateral_asset, _from_collateral_asset_fee_shares,
                     );
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, to_collateral_asset, _to_collateral_asset_fee_shares
+                        pool_id, extension.contract_address, to_collateral_asset, _to_collateral_asset_fee_shares,
                     );
 
                 // store the updated asset configurations
                 self.asset_configs.write((pool_id, from_collateral_asset), from_collateral_asset_config);
                 self.asset_configs.write((pool_id, to_collateral_asset), to_collateral_asset_config);
 
-                (Zeroable::zero(), Zeroable::zero())
+                (Zero::zero(), Zero::zero())
             };
 
             let (debt_delta, nominal_debt_delta) = if (from_debt_asset == to_debt_asset) {
@@ -1555,10 +1552,10 @@ mod SingletonV2 {
                         amount_type: debt.amount_type,
                         denomination: debt.denomination,
                         value: if debt.amount_type == AmountType::Delta {
-                            i257_new(debt.value, true)
+                            I257Trait::new(debt.value, true)
                         } else {
-                            i257_new(debt.value, false)
-                        }
+                            I257Trait::new(debt.value, false)
+                        },
                     },
                     from_position,
                     debt_asset_config.last_rate_accumulator,
@@ -1566,26 +1563,26 @@ mod SingletonV2 {
                 );
 
                 // ensure that the transfer amount is zero or negative if the debt assets match
-                assert!(nominal_debt_delta <= Zeroable::zero(), "invalid-debt-amount");
+                assert!(nominal_debt_delta <= Zero::zero(), "invalid-debt-amount");
 
                 // limit the nominal_debt_delta to the available nominal_debt
-                if nominal_debt_delta.abs > from_position.nominal_debt {
-                    nominal_debt_delta = i257_new(from_position.nominal_debt, nominal_debt_delta.is_negative);
+                if nominal_debt_delta.abs() > from_position.nominal_debt {
+                    nominal_debt_delta = I257Trait::new(from_position.nominal_debt, nominal_debt_delta.is_negative());
                     debt_delta =
-                        i257_new(
+                        I257Trait::new(
                             calculate_debt(
-                                nominal_debt_delta.abs,
+                                nominal_debt_delta.abs(),
                                 debt_asset_config.last_rate_accumulator,
                                 debt_asset_config.scale,
-                                true
+                                true,
                             ),
-                            debt_delta.is_negative
+                            debt_delta.is_negative(),
                         );
                 }
 
                 // transfer the collateral shares between the positions
-                from_position.nominal_debt -= nominal_debt_delta.abs;
-                to_position.nominal_debt += nominal_debt_delta.abs;
+                from_position.nominal_debt -= nominal_debt_delta.abs();
+                to_position.nominal_debt += nominal_debt_delta.abs();
 
                 // store the updated positions and asset configuration
                 self.positions.write((pool_id, from_collateral_asset, from_debt_asset, from_user), from_position);
@@ -1604,24 +1601,25 @@ mod SingletonV2 {
                 // attribute the fee shares to the extension
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, from_debt_asset, _from_debt_asset_fee_shares
+                        pool_id, extension.contract_address, from_debt_asset, _from_debt_asset_fee_shares,
                     );
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, to_debt_asset, _to_debt_asset_fee_shares
+                        pool_id, extension.contract_address, to_debt_asset, _to_debt_asset_fee_shares,
                     );
 
                 // store the updated asset configurations
                 self.asset_configs.write((pool_id, from_debt_asset), from_debt_asset_config);
                 self.asset_configs.write((pool_id, to_debt_asset), to_debt_asset_config);
 
-                (Zeroable::zero(), Zeroable::zero())
+                (Zero::zero(), Zero::zero())
             };
 
             let mut from_context = self.context(pool_id, from_collateral_asset, from_debt_asset, from_user);
             let mut to_context = self.context(pool_id, to_collateral_asset, to_debt_asset, to_user);
 
-            // fee shares have to be re-attributed since the rate accumulator has already been updated (written to storage)
+            // fee shares have to be re-attributed since the rate accumulator has already been updated (written to
+            // storage)
             from_context.collateral_asset_fee_shares = from_collateral_asset_fee_shares;
             from_context.debt_asset_fee_shares = from_debt_asset_fee_shares;
             to_context.collateral_asset_fee_shares = to_collateral_asset_fee_shares;
@@ -1634,7 +1632,7 @@ mod SingletonV2 {
             self.assert_position_invariants(from_context, collateral_delta, debt_delta);
             self
                 .assert_position_invariants(
-                    to_context, i257_new(collateral_delta.abs, false), i257_new(debt_delta.abs, false)
+                    to_context, I257Trait::new(collateral_delta.abs(), false), I257Trait::new(debt_delta.abs(), false),
                 );
 
             // call after-hook of the extension
@@ -1643,14 +1641,14 @@ mod SingletonV2 {
                     .after_transfer_position(
                         from_context,
                         to_context,
-                        collateral_delta.abs,
-                        collateral_shares_delta.abs,
-                        debt_delta.abs,
-                        nominal_debt_delta.abs,
+                        collateral_delta.abs(),
+                        collateral_shares_delta.abs(),
+                        debt_delta.abs(),
+                        nominal_debt_delta.abs(),
                         to_data,
-                        get_caller_address()
+                        get_caller_address(),
                     ),
-                "after-transfer-position-failed"
+                "after-transfer-position-failed",
             );
 
             self
@@ -1666,8 +1664,8 @@ mod SingletonV2 {
                         collateral_delta,
                         collateral_shares_delta,
                         debt_delta,
-                        nominal_debt_delta
-                    }
+                        nominal_debt_delta,
+                    },
                 );
         }
 
@@ -1689,10 +1687,12 @@ mod SingletonV2 {
             let collateral = Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: i257_new(collateral, true),
+                value: I257Trait::new(collateral, true),
             };
             let debt = Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: i257_new(debt, true),
+                amount_type: AmountType::Delta,
+                denomination: AmountDenomination::Assets,
+                value: I257Trait::new(debt, true),
             };
 
             // reload context since it might have changed by a reentered call
@@ -1701,17 +1701,14 @@ mod SingletonV2 {
             // only allow for liquidation of undercollateralized positions
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
             assert!(
-                !is_collateralized(collateral_value, debt_value, context.max_ltv.into()), "not-undercollateralized"
+                !is_collateralized(collateral_value, debt_value, context.max_ltv.into()), "not-undercollateralized",
             );
 
             // update the position
             let response = self.update_position(ref context, collateral, debt, bad_debt);
-            let UpdatePositionResponse { mut collateral_delta,
-            mut collateral_shares_delta,
-            debt_delta,
-            nominal_debt_delta,
-            bad_debt } =
-                response;
+            let UpdatePositionResponse {
+                mut collateral_delta, mut collateral_shares_delta, debt_delta, nominal_debt_delta, bad_debt,
+            } = response;
 
             // call after-hook of the extension (assets are not settled yet, only the internal state has been updated)
             assert!(
@@ -1724,9 +1721,9 @@ mod SingletonV2 {
                         nominal_debt_delta,
                         bad_debt,
                         data,
-                        get_caller_address()
+                        get_caller_address(),
                     ),
-                "after-liquidate-position-failed"
+                "after-liquidate-position-failed",
             );
 
             self
@@ -1741,8 +1738,8 @@ mod SingletonV2 {
                         collateral_shares_delta,
                         debt_delta,
                         nominal_debt_delta,
-                        bad_debt
-                    }
+                        bad_debt,
+                    },
                 );
 
             // settle collateral and debt balances
@@ -1763,7 +1760,7 @@ mod SingletonV2 {
             asset: ContractAddress,
             amount: u256,
             is_legacy: bool,
-            data: Span<felt252>
+            data: Span<felt252>,
         ) {
             transfer_asset(asset, get_contract_address(), receiver, amount, is_legacy);
             IFlashloanReceiverDispatcher { contract_address: receiver }
@@ -1809,7 +1806,7 @@ mod SingletonV2 {
         /// * `receiver` - address of the receiver
         /// * `amount` - amount to retrieve [asset scale]
         fn retrieve_from_reserve(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, receiver: ContractAddress, amount: u256
+            ref self: ContractState, pool_id: felt252, asset: ContractAddress, receiver: ContractAddress, amount: u256,
         ) {
             let extension = self.extensions.read(pool_id);
             assert!(extension == get_caller_address(), "caller-not-extension");
@@ -1836,7 +1833,7 @@ mod SingletonV2 {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            ltv_config: LTVConfig
+            ltv_config: LTVConfig,
         ) {
             assert!(!self.lock.read(), "set-ltv-config-reentrancy");
             assert!(get_caller_address() == self.extensions.read(pool_id), "caller-not-extension");
@@ -1889,7 +1886,7 @@ mod SingletonV2 {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_asset_parameter(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
+            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256,
         ) {
             assert!(!self.lock.read(), "set-asset-parameter-reentrancy");
             assert!(get_caller_address() == self.extensions.read(pool_id), "caller-not-extension");
@@ -1921,7 +1918,7 @@ mod SingletonV2 {
         /// * `extension` - address of the extension contract
         fn set_extension(ref self: ContractState, pool_id: felt252, extension: ContractAddress) {
             assert!(get_caller_address() == self.extensions.read(pool_id), "caller-not-extension");
-            assert!(extension != Zeroable::zero(), "extension-not-set");
+            assert!(extension != Zero::zero(), "extension-not-set");
             self._set_extension(pool_id, extension);
         }
 
@@ -1956,7 +1953,7 @@ mod SingletonV2 {
             extension: ContractAddress,
             creator: ContractAddress,
             asset_configs: Span<(ContractAddress, AssetConfig)>,
-            ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>
+            ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
         ) {
             assert!(self.migrator.read() == get_caller_address(), "caller-not-migrator");
             assert!(_is_v1_pool(pool_id), "not-v1-pool");
@@ -1967,20 +1964,18 @@ mod SingletonV2 {
             self.creator_nonce.write(creator, self.creator_nonce.read(creator) + 1);
 
             let mut asset_configs = asset_configs;
-            while !asset_configs
-                .is_empty() {
-                    let (asset, asset_config) = *asset_configs.pop_front().unwrap();
-                    self.asset_configs.write((pool_id, asset), asset_config);
-                    self.emit(SetAssetConfig { pool_id, asset });
-                };
+            while !asset_configs.is_empty() {
+                let (asset, asset_config) = *asset_configs.pop_front().unwrap();
+                self.asset_configs.write((pool_id, asset), asset_config);
+                self.emit(SetAssetConfig { pool_id, asset });
+            }
 
             let mut ltv_configs = ltv_configs;
-            while !ltv_configs
-                .is_empty() {
-                    let (collateral_asset, debt_asset, ltv_config) = *ltv_configs.pop_front().unwrap();
-                    self.ltv_configs.write((pool_id, collateral_asset, debt_asset), ltv_config);
-                    self.emit(SetLTVConfig { pool_id, collateral_asset, debt_asset, ltv_config });
-                };
+            while !ltv_configs.is_empty() {
+                let (collateral_asset, debt_asset, ltv_config) = *ltv_configs.pop_front().unwrap();
+                self.ltv_configs.write((pool_id, collateral_asset, debt_asset), ltv_config);
+                self.emit(SetLTVConfig { pool_id, collateral_asset, debt_asset, ltv_config });
+            }
 
             self.emit(CreatePool { pool_id, extension, creator });
         }

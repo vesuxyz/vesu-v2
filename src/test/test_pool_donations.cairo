@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod TestPoolDonation {
     use snforge_std::{
-        start_prank, stop_prank, CheatTarget, ContractClassTrait, ContractClass, get_class_hash, start_warp
+        CheatTarget, ContractClass, ContractClassTrait, get_class_hash, start_prank, start_warp, stop_prank,
     };
     use starknet::get_block_timestamp;
-    use vesu::{
-        units::{SCALE, PERCENT, DAY_IN_SECONDS}, math::pow_10, data_model::{Amount, AmountType, AmountDenomination},
-        singleton_v2::{ISingletonV2DispatcherTrait, ModifyPositionParams},
-        vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait},
-        test::setup_v2::{setup, TestConfig, LendingTerms},
-    };
+    use vesu::data_model::{Amount, AmountDenomination, AmountType};
+    use vesu::math::pow_10;
+    use vesu::singleton_v2::{ISingletonV2DispatcherTrait, ModifyPositionParams};
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
+    use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE};
+    use vesu::vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait};
 
     #[test]
     fn test_donate_to_reserve_pool() {
@@ -41,7 +41,7 @@ mod TestPoolDonation {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -83,7 +83,7 @@ mod TestPoolDonation {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -108,7 +108,7 @@ mod TestPoolDonation {
         let balance = debt_asset.balance_of(users.lender);
         assert!(
             balance == initial_lender_debt_asset_balance - liquidity_to_deposit - amount_to_donate_to_reserve,
-            "Not transferred from Lender"
+            "Not transferred from Lender",
         );
 
         let (new_position, _, _) = singleton
@@ -120,7 +120,7 @@ mod TestPoolDonation {
         let new_pool_reserve = asset_config.reserve;
         assert!(
             new_pool_reserve == old_pool_reserve + amount_to_donate_to_reserve - response.debt_delta.abs,
-            "Reserves not updated"
+            "Reserves not updated",
         );
     }
 
@@ -152,7 +152,7 @@ mod TestPoolDonation {
         let fake_asset_scale = pow_10(decimals);
         let supply = 5 * fake_asset_scale;
         let calldata = array![
-            'Fake', 'FKE', decimals.into(), supply.low.into(), supply.high.into(), users.lender.into()
+            'Fake', 'FKE', decimals.into(), supply.low.into(), supply.high.into(), users.lender.into(),
         ];
         let fake_asset = IERC20Dispatcher { contract_address: mock_asset_class.deploy(@calldata).unwrap() };
 

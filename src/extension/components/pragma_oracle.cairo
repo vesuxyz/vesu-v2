@@ -7,45 +7,48 @@ pub struct OracleConfig {
     pub number_of_sources: u32, // [0, 255]
     pub start_time_offset: u64, // [seconds]
     pub time_window: u64, // [seconds]
-    pub aggregation_mode: AggregationMode
+    pub aggregation_mode: AggregationMode,
 }
 
-fn assert_oracle_config(oracle_config: OracleConfig) {
+pub fn assert_oracle_config(oracle_config: OracleConfig) {
     assert!(oracle_config.pragma_key != 0, "pragma-key-must-be-set");
     assert!(
-        oracle_config.time_window <= oracle_config.start_time_offset, "time-window-must-be-less-than-start-time-offset"
+        oracle_config.time_window <= oracle_config.start_time_offset, "time-window-must-be-less-than-start-time-offset",
     );
 }
 
 #[starknet::component]
-mod pragma_oracle_component {
+pub mod pragma_oracle_component {
+    use core::num::traits::Zero;
+    use starknet::storage::{
+        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
     use starknet::{ContractAddress, get_block_timestamp};
-    use vesu::{
-        units::{SCALE, SCALE_128}, math::{pow_10},
-        vendor::pragma::{
-            PragmaPricesResponse, DataType, AggregationMode, IPragmaABIDispatcher, IPragmaABIDispatcherTrait,
-            ISummaryStatsABIDispatcher, ISummaryStatsABIDispatcherTrait
-        },
-        extension::components::pragma_oracle::{OracleConfig, assert_oracle_config}
+    use vesu::extension::components::pragma_oracle::{OracleConfig, assert_oracle_config};
+    use vesu::math::pow_10;
+    use vesu::units::SCALE;
+    use vesu::vendor::pragma::{
+        AggregationMode, DataType, IPragmaABIDispatcher, IPragmaABIDispatcherTrait, ISummaryStatsABIDispatcher,
+        ISummaryStatsABIDispatcherTrait,
     };
 
     #[storage]
-    struct Storage {
-        oracle_address: ContractAddress,
-        summary_address: ContractAddress,
+    pub struct Storage {
+        pub oracle_address: ContractAddress,
+        pub summary_address: ContractAddress,
         // (pool_id, asset) -> oracle configuration
-        oracle_configs: starknet::storage::map::Map::<(felt252, ContractAddress), OracleConfig>,
+        pub oracle_configs: starknet::storage::Map<(felt252, ContractAddress), OracleConfig>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetOracleConfig {
+    pub struct SetOracleConfig {
         pool_id: felt252,
         asset: ContractAddress,
         oracle_config: OracleConfig,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetOracleParameter {
+    pub struct SetOracleParameter {
         pool_id: felt252,
         asset: ContractAddress,
         parameter: felt252,
@@ -54,13 +57,13 @@ mod pragma_oracle_component {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         SetOracleConfig: SetOracleConfig,
-        SetOracleParameter: SetOracleParameter
+        SetOracleParameter: SetOracleParameter,
     }
 
     #[generate_trait]
-    impl PragmaOracleTrait<TContractState, +HasComponent<TContractState>> of Trait<TContractState> {
+    pub impl PragmaOracleTrait<TContractState, +HasComponent<TContractState>> of Trait<TContractState> {
         /// Sets the address of the summary contract
         /// # Arguments
         /// * `summary_address` - address of the summary contract
@@ -99,15 +102,9 @@ mod pragma_oracle_component {
         /// * `price` - current price of the asset
         /// * `valid` - whether the price is valid
         fn price(self: @ComponentState<TContractState>, pool_id: felt252, asset: ContractAddress) -> (u256, bool) {
-            let OracleConfig { pragma_key,
-            timeout,
-            number_of_sources,
-            start_time_offset,
-            time_window,
-            aggregation_mode } =
-                self
-                .oracle_configs
-                .read((pool_id, asset));
+            let OracleConfig {
+                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
+            } = self.oracle_configs.read((pool_id, asset));
             let dispatcher = IPragmaABIDispatcher { contract_address: self.oracle_address.read() };
             let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
 
@@ -121,7 +118,7 @@ mod pragma_oracle_component {
                         DataType::SpotEntry(pragma_key),
                         aggregation_mode,
                         time_window,
-                        get_block_timestamp() - start_time_offset
+                        get_block_timestamp() - start_time_offset,
                     );
                 value.into() * SCALE / pow_10(decimals.into())
             };
@@ -148,7 +145,7 @@ mod pragma_oracle_component {
             ref self: ComponentState<TContractState>,
             pool_id: felt252,
             asset: ContractAddress,
-            oracle_config: OracleConfig
+            oracle_config: OracleConfig,
         ) {
             let OracleConfig { pragma_key, .. } = self.oracle_configs.read((pool_id, asset));
             assert!(pragma_key == 0, "oracle-config-already-set");
@@ -170,7 +167,7 @@ mod pragma_oracle_component {
             pool_id: felt252,
             asset: ContractAddress,
             parameter: felt252,
-            value: felt252
+            value: felt252,
         ) {
             let mut oracle_config: OracleConfig = self.oracle_configs.read((pool_id, asset));
             assert!(oracle_config.pragma_key != 0, "oracle-config-not-set");

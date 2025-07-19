@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod TestAssetRetrieval {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, start_warp};
+    use snforge_std::{CheatTarget, start_prank, start_warp, stop_prank};
     use starknet::{contract_address_const, get_block_timestamp};
-    use vesu::{
-        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams},
-        singleton_v2::ISingletonV2DispatcherTrait,
-        extension::default_extension_po_v2::{IDefaultExtensionPOV2DispatcherTrait}, units::{PERCENT, DAY_IN_SECONDS},
-        test::setup_v2::{setup, TestConfig, LendingTerms}, vendor::erc20::ERC20ABIDispatcherTrait
-    };
+    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
+    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
+    use vesu::units::{DAY_IN_SECONDS, PERCENT};
+    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
 
     #[test]
     fn test_retrieve_from_reserve_total_balance() {
@@ -30,7 +30,7 @@ mod TestAssetRetrieval {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -41,7 +41,7 @@ mod TestAssetRetrieval {
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
         assert!(pre_retrieval_balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
-        // retrieve entire balance 
+        // retrieve entire balance
         start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
         singleton.retrieve_from_reserve(pool_id, debt_asset.contract_address, users.lender, pre_retrieval_balance);
         stop_prank(CheatTarget::One(singleton.contract_address));
@@ -51,7 +51,7 @@ mod TestAssetRetrieval {
         assert!(post_retrieval_balance == 0, "Asset not transferred out of the Singleton");
         assert!(
             post_retrieval_user_balance - pre_deposit_balance == initial_lender_debt_asset_balance,
-            "Asset not transferred to the user"
+            "Asset not transferred to the user",
         );
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
@@ -81,7 +81,7 @@ mod TestAssetRetrieval {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -94,10 +94,10 @@ mod TestAssetRetrieval {
 
         let (asset_config_pre_retrieval, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(
-            asset_config_pre_retrieval.reserve == pre_deposit_reserve + liquidity_to_deposit, "Reserve not updated"
+            asset_config_pre_retrieval.reserve == pre_deposit_reserve + liquidity_to_deposit, "Reserve not updated",
         );
 
-        // retrieve % of total balance 
+        // retrieve % of total balance
         let amount_to_retrieve = pre_retrieval_balance / 2;
 
         start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
@@ -108,11 +108,11 @@ mod TestAssetRetrieval {
         let post_retrieval_user_balance = debt_asset.balance_of(users.lender);
         assert!(
             post_retrieval_balance == pre_retrieval_balance - amount_to_retrieve,
-            "Asset not transferred out of the Singleton"
+            "Asset not transferred out of the Singleton",
         );
         assert!(
             post_retrieval_user_balance - pre_deposit_balance == initial_lender_debt_asset_balance - amount_to_retrieve,
-            "Asset not transferred to the user"
+            "Asset not transferred to the user",
         );
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
@@ -141,7 +141,7 @@ mod TestAssetRetrieval {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -166,7 +166,7 @@ mod TestAssetRetrieval {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -214,7 +214,7 @@ mod TestAssetRetrieval {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);

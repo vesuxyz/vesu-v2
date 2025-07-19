@@ -1,20 +1,19 @@
 #[cfg(test)]
 mod TestModifyPosition {
-    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
+    use snforge_std::{CheatTarget, start_prank, start_warp, stop_prank, stop_warp};
     use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
-    use vesu::{
-        units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS},
-        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams, Context, AssetConfig, Position},
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        extension::{
-            interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
-        },
-        vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
-        test::{
-            setup_v2::{setup, TestConfig, LendingTerms}, mock_asset::{IMintableDispatcher, IMintableDispatcherTrait}
-        },
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, AssetConfig, Context, ModifyPositionParams, Position,
     };
+    use vesu::extension::default_extension_po_v2::{
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
+    };
+    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
+    use vesu::units::{DAY_IN_SECONDS, SCALE, YEAR_IN_SECONDS};
+    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     #[test]
     #[should_panic(expected: "caller-not-singleton")]
@@ -34,10 +33,10 @@ mod TestModifyPosition {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default(), };
+        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
 
         let context = Context {
             pool_id: 1,
@@ -52,7 +51,7 @@ mod TestModifyPosition {
             debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         IExtensionDispatcher { contract_address: extension.contract_address }
@@ -61,7 +60,7 @@ mod TestModifyPosition {
                 Default::default(),
                 Default::default(),
                 data: ArrayTrait::new().span(),
-                caller: get_caller_address()
+                caller: get_caller_address(),
             );
     }
 
@@ -83,10 +82,10 @@ mod TestModifyPosition {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default(), };
+        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
 
         let context = Context {
             pool_id: 1,
@@ -101,7 +100,7 @@ mod TestModifyPosition {
             debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         IExtensionDispatcher { contract_address: extension.contract_address }
@@ -112,7 +111,7 @@ mod TestModifyPosition {
                 Default::default(),
                 Default::default(),
                 data: ArrayTrait::new().span(),
-                caller: get_caller_address()
+                caller: get_caller_address(),
             );
     }
 
@@ -129,7 +128,7 @@ mod TestModifyPosition {
             user: users.lender,
             collateral: Default::default(),
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -159,7 +158,7 @@ mod TestModifyPosition {
                 value: (liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -177,7 +176,7 @@ mod TestModifyPosition {
                 value: -(liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -205,7 +204,7 @@ mod TestModifyPosition {
                 value: (liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -232,7 +231,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (SCALE / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -260,7 +259,7 @@ mod TestModifyPosition {
                 value: (liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -282,7 +281,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (SCALE / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -298,7 +297,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: SCALE.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -385,10 +384,10 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into()
+                value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -405,10 +404,8 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: 10.into(),
             },
-            debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 1.into(),
-            },
-            data: ArrayTrait::new().span()
+            debt: Amount { amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 1.into() },
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -439,10 +436,10 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into()
+                value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -461,10 +458,8 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Assets,
                 value: collateral_to_deposit.into(),
             },
-            debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 1.into(),
-            },
-            data: ArrayTrait::new().span()
+            debt: Amount { amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 1.into() },
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -533,7 +528,7 @@ mod TestModifyPosition {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: amount.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -547,7 +542,7 @@ mod TestModifyPosition {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: -amount.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -565,7 +560,7 @@ mod TestModifyPosition {
                 value: collateral_amount.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -581,7 +576,7 @@ mod TestModifyPosition {
                 value: -collateral_amount.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -602,7 +597,7 @@ mod TestModifyPosition {
                 value: collateral_shares.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -616,7 +611,7 @@ mod TestModifyPosition {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -634,7 +629,7 @@ mod TestModifyPosition {
                 value: collateral_amount.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -648,7 +643,7 @@ mod TestModifyPosition {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 0.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -691,7 +686,7 @@ mod TestModifyPosition {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt_amount.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -709,7 +704,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: (amount / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -725,7 +720,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: -(amount / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -745,7 +740,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt_amount.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -763,7 +758,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -debt_amount.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -788,7 +783,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Native,
                 value: (collateral_shares / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -801,10 +796,8 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into(),
             },
-            debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into(),
-            },
-            data: ArrayTrait::new().span()
+            debt: Amount { amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into() },
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -824,7 +817,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: debt_amount.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -837,10 +830,8 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 0.into(),
             },
-            debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 0.into(),
-            },
-            data: ArrayTrait::new().span()
+            debt: Amount { amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: 0.into() },
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -871,7 +862,7 @@ mod TestModifyPosition {
                 value: (collateral_to_deposit / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -881,7 +872,7 @@ mod TestModifyPosition {
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
         assert(
-            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching'
+            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching',
         );
 
         singleton.donate_to_reserve(pool_id, collateral_asset.contract_address, collateral_to_deposit / 2);
@@ -890,7 +881,7 @@ mod TestModifyPosition {
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert(
-            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching'
+            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching',
         );
 
         let params = ModifyPositionParams {
@@ -904,7 +895,7 @@ mod TestModifyPosition {
                 value: -(collateral_to_deposit / 4).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -913,12 +904,12 @@ mod TestModifyPosition {
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert(
-            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching'
+            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching',
         );
 
         let collateral_shares = singleton
             .calculate_collateral_shares(
-                pool_id, collateral_asset.contract_address, (collateral_to_deposit / 2).into()
+                pool_id, collateral_asset.contract_address, (collateral_to_deposit / 2).into(),
             );
 
         let params = ModifyPositionParams {
@@ -929,17 +920,17 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Native,
-                value: collateral_shares.into()
+                value: collateral_shares.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
 
         let collateral_shares = singleton
             .calculate_collateral_shares(
-                pool_id, collateral_asset.contract_address, -(collateral_to_deposit / 4).into()
+                pool_id, collateral_asset.contract_address, -(collateral_to_deposit / 4).into(),
             );
 
         let params = ModifyPositionParams {
@@ -950,10 +941,10 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Native,
-                value: -collateral_shares.into()
+                value: -collateral_shares.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -969,7 +960,7 @@ mod TestModifyPosition {
                 value: (collateral_to_deposit / 4).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -985,10 +976,10 @@ mod TestModifyPosition {
             collateral: Amount {
                 amount_type: AmountType::Target,
                 denomination: AmountDenomination::Native,
-                value: collateral_shares.into()
+                value: collateral_shares.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1002,7 +993,7 @@ mod TestModifyPosition {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1011,7 +1002,7 @@ mod TestModifyPosition {
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert(
-            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching'
+            asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching',
         );
         // rounding error might leave some extra units in the pool
         assert(asset_config.reserve == 4000, 'Reserve not zero');
@@ -1040,7 +1031,7 @@ mod TestModifyPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1057,7 +1048,7 @@ mod TestModifyPosition {
                 value: collateral_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
@@ -1075,7 +1066,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1095,7 +1086,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Assets,
                 value: -(debt_to_draw / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1111,7 +1102,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Native,
                 value: ((debt_to_draw / 2) * SCALE / debt_scale).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1127,7 +1118,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Native,
                 value: -((debt_to_draw / 4) * SCALE / debt_scale).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1143,7 +1134,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1159,7 +1150,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Native,
                 value: ((debt_to_draw * SCALE / debt_scale) / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1173,7 +1164,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1191,8 +1182,9 @@ mod TestModifyPosition {
     fn test_modify_position_complex() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
-        let LendingTerms { liquidity_to_deposit, collateral_to_deposit, debt_to_draw, nominal_debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, collateral_to_deposit, debt_to_draw, nominal_debt_to_draw, ..,
+        } = terms;
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
         let initial_borrower_collateral_asset_balance = collateral_asset.balance_of(users.borrower);
@@ -1213,7 +1205,7 @@ mod TestModifyPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1226,7 +1218,7 @@ mod TestModifyPosition {
 
         let balance = debt_asset.balance_of(singleton.contract_address);
         assert!(
-            balance == initial_singleton_debt_asset_balance + liquidity_to_deposit, "Not transferred to Singleton"
+            balance == initial_singleton_debt_asset_balance + liquidity_to_deposit, "Not transferred to Singleton",
         ); // 2 due to inflation mitigation
 
         let (position, collateral, debt) = singleton
@@ -1256,7 +1248,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1269,12 +1261,12 @@ mod TestModifyPosition {
         let balance = collateral_asset.balance_of(users.borrower);
         assert!(
             balance == initial_borrower_collateral_asset_balance - collateral_to_deposit,
-            "Not transferred from borrower"
+            "Not transferred from borrower",
         );
         let balance = collateral_asset.balance_of(singleton.contract_address);
         assert!(
             balance == initial_singleton_collateral_asset_balance + collateral_to_deposit,
-            "Not transferred to Singleton"
+            "Not transferred to Singleton",
         );
 
         // debt asset has been transferred from the singleton to the borrower
@@ -1283,28 +1275,29 @@ mod TestModifyPosition {
         let balance = debt_asset.balance_of(singleton.contract_address);
         assert!(
             balance == initial_singleton_debt_asset_balance + liquidity_to_deposit - debt_to_draw,
-            "Debt asset not transferred"
+            "Debt asset not transferred",
         );
 
         // collateral asset reserve has been updated
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(
             asset_config.reserve == initial_singleton_collateral_asset_balance + collateral_to_deposit,
-            "Collateral not in reserve"
+            "Collateral not in reserve",
         );
 
         // debt asset reserve has been updated
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(
             asset_config.reserve == initial_singleton_debt_asset_balance + liquidity_to_deposit - debt_to_draw,
-            "Debt not taken from reserve"
+            "Debt not taken from reserve",
         );
 
         // position's collateral balance has been updated
         let (position, collateral, debt) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         // assert!(
-        //     position.collateral_shares == collateral_to_deposit * SCALE / collateral_scale, "Collateral Shares not set"
+        //     position.collateral_shares == collateral_to_deposit * SCALE / collateral_scale, "Collateral Shares not
+        //     set"
         // );
         assert!(collateral == collateral_to_deposit, "Collateral not set");
         // position's debt balance has been updated (no interest accrued yet)
@@ -1336,7 +1329,7 @@ mod TestModifyPosition {
                 denomination: AmountDenomination::Assets,
                 value: -(debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1347,7 +1340,7 @@ mod TestModifyPosition {
         let balance = debt_asset.balance_of(users.borrower);
         assert!(
             balance <= initial_borrower_debt_asset_balance + debt_to_draw - debt_to_draw / 2,
-            "Debt asset not transferred"
+            "Debt asset not transferred",
         );
 
         let balance = debt_asset.balance_of(singleton.contract_address);
@@ -1356,7 +1349,7 @@ mod TestModifyPosition {
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(
             asset_config.reserve >= liquidity_to_deposit - debt_to_draw + debt_to_draw / 2,
-            "Repayed assets not in reserve"
+            "Repayed assets not in reserve",
         );
 
         let (position, _, debt) = singleton
@@ -1368,7 +1361,7 @@ mod TestModifyPosition {
         let balance = collateral_asset.balance_of(users.borrower);
         assert!(
             balance <= initial_borrower_collateral_asset_balance - collateral_to_deposit / 2,
-            "Collateral not transferred"
+            "Collateral not transferred",
         );
 
         let balance = collateral_asset.balance_of(singleton.contract_address);
@@ -1393,7 +1386,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1402,7 +1395,7 @@ mod TestModifyPosition {
 
         // check that all debt has been repayed and all collateral has been withdrawn
         assert!(
-            debt_asset.balance_of(singleton.contract_address) >= liquidity_to_deposit, "Debt asset not transferred"
+            debt_asset.balance_of(singleton.contract_address) >= liquidity_to_deposit, "Debt asset not transferred",
         );
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
@@ -1438,7 +1431,7 @@ mod TestModifyPosition {
                 value: (liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1460,7 +1453,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (SCALE / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1489,7 +1482,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1532,7 +1525,7 @@ mod TestModifyPosition {
                 value: (liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1558,7 +1551,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (SCALE / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1583,7 +1576,7 @@ mod TestModifyPosition {
             user: users.borrower,
             collateral: Default::default(),
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1603,7 +1596,7 @@ mod TestModifyPosition {
 
         assert(
             singleton.rate_accumulator(pool_id, third_asset.contract_address) == rate_accumulator,
-            'rate_accumulator changed'
+            'rate_accumulator changed',
         );
 
         // fund borrower with debt assets to repay interest
@@ -1620,7 +1613,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1668,7 +1661,7 @@ mod TestModifyPosition {
                 value: (liquidity_to_deposit).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1696,7 +1689,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: (SCALE / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1722,7 +1715,7 @@ mod TestModifyPosition {
                 value: (collateral_to_deposit).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1745,7 +1738,7 @@ mod TestModifyPosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: (SCALE / 4).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);

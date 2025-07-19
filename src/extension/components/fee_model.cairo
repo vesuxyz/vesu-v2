@@ -2,55 +2,51 @@ use starknet::ContractAddress;
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 pub struct FeeConfig {
-    pub fee_recipient: ContractAddress
+    pub fee_recipient: ContractAddress,
 }
 
 #[starknet::component]
-mod fee_model_component {
-    use alexandria_math::i257::{i257, i257_new};
-    use starknet::{ContractAddress, get_contract_address, contract_address_const};
-    use vesu::{
-        singleton_v2::{
-            ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, ModifyPositionParams, UpdatePositionResponse
-        },
-        data_model::{Amount, AmountDenomination, AmountType},
-        extension::{
-            components::fee_model::FeeConfig,
-            default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback}
-        },
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait}
-    };
+pub mod fee_model_component {
+    use alexandria_math::i257::I257Trait;
+    use core::num::traits::Zero;
+    use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::{ContractAddress, contract_address_const, get_contract_address};
+    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, UpdatePositionResponse};
+    use vesu::extension::components::fee_model::FeeConfig;
+    use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait};
+    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         // pool_id -> fee configuration
-        fee_configs: starknet::storage::map::Map::<felt252, FeeConfig>,
+        pub fee_configs: starknet::storage::Map<felt252, FeeConfig>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetFeeConfig {
+    pub struct SetFeeConfig {
         #[key]
         pool_id: felt252,
         #[key]
-        fee_config: FeeConfig
+        fee_config: FeeConfig,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ClaimFees {
+    pub struct ClaimFees {
         #[key]
         pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         recipient: ContractAddress,
-        amount: u256
+        amount: u256,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         SetFeeConfig: SetFeeConfig,
-        ClaimFees: ClaimFees
+        ClaimFees: ClaimFees,
     }
 
     fn _is_v1_pool(pool_id: felt252) -> bool {
@@ -69,11 +65,11 @@ mod fee_model_component {
     }
 
     #[generate_trait]
-    impl FeeModelTrait<
+    pub impl FeeModelTrait<
         TContractState,
         +HasComponent<TContractState>,
         +IDefaultExtensionCallback<TContractState>,
-        +ITokenizationCallback<TContractState>
+        +ITokenizationCallback<TContractState>,
     > of Trait<TContractState> {
         /// Sets the fee configuration for a pool
         /// # Arguments
@@ -92,15 +88,15 @@ mod fee_model_component {
             let singleton = self.get_contract().singleton();
 
             let (position, _, _) = ISingletonV2Dispatcher { contract_address: singleton }
-                .position(pool_id, collateral_asset, Zeroable::zero(), get_contract_address());
+                .position(pool_id, collateral_asset, Zero::zero(), get_contract_address());
 
             let v_token = IERC20Dispatcher {
-                contract_address: self.get_contract().v_token_for_collateral_asset(pool_id, collateral_asset)
+                contract_address: self.get_contract().v_token_for_collateral_asset(pool_id, collateral_asset),
             };
 
             let unmigrated = if _is_v1_pool(pool_id) {
                 let v_token_v1 = IERC20Dispatcher {
-                    contract_address: IVTokenV2Dispatcher { contract_address: v_token.contract_address }.v_token_v1()
+                    contract_address: IVTokenV2Dispatcher { contract_address: v_token.contract_address }.v_token_v1(),
                 };
                 v_token_v1.total_supply() - v_token_v1.balance_of(contract_address_const::<'0x0'>())
             } else {
@@ -109,25 +105,28 @@ mod fee_model_component {
 
             let amount = position.collateral_shares - (v_token.total_supply() + unmigrated);
 
-            let UpdatePositionResponse { collateral_delta, .. } = ISingletonV2Dispatcher { contract_address: singleton }
-                .modify_position(
-                    ModifyPositionParams {
-                        pool_id,
-                        collateral_asset,
-                        debt_asset: Zeroable::zero(),
-                        user: get_contract_address(),
-                        collateral: Amount {
-                            amount_type: AmountType::Delta,
-                            denomination: AmountDenomination::Native,
-                            value: i257_new(amount, true),
+            let UpdatePositionResponse {
+                collateral_delta, ..,
+            } =
+                ISingletonV2Dispatcher { contract_address: singleton }
+                    .modify_position(
+                        ModifyPositionParams {
+                            pool_id,
+                            collateral_asset,
+                            debt_asset: Zero::zero(),
+                            user: get_contract_address(),
+                            collateral: Amount {
+                                amount_type: AmountType::Delta,
+                                denomination: AmountDenomination::Native,
+                                value: I257Trait::new(amount, true),
+                            },
+                            debt: Default::default(),
+                            data: ArrayTrait::new().span(),
                         },
-                        debt: Default::default(),
-                        data: ArrayTrait::new().span()
-                    }
-                );
+                    );
 
             let fee_config = self.fee_configs.read(pool_id);
-            let amount = collateral_delta.abs;
+            let amount = collateral_delta.abs();
 
             IERC20Dispatcher { contract_address: collateral_asset }.transfer(fee_config.fee_recipient, amount);
 
@@ -136,10 +135,10 @@ mod fee_model_component {
                     ClaimFees {
                         pool_id,
                         collateral_asset,
-                        debt_asset: Zeroable::zero(),
+                        debt_asset: Zero::zero(),
                         recipient: fee_config.fee_recipient,
-                        amount
-                    }
+                        amount,
+                    },
                 );
         }
     }

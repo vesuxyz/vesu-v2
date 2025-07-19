@@ -1,30 +1,24 @@
 #[cfg(test)]
 mod TestShutdown {
-    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
+    use snforge_std::{CheatTarget, start_prank, start_warp, stop_prank, stop_warp};
     use starknet::{contract_address_const, get_block_timestamp, get_contract_address};
-    use vesu::{
-        units::{SCALE, SCALE_128, DAY_IN_SECONDS},
-        data_model::{
-            UnsignedAmount, Amount, AmountDenomination, AmountType, Position, ModifyPositionParams,
-            LiquidatePositionParams, TransferPositionParams
-        },
-        test::{
-            mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
-            setup_v2::{
-                setup, setup_env, setup_pool, test_interest_rate_config, TestConfig, LendingTerms, COLL_PRAGMA_KEY,
-                DEBT_PRAGMA_KEY, THIRD_PRAGMA_KEY
-            },
-        },
-        extension::{
-            components::position_hooks::{ShutdownMode},
-            default_extension_po_v2::{
-                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig
-            },
-        },
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait, IERC4626Dispatcher, IERC4626DispatcherTrait},
-        vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, LiquidatePositionParams, ModifyPositionParams, Position,
+        TransferPositionParams, UnsignedAmount,
     };
+    use vesu::extension::components::position_hooks::ShutdownMode;
+    use vesu::extension::default_extension_po_v2::{
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
+    };
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
+    use vesu::test::setup_v2::{
+        COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_env, setup_pool,
+        test_interest_rate_config,
+    };
+    use vesu::units::{DAY_IN_SECONDS, SCALE, SCALE_128};
+    use vesu::v_token_v2::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenV2Dispatcher, IVTokenV2DispatcherTrait};
+    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     #[test]
     fn test_set_shutdown_mode_recovery() {
@@ -68,7 +62,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -92,7 +86,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -120,7 +114,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (SCALE / 5_000).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -148,7 +142,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -172,7 +166,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -194,7 +188,7 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into() },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -223,7 +217,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -247,7 +241,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -273,7 +267,7 @@ mod TestShutdown {
                 value: (collateral_to_deposit / 10).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -291,7 +285,7 @@ mod TestShutdown {
                 value: -(collateral_to_deposit / 1000).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -320,7 +314,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -344,7 +338,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -370,7 +364,7 @@ mod TestShutdown {
                 value: (collateral_to_deposit / 10).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -388,7 +382,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw / 100).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -416,7 +410,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -440,7 +434,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -460,7 +454,7 @@ mod TestShutdown {
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.max_deposit(Zeroable::zero()) > 0, 'max_deposit neq');
         assert(v_token.preview_deposit(10000000) > 0, 'preview_deposit neq');
@@ -494,7 +488,7 @@ mod TestShutdown {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: -1_u256.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -523,7 +517,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -547,7 +541,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -579,7 +573,7 @@ mod TestShutdown {
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.max_deposit(Zeroable::zero()) == 0, 'max_deposit neq');
         assert(v_token.preview_deposit(10000000) == 0, 'preview_deposit neq');
@@ -601,7 +595,7 @@ mod TestShutdown {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: SCALE.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -630,7 +624,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -654,7 +648,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -700,7 +694,7 @@ mod TestShutdown {
                 value: -1000_0000000000.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -729,7 +723,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -753,7 +747,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -799,7 +793,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw / 10).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -827,7 +821,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -851,7 +845,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -896,7 +890,7 @@ mod TestShutdown {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -924,7 +918,7 @@ mod TestShutdown {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -953,7 +947,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -977,7 +971,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1023,7 +1017,7 @@ mod TestShutdown {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1047,7 +1041,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
 
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
 
         start_prank(CheatTarget::One(v_token.contract_address), extension.contract_address);
@@ -1073,7 +1067,7 @@ mod TestShutdown {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: SCALE.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1102,7 +1096,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1126,7 +1120,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1174,7 +1168,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw / 10).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1207,7 +1201,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: -(nominal_debt_to_draw / 10).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1236,7 +1230,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1260,7 +1254,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1306,7 +1300,7 @@ mod TestShutdown {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1339,7 +1333,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw / 10).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1370,7 +1364,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1394,7 +1388,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1448,7 +1442,7 @@ mod TestShutdown {
                 value: -1000_0000000000.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1493,7 +1487,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1517,14 +1511,14 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), borrower);
         singleton.modify_position(params);
         stop_prank(CheatTarget::One(singleton.contract_address));
 
-        // 
+        //
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1537,7 +1531,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Assets,
                 value: (collateral_to_deposit / 11).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1583,7 +1577,7 @@ mod TestShutdown {
             debt: Amount {
                 amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), borrower);
@@ -1624,7 +1618,7 @@ mod TestShutdown {
                 value: -(asset_config.reserve).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), borrower);
@@ -1641,12 +1635,9 @@ mod TestShutdown {
     fn test_recovery_mode_complex() {
         let (singleton, extension, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit,
-        collateral_to_deposit,
-        nominal_debt_to_draw,
-        liquidity_to_deposit_third,
-        .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
+        } = terms;
 
         // User 1
 
@@ -1661,7 +1652,7 @@ mod TestShutdown {
                 value: (liquidity_to_deposit).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1679,7 +1670,7 @@ mod TestShutdown {
                 value: (liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1703,7 +1694,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1725,7 +1716,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1801,7 +1792,7 @@ mod TestShutdown {
             Zeroable::zero(),
             Zeroable::zero(),
             true,
-            Option::Some(interest_rate_config)
+            Option::Some(interest_rate_config),
         );
 
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
@@ -1821,7 +1812,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1845,7 +1836,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1886,12 +1877,9 @@ mod TestShutdown {
     fn test_shutdown_collateral_accounting() {
         let (singleton, extension, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit,
-        collateral_to_deposit,
-        nominal_debt_to_draw,
-        liquidity_to_deposit_third,
-        .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
+        } = terms;
 
         // Lender
 
@@ -1906,7 +1894,7 @@ mod TestShutdown {
                 value: (liquidity_to_deposit).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1924,7 +1912,7 @@ mod TestShutdown {
                 value: (liquidity_to_deposit_third).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1948,7 +1936,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1970,14 +1958,14 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
         singleton.modify_position(params);
         stop_prank(CheatTarget::One(singleton.contract_address));
 
-        // 
+        //
 
         // Pair 1 and Pair 2: None -> Recovery
         // undercollateraliztion in pair 1 and pair 2 --> recovery
@@ -2014,7 +2002,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -2034,7 +2022,7 @@ mod TestShutdown {
                 value: collateral_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -2093,7 +2081,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -2113,7 +2101,7 @@ mod TestShutdown {
                 value: collateral_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -2172,7 +2160,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -2196,7 +2184,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -2254,7 +2242,7 @@ mod TestShutdown {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -2278,7 +2266,7 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);

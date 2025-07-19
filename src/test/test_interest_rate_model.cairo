@@ -1,20 +1,18 @@
 #[cfg(test)]
 mod TestInterestRateModel {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, start_warp};
-    use starknet::{get_block_timestamp};
-    use vesu::{
-        units::{SCALE, PERCENT, FRACTION, YEAR_IN_SECONDS, DAY_IN_SECONDS}, math::{pow_scale},
-        common::{calculate_utilization, calculate_debt, calculate_nominal_debt},
-        extension::{
-            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
-            components::interest_rate_model::{
-                interest_rate_model_component::calculate_interest_rate, InterestRateConfig, InterestRateConfigPacking
-            }
-        },
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, AssetConfig},
-        data_model::{ModifyPositionParams, Amount, AmountType, AmountDenomination},
-        test::setup_v2::{setup, TestConfig, LendingTerms}
+    use snforge_std::{CheatTarget, ContractClass, declare, get_class_hash, start_prank, start_warp, stop_prank};
+    use starknet::get_block_timestamp;
+    use vesu::common::{calculate_debt, calculate_nominal_debt, calculate_utilization};
+    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
+    use vesu::extension::components::interest_rate_model::interest_rate_model_component::calculate_interest_rate;
+    use vesu::extension::components::interest_rate_model::{InterestRateConfig, InterestRateConfigPacking};
+    use vesu::extension::default_extension_po_v2::{
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
+    use vesu::math::pow_scale;
+    use vesu::singleton_v2::{AssetConfig, ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
+    use vesu::units::{DAY_IN_SECONDS, FRACTION, PERCENT, SCALE, YEAR_IN_SECONDS};
 
     fn interest_rate_config() -> InterestRateConfig {
         InterestRateConfig {
@@ -56,7 +54,7 @@ mod TestInterestRateModel {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let AssetConfig { total_nominal_debt, reserve, scale, .. } = asset_config;
@@ -67,7 +65,7 @@ mod TestInterestRateModel {
         let time_delta = DAY_IN_SECONDS - last_updated;
 
         let (rate, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
 
         let borrow_apr = rate * YEAR_IN_SECONDS;
@@ -92,7 +90,7 @@ mod TestInterestRateModel {
         // below target
         let utilization = 50 * PERCENT;
         let (rate, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(to_apr(rate) == 02_395, "invalid rate"); // 2.395%
         assert!(to_apr(next_full_utilization_rate) == 17_142, "invalid next_full_utilization_rate"); // 17.142%
@@ -100,14 +98,14 @@ mod TestInterestRateModel {
         // in range
         let utilization = 80 * PERCENT;
         let (rate, _) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(to_apr(rate) == 04_059, "invalid rate");
 
         // above target
         let utilization = 90 * PERCENT;
         let (rate, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(to_apr(rate) == 05_060, "invalid rate");
         assert!(to_apr(next_full_utilization_rate) == 23_333, "invalid next_full_utilization_rate");
@@ -124,21 +122,21 @@ mod TestInterestRateModel {
         // below target
         let utilization = (interest_rate_config.min_target_utilization / 2) * FRACTION;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate < last_full_utilization_rate, "invalid below");
 
         // in range
         let utilization = interest_rate_config.target_utilization * FRACTION;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate == last_full_utilization_rate, "invalid in range");
 
         // above target
         let utilization = ((interest_rate_config.max_target_utilization + 100_000) / 2) * FRACTION;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate > last_full_utilization_rate, "invalid above");
     }
@@ -146,7 +144,7 @@ mod TestInterestRateModel {
     #[test]
     #[fuzzer(runs: 256, seed: 0)]
     fn test_full_utilization_bounds(
-        seed_1: u32, seed_2: u32, seed_3: u32, seed_4: u32, seed_5: u32, seed_6: u32, seed_7: u32, seed_8: u32
+        seed_1: u32, seed_2: u32, seed_3: u32, seed_4: u32, seed_5: u32, seed_6: u32, seed_7: u32, seed_8: u32,
     ) {
         let mut interest_rate_config = random_interest_rate_config(seed_1, seed_2);
         interest_rate_config.zero_utilization_rate = from_apr(random_fraction(seed_3));
@@ -160,7 +158,7 @@ mod TestInterestRateModel {
         let last_full_utilization_rate = from_apr(random_fraction(seed_8));
 
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate >= interest_rate_config.min_full_utilization_rate, "below bound");
         assert!(next_full_utilization_rate <= interest_rate_config.max_full_utilization_rate, "above bound");
@@ -178,7 +176,7 @@ mod TestInterestRateModel {
         interest_rate_config.min_full_utilization_rate = 00_000;
         interest_rate_config.max_full_utilization_rate = 00_000;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate >= interest_rate_config.min_full_utilization_rate, "below bound");
         assert!(next_full_utilization_rate <= interest_rate_config.max_full_utilization_rate, "above bound");
@@ -188,7 +186,7 @@ mod TestInterestRateModel {
         interest_rate_config.min_full_utilization_rate = 100_000;
         interest_rate_config.max_full_utilization_rate = 100_000;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate >= interest_rate_config.min_full_utilization_rate, "below bound");
         assert!(next_full_utilization_rate <= interest_rate_config.max_full_utilization_rate, "above bound");
@@ -197,7 +195,7 @@ mod TestInterestRateModel {
         interest_rate_config.min_full_utilization_rate = 1_000_000_000;
         interest_rate_config.max_full_utilization_rate = 1_000_000_000;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate >= interest_rate_config.min_full_utilization_rate, "below bound");
         assert!(next_full_utilization_rate <= interest_rate_config.max_full_utilization_rate, "above bound");
@@ -212,13 +210,13 @@ mod TestInterestRateModel {
 
         let utilization = 0;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate == last_full_utilization_rate / 2, "invalid next_full_utilization_rate");
 
         let utilization = 100_000 * FRACTION;
         let (_, next_full_utilization_rate) = calculate_interest_rate(
-            interest_rate_config, utilization, time_delta, last_full_utilization_rate
+            interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
         assert!(next_full_utilization_rate == last_full_utilization_rate * 2, "invalid next_full_utilization_rate");
     }
@@ -259,10 +257,10 @@ mod TestInterestRateModel {
         assert!(config.max_target_utilization == unpacked.max_target_utilization, "max_target_utilization err");
         assert!(config.target_utilization == unpacked.target_utilization, "target_utilization err");
         assert!(
-            config.min_full_utilization_rate == unpacked.min_full_utilization_rate, "min_full_utilization_rate err"
+            config.min_full_utilization_rate == unpacked.min_full_utilization_rate, "min_full_utilization_rate err",
         );
         assert!(
-            config.max_full_utilization_rate == unpacked.max_full_utilization_rate, "max_full_utilization_rate err"
+            config.max_full_utilization_rate == unpacked.max_full_utilization_rate, "max_full_utilization_rate err",
         );
         assert!(config.zero_utilization_rate == unpacked.zero_utilization_rate, "zero_utilization_rate err");
         assert!(config.rate_half_life == unpacked.rate_half_life, "rate_half_life err");
@@ -295,7 +293,7 @@ mod TestInterestRateModel {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -320,7 +318,7 @@ mod TestInterestRateModel {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);

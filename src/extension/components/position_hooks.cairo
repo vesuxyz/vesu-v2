@@ -1,64 +1,66 @@
-use vesu::{units::{SCALE, DAY_IN_SECONDS}, packing::{into_u123, SHIFT_128, split_128}};
+use starknet::storage_access::StorePacking;
+use vesu::packing::{SHIFT_128, into_u123, split_128};
+use vesu::units::{DAY_IN_SECONDS, SCALE};
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 pub struct ShutdownConfig {
     pub recovery_period: u64, // [seconds]
-    pub subscription_period: u64, // [seconds]
+    pub subscription_period: u64 // [seconds]
 }
 
-fn assert_shutdown_config(shutdown_config: ShutdownConfig) {
+pub fn assert_shutdown_config(shutdown_config: ShutdownConfig) {
     assert!(
         (shutdown_config.recovery_period == 0 && shutdown_config.subscription_period == 0)
             || (shutdown_config.subscription_period >= DAY_IN_SECONDS),
-        "invalid-shutdown-config"
+        "invalid-shutdown-config",
     );
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-struct LiquidationConfig {
-    liquidation_factor: u64 // [SCALE]
+pub struct LiquidationConfig {
+    pub liquidation_factor: u64 // [SCALE]
 }
 
-fn assert_liquidation_config(liquidation_config: LiquidationConfig) {
+pub fn assert_liquidation_config(liquidation_config: LiquidationConfig) {
     assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct Pair {
-    total_collateral_shares: u256, // packed as u128 [SCALE] 
-    total_nominal_debt: u256 // packed as u123 [SCALE]
+pub struct Pair {
+    pub total_collateral_shares: u256, // packed as u128 [SCALE] 
+    pub total_nominal_debt: u256 // packed as u123 [SCALE]
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default, starknet::Store)]
-enum ShutdownMode {
+pub enum ShutdownMode {
     #[default]
     None,
     Recovery,
     Subscription,
-    Redemption
+    Redemption,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct ShutdownStatus {
-    shutdown_mode: ShutdownMode,
-    violating: bool
+pub struct ShutdownStatus {
+    pub shutdown_mode: ShutdownMode,
+    pub violating: bool,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-struct ShutdownState {
+pub struct ShutdownState {
     // current set shutdown mode (overwrites the inferred shutdown mode)
-    shutdown_mode: ShutdownMode,
+    pub shutdown_mode: ShutdownMode,
     // timestamp at which the shutdown mode was last updated
-    last_updated: u64
+    pub last_updated: u64,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct LiquidationData {
-    min_collateral_to_receive: u256,
-    debt_to_repay: u256,
+pub struct LiquidationData {
+    pub min_collateral_to_receive: u256,
+    pub debt_to_repay: u256,
 }
 
-impl PairPacking of starknet::StorePacking<Pair, felt252> {
+impl PairPacking of StorePacking<Pair, felt252> {
     fn pack(value: Pair) -> felt252 {
         let total_collateral_shares: u128 = value
             .total_collateral_shares
@@ -76,48 +78,44 @@ impl PairPacking of starknet::StorePacking<Pair, felt252> {
 }
 
 #[starknet::component]
-mod position_hooks_component {
-    use alexandria_math::i257::{i257, i257_new};
+pub mod position_hooks_component {
+    use alexandria_math::i257::{I257Trait, i257};
+    use core::num::traits::Zero;
+    use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_block_timestamp, get_contract_address};
-    use vesu::{
-        units::SCALE, math::pow_10,
-        data_model::{Amount, Context, Position, LTVConfig, assert_ltv_config, UnsignedAmount},
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        common::{calculate_collateral, is_collateralized, calculate_collateral_and_debt_value, calculate_debt},
-        extension::{
-            default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback},
-            components::position_hooks::{
-                ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, LiquidationData, Pair,
-                assert_shutdown_config, assert_liquidation_config, ShutdownState
-            }
-        }
+    use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
+    use vesu::data_model::{Context, LTVConfig, Position, UnsignedAmount, assert_ltv_config};
+    use vesu::extension::components::position_hooks::{
+        LiquidationConfig, LiquidationData, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus,
+        assert_liquidation_config, assert_shutdown_config,
     };
+    use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::units::SCALE;
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         // contains the shutdown configuration for each pool
         // pool_id -> shutdown configuration
-        shutdown_configs: starknet::storage::map::Map::<felt252, ShutdownConfig>,
+        pub shutdown_configs: starknet::storage::Map<felt252, ShutdownConfig>,
         // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
         // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
-        shutdown_ltv_configs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        pub shutdown_ltv_configs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // contains the current shutdown mode for a pool
         // pool_id -> shutdown mode
-        fixed_shutdown_mode: starknet::storage::map::Map::<felt252, ShutdownState>,
+        pub fixed_shutdown_mode: starknet::storage::Map<felt252, ShutdownState>,
         // contains the liquidation configuration for each pair in a pool
         // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
-        liquidation_configs: starknet::storage::map::Map::<
-            (felt252, ContractAddress, ContractAddress), LiquidationConfig
-        >,
+        pub liquidation_configs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
         // tracks the total collateral shares and the total nominal debt for each pair
         // (pool_id, collateral asset, debt asset) -> pair configuration
-        pairs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), Pair>,
+        pub pairs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), Pair>,
         // tracks the debt caps for each asset
-        debt_caps: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), u256>
+        pub debt_caps: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), u256>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetLiquidationConfig {
+    pub struct SetLiquidationConfig {
         #[key]
         pool_id: felt252,
         #[key]
@@ -128,14 +126,14 @@ mod position_hooks_component {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetShutdownConfig {
+    pub struct SetShutdownConfig {
         #[key]
         pool_id: felt252,
-        shutdown_config: ShutdownConfig
+        shutdown_config: ShutdownConfig,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetShutdownLTVConfig {
+    pub struct SetShutdownLTVConfig {
         #[key]
         pool_id: felt252,
         #[key]
@@ -146,15 +144,15 @@ mod position_hooks_component {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetShutdownMode {
+    pub struct SetShutdownMode {
         #[key]
         pool_id: felt252,
         shutdown_mode: ShutdownMode,
-        last_updated: u64
+        last_updated: u64,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetDebtCap {
+    pub struct SetDebtCap {
         #[key]
         pool_id: felt252,
         #[key]
@@ -166,21 +164,21 @@ mod position_hooks_component {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         SetLiquidationConfig: SetLiquidationConfig,
         SetShutdownConfig: SetShutdownConfig,
         SetShutdownLTVConfig: SetShutdownLTVConfig,
         SetShutdownMode: SetShutdownMode,
-        SetDebtCap: SetDebtCap
+        SetDebtCap: SetDebtCap,
     }
 
     #[generate_trait]
-    impl PositionHooksTrait<
+    pub impl PositionHooksTrait<
         TContractState,
         +HasComponent<TContractState>,
         +IDefaultExtensionCallback<TContractState>,
         +ITokenizationCallback<TContractState>,
-        +Drop<TContractState>
+        +Drop<TContractState>,
     > of Trait<TContractState> {
         /// Checks if a pair is collateralized based on the current oracle prices and the shutdown ltv configuration.
         /// # Arguments
@@ -188,15 +186,15 @@ mod position_hooks_component {
         /// # Returns
         /// * `bool` - true if the pair is collateralized, false otherwise
         fn is_pair_collateralized(self: @ComponentState<TContractState>, ref context: Context) -> bool {
-            let Pair { total_collateral_shares, total_nominal_debt } = self
-                .pairs
-                .read((context.pool_id, context.collateral_asset, context.debt_asset));
+            let Pair {
+                total_collateral_shares, total_nominal_debt,
+            } = self.pairs.read((context.pool_id, context.collateral_asset, context.debt_asset));
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(
-                context, Position { collateral_shares: total_collateral_shares, nominal_debt: total_nominal_debt }
+                context, Position { collateral_shares: total_collateral_shares, nominal_debt: total_nominal_debt },
             );
-            let LTVConfig { max_ltv } = self
-                .shutdown_ltv_configs
-                .read((context.pool_id, context.collateral_asset, context.debt_asset));
+            let LTVConfig {
+                max_ltv,
+            } = self.shutdown_ltv_configs.read((context.pool_id, context.collateral_asset, context.debt_asset));
             if max_ltv != 0 {
                 is_collateralized(collateral_value, debt_value, max_ltv.into())
             } else {
@@ -215,7 +213,7 @@ mod position_hooks_component {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            debt_cap: u256
+            debt_cap: u256,
         ) {
             self.debt_caps.write((pool_id, collateral_asset, debt_asset), debt_cap);
             self.emit(SetDebtCap { pool_id, collateral_asset, debt_asset, debt_cap });
@@ -232,7 +230,7 @@ mod position_hooks_component {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            liquidation_config: LiquidationConfig
+            liquidation_config: LiquidationConfig,
         ) {
             assert_liquidation_config(liquidation_config);
 
@@ -245,8 +243,8 @@ mod position_hooks_component {
                             SCALE.try_into().unwrap()
                         } else {
                             liquidation_config.liquidation_factor
-                        }
-                    }
+                        },
+                    },
                 );
 
             self.emit(SetLiquidationConfig { pool_id, collateral_asset, debt_asset, liquidation_config });
@@ -257,7 +255,7 @@ mod position_hooks_component {
         /// * `pool_id` - pool identifier
         /// * `shutdown_config` - shutdown configuration
         fn set_shutdown_config(
-            ref self: ComponentState<TContractState>, pool_id: felt252, shutdown_config: ShutdownConfig
+            ref self: ComponentState<TContractState>, pool_id: felt252, shutdown_config: ShutdownConfig,
         ) {
             assert_shutdown_config(shutdown_config);
 
@@ -360,25 +358,25 @@ mod position_hooks_component {
         /// * `context` - contextual state of the user (position owner)
         /// * `shutdown_mode` - shutdown mode
         fn set_shutdown_mode(
-            ref self: ComponentState<TContractState>, pool_id: felt252, new_shutdown_mode: ShutdownMode
+            ref self: ComponentState<TContractState>, pool_id: felt252, new_shutdown_mode: ShutdownMode,
         ) {
             let ShutdownState { shutdown_mode, last_updated, .. } = self.fixed_shutdown_mode.read(pool_id);
 
             // can only transition to recovery mode if the shutdown mode is in normal mode
             assert!(
                 shutdown_mode != ShutdownMode::None || new_shutdown_mode == ShutdownMode::Recovery,
-                "shutdown-mode-not-none"
+                "shutdown-mode-not-none",
             );
             // can only transition back to normal mode or subscription mode if the shutdown mode is in recovery mode
             assert!(
                 shutdown_mode != ShutdownMode::Recovery
                     || (new_shutdown_mode == ShutdownMode::None || new_shutdown_mode == ShutdownMode::Subscription),
-                "shutdown-mode-not-recovery"
+                "shutdown-mode-not-recovery",
             );
             // can only transition to redemption mode if the shutdown mode is in subscription mode
             assert!(
                 shutdown_mode != ShutdownMode::Subscription || new_shutdown_mode == ShutdownMode::Redemption,
-                "shutdown-mode-not-subscription"
+                "shutdown-mode-not-subscription",
             );
             // can not transition into any shutdown mode if the shutdown mode is in redemption mode
             assert!(shutdown_mode != ShutdownMode::Redemption, "shutdown-mode-in-redemption");
@@ -389,18 +387,18 @@ mod position_hooks_component {
             assert!(
                 new_shutdown_mode != ShutdownMode::Subscription || last_updated
                     + recovery_period < get_block_timestamp(),
-                "shutdown-mode-recovery-period"
+                "shutdown-mode-recovery-period",
             );
 
             // can only transition to redemption mode if the subscription period has passed
             assert!(
                 new_shutdown_mode != ShutdownMode::Redemption || last_updated
                     + subscription_period < get_block_timestamp(),
-                "shutdown-mode-subscription-period"
+                "shutdown-mode-subscription-period",
             );
 
             let shutdown_state = ShutdownState {
-                shutdown_mode: new_shutdown_mode, last_updated: get_block_timestamp()
+                shutdown_mode: new_shutdown_mode, last_updated: get_block_timestamp(),
             };
             self.fixed_shutdown_mode.write(pool_id, shutdown_state);
 
@@ -416,42 +414,42 @@ mod position_hooks_component {
             ref self: ComponentState<TContractState>,
             ref context: Context,
             collateral_shares_delta: i257,
-            nominal_debt_delta: i257
+            nominal_debt_delta: i257,
         ) {
-            // skip updating the pairs if the debt asset is zero as the pair's ltv is always 100% 
-            if context.debt_asset == Zeroable::zero() {
+            // skip updating the pairs if the debt asset is zero as the pair's ltv is always 100%
+            if context.debt_asset == Zero::zero() {
                 return;
             }
 
             // update the balances of the pair of the modified position
-            let Pair { mut total_collateral_shares, mut total_nominal_debt } = self
-                .pairs
-                .read((context.pool_id, context.collateral_asset, context.debt_asset));
-            if collateral_shares_delta > Zeroable::zero() {
-                total_collateral_shares = total_collateral_shares + collateral_shares_delta.abs;
-            } else if collateral_shares_delta < Zeroable::zero() {
-                total_collateral_shares = total_collateral_shares - collateral_shares_delta.abs;
+            let Pair {
+                mut total_collateral_shares, mut total_nominal_debt,
+            } = self.pairs.read((context.pool_id, context.collateral_asset, context.debt_asset));
+            if collateral_shares_delta > Zero::zero() {
+                total_collateral_shares = total_collateral_shares + collateral_shares_delta.abs();
+            } else if collateral_shares_delta < Zero::zero() {
+                total_collateral_shares = total_collateral_shares - collateral_shares_delta.abs();
             }
-            if nominal_debt_delta > Zeroable::zero() {
-                total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs;
+            if nominal_debt_delta > Zero::zero() {
+                total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs();
                 let debt_cap = self.debt_caps.read((context.pool_id, context.collateral_asset, context.debt_asset));
                 if debt_cap != 0 {
                     let total_debt = calculate_debt(
                         total_nominal_debt,
                         context.debt_asset_config.last_rate_accumulator,
                         context.debt_asset_config.scale,
-                        true
+                        true,
                     );
                     assert!(total_debt <= debt_cap, "debt-cap-exceeded");
                 }
-            } else if nominal_debt_delta < Zeroable::zero() {
-                total_nominal_debt = total_nominal_debt - nominal_debt_delta.abs;
+            } else if nominal_debt_delta < Zero::zero() {
+                total_nominal_debt = total_nominal_debt - nominal_debt_delta.abs();
             }
             self
                 .pairs
                 .write(
                     (context.pool_id, context.collateral_asset, context.debt_asset),
-                    Pair { total_collateral_shares, total_nominal_debt }
+                    Pair { total_collateral_shares, total_nominal_debt },
                 );
         }
 
@@ -479,7 +477,7 @@ mod position_hooks_component {
             debt_delta: i257,
             nominal_debt_delta: i257,
             data: Span<felt252>,
-            caller: ContractAddress
+            caller: ContractAddress,
         ) -> bool {
             self.update_pair(ref context, collateral_shares_delta, nominal_debt_delta);
 
@@ -487,16 +485,16 @@ mod position_hooks_component {
 
             // check invariants for collateral and debt amounts
             if shutdown_mode == ShutdownMode::Recovery {
-                let decreasing_collateral = collateral_delta < Zeroable::zero();
-                let increasing_debt = debt_delta > Zeroable::zero();
+                let decreasing_collateral = collateral_delta < Zero::zero();
+                let increasing_debt = debt_delta > Zero::zero();
                 assert!(!(decreasing_collateral || increasing_debt), "in-recovery");
             } else if shutdown_mode == ShutdownMode::Subscription {
-                let modifying_collateral = collateral_delta != Zeroable::zero();
-                let increasing_debt = debt_delta > Zeroable::zero();
+                let modifying_collateral = collateral_delta != Zero::zero();
+                let increasing_debt = debt_delta > Zero::zero();
                 assert!(!(modifying_collateral || increasing_debt), "in-subscription");
             } else if shutdown_mode == ShutdownMode::Redemption {
-                let increasing_collateral = collateral_delta > Zeroable::zero();
-                let modifying_debt = debt_delta != Zeroable::zero();
+                let increasing_collateral = collateral_delta > Zero::zero();
+                let modifying_debt = debt_delta != Zero::zero();
                 assert!(!(increasing_collateral || modifying_debt), "in-redemption");
                 assert!(context.position.nominal_debt == 0, "non-zero-debt");
             }
@@ -523,9 +521,9 @@ mod position_hooks_component {
             collateral: UnsignedAmount,
             debt: UnsignedAmount,
             data: Span<felt252>,
-            caller: ContractAddress
+            caller: ContractAddress,
         ) -> (UnsignedAmount, UnsignedAmount) {
-            if from_context.debt_asset == Zeroable::zero() && from_context.user == get_contract_address() {
+            if from_context.debt_asset == Zero::zero() && from_context.user == get_contract_address() {
                 ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                     .modify_delegation(from_context.pool_id, caller, true);
             }
@@ -554,7 +552,7 @@ mod position_hooks_component {
             debt_delta: u256,
             nominal_debt_delta: u256,
             data: Span<felt252>,
-            caller: ContractAddress
+            caller: ContractAddress,
         ) -> bool {
             // skip shutdown mode evaluation and updating the pairs collateral shares and nominal debt balances
             // if the pairs are the same
@@ -568,15 +566,19 @@ mod position_hooks_component {
                 assert!(
                     from_context.collateral_asset == to_context.collateral_asset
                         || from_context.debt_asset == to_context.debt_asset,
-                    "asset-mismatch"
+                    "asset-mismatch",
                 );
                 self
                     .update_pair(
-                        ref from_context, i257_new(collateral_shares_delta, true), i257_new(nominal_debt_delta, true)
+                        ref from_context,
+                        I257Trait::new(collateral_shares_delta, true),
+                        I257Trait::new(nominal_debt_delta, true),
                     );
                 self
                     .update_pair(
-                        ref to_context, i257_new(collateral_shares_delta, false), i257_new(nominal_debt_delta, false)
+                        ref to_context,
+                        I257Trait::new(collateral_shares_delta, false),
+                        I257Trait::new(nominal_debt_delta, false),
                     );
                 (self.update_shutdown_status(ref from_context), self.update_shutdown_status(ref to_context))
             };
@@ -588,12 +590,12 @@ mod position_hooks_component {
                 assert!(
                     from_context.collateral_asset == to_context.collateral_asset
                         && from_context.debt_asset == to_context.debt_asset,
-                    "shutdown-pair-mismatch"
+                    "shutdown-pair-mismatch",
                 );
             }
 
             // mint vTokens if collateral shares are transferred to the corresponding vToken pairing
-            if to_context.debt_asset == Zeroable::zero() && to_context.user == get_contract_address() {
+            if to_context.debt_asset == Zero::zero() && to_context.user == get_contract_address() {
                 assert!(from_context.collateral_asset == to_context.collateral_asset, "v-token-to-asset-mismatch");
                 let mut tokenization = self.get_contract_mut();
                 tokenization
@@ -601,19 +603,22 @@ mod position_hooks_component {
                         to_context.pool_id,
                         to_context.collateral_asset,
                         caller,
-                        i257_new(collateral_shares_delta, false)
+                        I257Trait::new(collateral_shares_delta, false),
                     );
             }
 
             // burn vTokens if collateral shares are transferred from the corresponding vToken pairing
-            if from_context.debt_asset == Zeroable::zero() && from_context.user == get_contract_address() {
+            if from_context.debt_asset == Zero::zero() && from_context.user == get_contract_address() {
                 assert!(from_context.collateral_asset == to_context.collateral_asset, "v-token-from-asset-mismatch");
                 ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                     .modify_delegation(from_context.pool_id, caller, false);
                 let mut tokenization = self.get_contract_mut();
                 tokenization
                     .mint_or_burn_v_token(
-                        to_context.pool_id, to_context.collateral_asset, caller, i257_new(collateral_shares_delta, true)
+                        to_context.pool_id,
+                        to_context.collateral_asset,
+                        caller,
+                        I257Trait::new(collateral_shares_delta, true),
                     );
             }
 
@@ -627,7 +632,7 @@ mod position_hooks_component {
         /// In an event where there's not enough collateral to cover the debt, the liquidation will result in bad debt.
         /// The bad debt is attributed to the pool and distributed amongst the lenders of the corresponding
         /// collateral asset. The liquidator receives all the collateral but only has to repay the proportioned
-        /// debt value. 
+        /// debt value.
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// * `data` - liquidation data (optional)
@@ -640,7 +645,7 @@ mod position_hooks_component {
             ref self: ComponentState<TContractState>,
             mut context: Context,
             mut data: Span<felt252>,
-            caller: ContractAddress
+            caller: ContractAddress,
         ) -> (u256, u256, u256) {
             // don't allow for liquidations if the pool is not in normal or recovery mode
             let shutdown_mode = self.update_shutdown_status(ref context);
@@ -648,15 +653,16 @@ mod position_hooks_component {
                 (shutdown_mode == ShutdownMode::None || shutdown_mode == ShutdownMode::Recovery)
                     && context.collateral_asset_price.is_valid
                     && context.debt_asset_price.is_valid,
-                "emergency-mode"
+                "emergency-mode",
             );
 
-            let LiquidationData { min_collateral_to_receive, mut debt_to_repay } = Serde::deserialize(ref data)
-                .expect('invalid-liquidation-data');
+            let LiquidationData {
+                min_collateral_to_receive, mut debt_to_repay,
+            } = Serde::deserialize(ref data).expect('invalid-liquidation-data');
 
             // compute the collateral and debt value of the position
             let (collateral, mut collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(
-                context, context.position
+                context, context.position,
             );
 
             // if the liquidation factor is not set, then set it to 100%
@@ -737,7 +743,7 @@ mod position_hooks_component {
             nominal_debt_delta: i257,
             bad_debt: u256,
             data: Span<felt252>,
-            caller: ContractAddress
+            caller: ContractAddress,
         ) -> bool {
             self.update_pair(ref context, collateral_shares_delta, nominal_debt_delta);
             self.update_shutdown_status(ref context);

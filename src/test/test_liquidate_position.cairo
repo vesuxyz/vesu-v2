@@ -1,26 +1,22 @@
 #[cfg(test)]
 mod TestLiquidatePosition {
-    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
+    use snforge_std::{CheatTarget, start_prank, start_warp, stop_prank, stop_warp};
     use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
-    use vesu::{
-        units::{SCALE, SCALE_128},
-        data_model::{
-            Amount, AmountType, AmountDenomination, ModifyPositionParams, LiquidatePositionParams, AssetConfig,
-            Position, Context
-        },
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        extension::{
-            components::position_hooks::{LiquidationData, LiquidationConfig},
-            interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait}
-        },
-        test::{
-            mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
-            setup_v2::{setup, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY},
-            mock_asset::{IMintableDispatcherTrait, IMintableDispatcher},
-        },
-        vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, AssetConfig, Context, LiquidatePositionParams, ModifyPositionParams,
+        Position,
     };
+    use vesu::extension::components::position_hooks::{LiquidationConfig, LiquidationData};
+    use vesu::extension::default_extension_po_v2::{
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
+    };
+    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
+    use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
+    use vesu::test::setup_v2::{COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, LendingTerms, TestConfig, setup};
+    use vesu::units::{SCALE, SCALE_128};
+    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     #[test]
     #[should_panic(expected: "caller-not-singleton")]
@@ -40,10 +36,10 @@ mod TestLiquidatePosition {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default(), };
+        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
 
         let context = Context {
             pool_id: 1,
@@ -58,7 +54,7 @@ mod TestLiquidatePosition {
             debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         IExtensionDispatcher { contract_address: extension.contract_address }
@@ -85,10 +81,10 @@ mod TestLiquidatePosition {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default(), };
+        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
 
         let context = Context {
             pool_id: 1,
@@ -103,7 +99,7 @@ mod TestLiquidatePosition {
             debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         IExtensionDispatcher { contract_address: extension.contract_address }
@@ -115,7 +111,7 @@ mod TestLiquidatePosition {
                 Default::default(),
                 Default::default(),
                 data: ArrayTrait::new().span(),
-                caller: get_caller_address()
+                caller: get_caller_address(),
             );
     }
 
@@ -140,7 +136,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -164,7 +160,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -178,7 +174,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(collateralized, "Not collateralized");
 
@@ -191,7 +187,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -220,7 +216,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -244,7 +240,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -270,7 +266,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -299,7 +295,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -323,7 +319,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -349,7 +345,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -378,7 +374,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -402,7 +398,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -427,7 +423,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -465,7 +461,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -489,7 +485,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -507,7 +503,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -520,7 +516,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -840,7 +836,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -864,7 +860,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw + nominal_debt_to_draw / 10).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -885,7 +881,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -902,7 +898,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -947,7 +943,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -971,7 +967,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -989,7 +985,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1003,7 +999,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1036,7 +1032,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1063,7 +1059,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1081,7 +1077,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1094,7 +1090,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1130,7 +1126,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1157,7 +1153,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1175,7 +1171,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1188,7 +1184,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1224,7 +1220,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1251,7 +1247,7 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
@@ -1269,7 +1265,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1282,7 +1278,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1320,7 +1316,7 @@ mod TestLiquidatePosition {
                 pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
+                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
@@ -1344,7 +1340,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1364,7 +1360,7 @@ mod TestLiquidatePosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
@@ -1389,7 +1385,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1402,7 +1398,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1444,7 +1440,7 @@ mod TestLiquidatePosition {
                 pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
+                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
@@ -1468,7 +1464,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1488,7 +1484,7 @@ mod TestLiquidatePosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
@@ -1513,7 +1509,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1526,7 +1522,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1568,7 +1564,7 @@ mod TestLiquidatePosition {
                 pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
+                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
@@ -1592,7 +1588,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1612,7 +1608,7 @@ mod TestLiquidatePosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
@@ -1637,7 +1633,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1650,7 +1646,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1692,7 +1688,7 @@ mod TestLiquidatePosition {
                 pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
+                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
@@ -1716,7 +1712,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1736,7 +1732,7 @@ mod TestLiquidatePosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
@@ -1761,7 +1757,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1774,7 +1770,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1819,7 +1815,7 @@ mod TestLiquidatePosition {
                 pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
+                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
@@ -1843,7 +1839,7 @@ mod TestLiquidatePosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1863,7 +1859,7 @@ mod TestLiquidatePosition {
             debt: Amount {
                 amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
@@ -1888,7 +1884,7 @@ mod TestLiquidatePosition {
 
         let (collateralized, _, _) = singleton
             .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
             );
         assert!(!collateralized, "Not undercollateralized");
 
@@ -1901,7 +1897,7 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -1920,12 +1916,13 @@ mod TestLiquidatePosition {
 
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(
-            collateral_reserve_before - (collateral / 2) == asset_config.reserve, "collateral reserve should decrease"
+            collateral_reserve_before - (collateral / 2) == asset_config.reserve, "collateral reserve should decrease",
         );
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(
-            debt_reserve_before + (debt / 2) - response.bad_debt == asset_config.reserve, "debt reserve should increase"
+            debt_reserve_before + (debt / 2) - response.bad_debt == asset_config.reserve,
+            "debt reserve should increase",
         );
     }
 }

@@ -1,5 +1,3 @@
-use starknet::{ContractAddress};
-
 #[starknet::interface]
 trait IMockSingletonUpgrade<TContractState> {
     fn upgrade_name(ref self: TContractState) -> felt252;

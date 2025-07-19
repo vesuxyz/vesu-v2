@@ -1,5 +1,3 @@
-use starknet::ContractAddress;
-
 #[derive(Drop, Copy, Serde)]
 pub enum DataType {
     SpotEntry: felt252,
@@ -33,6 +31,6 @@ pub trait IPragmaABI<TContractState> {
 #[starknet::interface]
 pub trait ISummaryStatsABI<TContractState> {
     fn calculate_twap(
-        self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64
+        self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
     ) -> (u128, u32);
 }

@@ -13,33 +13,28 @@ fn to_percent(value: u256) -> u64 {
 #[cfg(test)]
 mod TestForking {
     use snforge_std::{
-        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, prank, CheatSpan
+        CheatSpan, CheatTarget, declare, load, map_entry_address, prank, start_prank, start_warp, stop_prank, store,
     };
     use starknet::{
-        contract_address_const, get_caller_address, get_contract_address, ContractAddress, get_block_timestamp,
-        get_block_number, deploy_syscall
+        ContractAddress, contract_address_const, deploy_syscall, get_block_number, get_block_timestamp,
+        get_caller_address, get_contract_address,
     };
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, AssetParams, AssetPrice, DebtCapParams, LTVParams, ModifyPositionParams,
+    };
+    use vesu::extension::components::position_hooks::LiquidationData;
+    use vesu::extension::default_extension_po_v2::{
+        FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
+        LiquidationParams, PragmaOracleParams, ShutdownMode, ShutdownParams, VTokenParams,
+    };
+    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, LiquidatePositionParams};
+    use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
+    use vesu::test::setup_v2::{deploy_contract, deploy_with_args, setup_pool};
+    use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE, SCALE_128};
+    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+    use vesu::vendor::pragma::AggregationMode;
     use super::{IStarkgateERC20Dispatcher, IStarkgateERC20DispatcherTrait, to_percent};
-    use vesu::{
-        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
-        data_model::{
-            AssetParams, LTVParams, ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetPrice,
-            DebtCapParams
-        },
-        extension::{
-            interface::{IExtensionDispatcher, IExtensionDispatcherTrait}, components::position_hooks::LiquidationData,
-            default_extension_po_v2::{
-                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams,
-                InterestRateConfig, LiquidationParams, ShutdownParams, FeeParams, VTokenParams, ShutdownMode
-            }
-        },
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, LiquidatePositionParams},
-        vendor::{erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait}, pragma::{AggregationMode}},
-        test::{
-            setup_v2::{setup_pool, deploy_contract, deploy_with_args},
-            mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait}
-        },
-    };
 
     struct SetupParams {
         singleton: ISingletonV2Dispatcher,
@@ -53,7 +48,7 @@ mod TestForking {
         supply_amount_usdc: u256,
         borrow_amount_eth: u256,
         borrow_amount_usdc: u256,
-        pool_id: felt252
+        pool_id: felt252,
     }
 
     fn generate_ltvs_for_pairs(all_asset_params: Span<AssetParams>, default_max_ltv: u64) -> Span<LTVParams> {
@@ -73,20 +68,22 @@ mod TestForking {
                                     pair_max_ltvs
                                         .append(
                                             LTVParams {
-                                                collateral_asset_index: i, debt_asset_index: j, max_ltv: default_max_ltv
-                                            }
+                                                collateral_asset_index: i,
+                                                debt_asset_index: j,
+                                                max_ltv: default_max_ltv,
+                                            },
                                         );
                                 }
                             },
-                            Option::None(_) => { break; }
-                        };
+                            Option::None(_) => { break; },
+                        }
                         j += 1;
                     };
                 },
-                Option::None(_) => { break; }
-            };
+                Option::None(_) => { break; },
+            }
             i += 1;
-        };
+        }
 
         pair_max_ltvs.span()
     }
@@ -108,20 +105,20 @@ mod TestForking {
                                 max_full_utilization_rate: 100_000,
                                 zero_utilization_rate: 100,
                                 rate_half_life: 86400,
-                                target_rate_percent: to_percent(20).into()
-                            }
+                                target_rate_percent: to_percent(20).into(),
+                            },
                         );
                 },
-                Option::None(_) => { break; }
-            };
+                Option::None(_) => { break; },
+            }
             i += 1;
-        };
+        }
 
         interest_rate_configs.span()
     }
 
     fn generate_liquidation_params(
-        all_asset_params: Span<AssetParams>, default_liquidation_factor: u64
+        all_asset_params: Span<AssetParams>, default_liquidation_factor: u64,
     ) -> Span<LiquidationParams> {
         let mut liquidation_params: Array<LiquidationParams> = array![];
 
@@ -141,26 +138,26 @@ mod TestForking {
                                             LiquidationParams {
                                                 collateral_asset_index: i,
                                                 debt_asset_index: j,
-                                                liquidation_factor: default_liquidation_factor
-                                            }
+                                                liquidation_factor: default_liquidation_factor,
+                                            },
                                         );
                                 }
                             },
-                            Option::None(_) => { break; }
-                        };
+                            Option::None(_) => { break; },
+                        }
                         j += 1;
                     };
                 },
-                Option::None(_) => { break; }
-            };
+                Option::None(_) => { break; },
+            }
             i += 1;
-        };
+        }
 
         liquidation_params.span()
     }
 
     fn generate_debt_caps_for_pairs(
-        all_asset_params: Span<AssetParams>, default_debt_cap: u256
+        all_asset_params: Span<AssetParams>, default_debt_cap: u256,
     ) -> Span<DebtCapParams> {
         let mut pair_debt_caps: Array<DebtCapParams> = array![];
 
@@ -180,20 +177,20 @@ mod TestForking {
                                             DebtCapParams {
                                                 collateral_asset_index: i,
                                                 debt_asset_index: j,
-                                                debt_cap: default_debt_cap
-                                            }
+                                                debt_cap: default_debt_cap,
+                                            },
                                         );
                                 }
                             },
-                            Option::None(_) => { break; }
-                        };
+                            Option::None(_) => { break; },
+                        }
                         j += 1;
                     };
                 },
-                Option::None(_) => { break; }
-            };
+                Option::None(_) => { break; },
+            }
             i += 1;
-        };
+        }
 
         pair_debt_caps.span()
     }
@@ -202,7 +199,7 @@ mod TestForking {
         let mut shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS * 30,
             subscription_period: DAY_IN_SECONDS * 30,
-            ltv_params: generate_ltvs_for_pairs(all_asset_params, to_percent(95))
+            ltv_params: generate_ltvs_for_pairs(all_asset_params, to_percent(95)),
         };
 
         shutdown_params
@@ -210,10 +207,10 @@ mod TestForking {
 
     fn setup() -> SetupParams {
         let pragma_oracle_address = contract_address_const::<
-            0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b
+            0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b,
         >();
         let summary_stats_address = contract_address_const::<
-            0x049eefafae944d07744d07cc72a5bf14728a6fb463c3eae5bca13552f5d455fd
+            0x049eefafae944d07744d07cc72a5bf14728a6fb463c3eae5bca13552f5d455fd,
         >();
 
         let eth_asset_params = AssetParams {
@@ -223,7 +220,7 @@ mod TestForking {
             initial_full_utilization_rate: to_percent(50).into(),
             max_utilization: to_percent(80).into(),
             is_legacy: false,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let eth_asset_oracle_params = PragmaOracleParams {
@@ -232,7 +229,7 @@ mod TestForking {
             number_of_sources: 0,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
 
         let eth_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Ethereum', v_token_symbol: 'vETH' };
@@ -244,7 +241,7 @@ mod TestForking {
             initial_full_utilization_rate: to_percent(50).into(),
             max_utilization: to_percent(80).into(),
             is_legacy: false,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let wbtc_asset_oracle_params = PragmaOracleParams {
@@ -253,7 +250,7 @@ mod TestForking {
             number_of_sources: 0,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
 
         let wbtc_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Wrapped Bitcoin', v_token_symbol: 'vWBTC' };
@@ -265,7 +262,7 @@ mod TestForking {
             initial_full_utilization_rate: to_percent(50).into(),
             max_utilization: to_percent(80).into(),
             is_legacy: false,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let usdc_asset_oracle_params = PragmaOracleParams {
@@ -274,7 +271,7 @@ mod TestForking {
             number_of_sources: 2,
             start_time_offset: 86400 * 7,
             time_window: 86400 * 6,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
 
         let usdc_asset_v_token_params = VTokenParams { v_token_name: 'Vesu USD Coin', v_token_symbol: 'vUSDC' };
@@ -286,7 +283,7 @@ mod TestForking {
             initial_full_utilization_rate: to_percent(50).into(),
             max_utilization: to_percent(80).into(),
             is_legacy: false,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let usdt_asset_oracle_params = PragmaOracleParams {
@@ -295,7 +292,7 @@ mod TestForking {
             number_of_sources: 0,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
 
         let usdt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Tether', v_token_symbol: 'vUSDT' };
@@ -307,7 +304,7 @@ mod TestForking {
             initial_full_utilization_rate: to_percent(50).into(),
             max_utilization: to_percent(80).into(),
             is_legacy: false,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let wsteth_asset_oracle_params = PragmaOracleParams {
@@ -316,11 +313,11 @@ mod TestForking {
             number_of_sources: 0,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
 
         let wsteth_asset_v_token_params = VTokenParams {
-            v_token_name: 'Vesu Wrapped Staked Ether', v_token_symbol: 'vWSTETH'
+            v_token_name: 'Vesu Wrapped Staked Ether', v_token_symbol: 'vWSTETH',
         };
 
         let strk_asset_params = AssetParams {
@@ -330,7 +327,7 @@ mod TestForking {
             initial_full_utilization_rate: to_percent(50).into(),
             max_utilization: to_percent(80).into(),
             is_legacy: false,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let strk_asset_oracle_params = PragmaOracleParams {
@@ -339,7 +336,7 @@ mod TestForking {
             number_of_sources: 0,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
 
         let strk_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Starknet', v_token_symbol: 'vSTRK' };
@@ -350,7 +347,7 @@ mod TestForking {
             usdc_asset_params,
             usdt_asset_params,
             wsteth_asset_params,
-            strk_asset_params
+            strk_asset_params,
         ]
             .span();
 
@@ -360,7 +357,7 @@ mod TestForking {
             usdc_asset_oracle_params,
             usdt_asset_oracle_params,
             wsteth_asset_oracle_params,
-            strk_asset_oracle_params
+            strk_asset_oracle_params,
         ]
             .span();
 
@@ -370,7 +367,7 @@ mod TestForking {
             usdc_asset_v_token_params,
             usdt_asset_v_token_params,
             wsteth_asset_v_token_params,
-            strk_asset_v_token_params
+            strk_asset_v_token_params,
         ]
             .span();
 
@@ -378,75 +375,75 @@ mod TestForking {
         let eth_usdc_ltv_params = LTVParams { collateral_asset_index: 0, debt_asset_index: 2, max_ltv: to_percent(74) };
         let eth_usdt_ltv_params = LTVParams { collateral_asset_index: 0, debt_asset_index: 3, max_ltv: to_percent(74) };
         let eth_wsteth_ltv_params = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 4, max_ltv: to_percent(87)
+            collateral_asset_index: 0, debt_asset_index: 4, max_ltv: to_percent(87),
         };
         let eth_strk_ltv_params = LTVParams { collateral_asset_index: 0, debt_asset_index: 5, max_ltv: to_percent(71) };
         let wbtc_eth_ltv_params = LTVParams { collateral_asset_index: 1, debt_asset_index: 0, max_ltv: to_percent(82) };
         let wbtc_usdc_ltv_params = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 2, max_ltv: to_percent(74)
+            collateral_asset_index: 1, debt_asset_index: 2, max_ltv: to_percent(74),
         };
         let wbtc_usdt_ltv_params = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 3, max_ltv: to_percent(74)
+            collateral_asset_index: 1, debt_asset_index: 3, max_ltv: to_percent(74),
         };
         let wbtc_wsteth_ltv_params = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 4, max_ltv: to_percent(75)
+            collateral_asset_index: 1, debt_asset_index: 4, max_ltv: to_percent(75),
         };
         let wbtc_strk_ltv_params = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 5, max_ltv: to_percent(59)
+            collateral_asset_index: 1, debt_asset_index: 5, max_ltv: to_percent(59),
         };
         let usdc_eth_ltv_params = LTVParams { collateral_asset_index: 2, debt_asset_index: 0, max_ltv: to_percent(68) };
         let usdc_wbtc_ltv_params = LTVParams {
-            collateral_asset_index: 2, debt_asset_index: 1, max_ltv: to_percent(68)
+            collateral_asset_index: 2, debt_asset_index: 1, max_ltv: to_percent(68),
         };
         let usdc_usdt_ltv_params = LTVParams {
-            collateral_asset_index: 2, debt_asset_index: 3, max_ltv: to_percent(93)
+            collateral_asset_index: 2, debt_asset_index: 3, max_ltv: to_percent(93),
         };
         let usdc_wsteth_ltv_params = LTVParams {
-            collateral_asset_index: 2, debt_asset_index: 4, max_ltv: to_percent(72)
+            collateral_asset_index: 2, debt_asset_index: 4, max_ltv: to_percent(72),
         };
         let usdc_strk_ltv_params = LTVParams {
-            collateral_asset_index: 2, debt_asset_index: 5, max_ltv: to_percent(60)
+            collateral_asset_index: 2, debt_asset_index: 5, max_ltv: to_percent(60),
         };
         let usdt_eth_ltv_params = LTVParams { collateral_asset_index: 3, debt_asset_index: 0, max_ltv: to_percent(66) };
         let usdt_wbtc_ltv_params = LTVParams {
-            collateral_asset_index: 3, debt_asset_index: 1, max_ltv: to_percent(65)
+            collateral_asset_index: 3, debt_asset_index: 1, max_ltv: to_percent(65),
         };
         let usdt_usdc_ltv_params = LTVParams {
-            collateral_asset_index: 3, debt_asset_index: 2, max_ltv: to_percent(93)
+            collateral_asset_index: 3, debt_asset_index: 2, max_ltv: to_percent(93),
         };
         let usdt_wsteth_ltv_params = LTVParams {
-            collateral_asset_index: 3, debt_asset_index: 4, max_ltv: to_percent(63)
+            collateral_asset_index: 3, debt_asset_index: 4, max_ltv: to_percent(63),
         };
         let usdt_strk_ltv_params = LTVParams {
-            collateral_asset_index: 3, debt_asset_index: 5, max_ltv: to_percent(58)
+            collateral_asset_index: 3, debt_asset_index: 5, max_ltv: to_percent(58),
         };
         let wsteth_eth_ltv_params = LTVParams {
-            collateral_asset_index: 4, debt_asset_index: 0, max_ltv: to_percent(87)
+            collateral_asset_index: 4, debt_asset_index: 0, max_ltv: to_percent(87),
         };
         let wsteth_wbtc_ltv_params = LTVParams {
-            collateral_asset_index: 4, debt_asset_index: 1, max_ltv: to_percent(81)
+            collateral_asset_index: 4, debt_asset_index: 1, max_ltv: to_percent(81),
         };
         let wsteth_usdc_ltv_params = LTVParams {
-            collateral_asset_index: 4, debt_asset_index: 2, max_ltv: to_percent(71)
+            collateral_asset_index: 4, debt_asset_index: 2, max_ltv: to_percent(71),
         };
         let wsteth_usdt_ltv_params = LTVParams {
-            collateral_asset_index: 4, debt_asset_index: 3, max_ltv: to_percent(73)
+            collateral_asset_index: 4, debt_asset_index: 3, max_ltv: to_percent(73),
         };
         let wsteth_strk_ltv_params = LTVParams {
-            collateral_asset_index: 4, debt_asset_index: 5, max_ltv: to_percent(68)
+            collateral_asset_index: 4, debt_asset_index: 5, max_ltv: to_percent(68),
         };
         let strk_eth_ltv_params = LTVParams { collateral_asset_index: 5, debt_asset_index: 0, max_ltv: to_percent(57) };
         let strk_wbtc_ltv_params = LTVParams {
-            collateral_asset_index: 5, debt_asset_index: 1, max_ltv: to_percent(46)
+            collateral_asset_index: 5, debt_asset_index: 1, max_ltv: to_percent(46),
         };
         let strk_usdc_ltv_params = LTVParams {
-            collateral_asset_index: 5, debt_asset_index: 2, max_ltv: to_percent(59)
+            collateral_asset_index: 5, debt_asset_index: 2, max_ltv: to_percent(59),
         };
         let strk_usdt_ltv_params = LTVParams {
-            collateral_asset_index: 5, debt_asset_index: 3, max_ltv: to_percent(57)
+            collateral_asset_index: 5, debt_asset_index: 3, max_ltv: to_percent(57),
         };
         let strk_wsteth_ltv_params = LTVParams {
-            collateral_asset_index: 5, debt_asset_index: 4, max_ltv: to_percent(55)
+            collateral_asset_index: 5, debt_asset_index: 4, max_ltv: to_percent(55),
         };
 
         let max_ltv_params = array![
@@ -479,7 +476,7 @@ mod TestForking {
             strk_wbtc_ltv_params,
             strk_usdc_ltv_params,
             strk_usdt_ltv_params,
-            strk_wsteth_ltv_params
+            strk_wsteth_ltv_params,
         ]
             .span();
 
@@ -497,7 +494,7 @@ mod TestForking {
             singleton_v2_class_hash.try_into().unwrap(),
             0,
             array![singleton_v1.into(), migrator.into(), owner.into()].span(),
-            false
+            false,
         ))
             .unwrap();
 
@@ -518,10 +515,10 @@ mod TestForking {
                 v_token_class_hash.into(),
                 v_token_v2_class_hash.into(),
                 migrator.into(),
-                extension_utils_class_hash.into()
+                extension_utils_class_hash.into(),
             ]
                 .span(),
-            false
+            false,
         ))
             .unwrap();
 
@@ -636,7 +633,7 @@ mod TestForking {
                 debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: creator },
-                creator
+                creator,
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
@@ -649,15 +646,15 @@ mod TestForking {
                         .price(pool_id, asset_params.asset);
                     assert!(price.value > 0, "No data");
                 },
-                Option::None(_) => { break; }
-            };
+                Option::None(_) => { break; },
+            }
             i += 1;
-        };
+        }
 
         store(
             extension.contract_address,
-            map_entry_address(selector!("oracle_configs"), array![pool_id, usdc.contract_address.into()].span(),),
-            array!['USDC/USD', 0, 2, 0, 0, 1].span()
+            map_entry_address(selector!("oracle_configs"), array![pool_id, usdc.contract_address.into()].span()),
+            array!['USDC/USD', 0, 2, 0, 0, 1].span(),
         );
 
         start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
@@ -674,7 +671,7 @@ mod TestForking {
             supply_amount_usdc,
             borrow_amount_eth,
             borrow_amount_usdc,
-            pool_id
+            pool_id,
         }
     }
 
@@ -683,18 +680,19 @@ mod TestForking {
     #[fork("Mainnet")]
     fn test_fork_modify_position() {
         let params = setup();
-        let SetupParams { singleton,
-        eth,
-        usdc,
-        supplier,
-        borrower,
-        supply_amount_eth,
-        supply_amount_usdc,
-        borrow_amount_eth,
-        borrow_amount_usdc,
-        pool_id,
-        .. } =
-            params;
+        let SetupParams {
+            singleton,
+            eth,
+            usdc,
+            supplier,
+            borrower,
+            supply_amount_eth,
+            supply_amount_usdc,
+            borrow_amount_eth,
+            borrow_amount_usdc,
+            pool_id,
+            ..,
+        } = params;
 
         // supply
 
@@ -706,10 +704,10 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: supply_amount_eth.into()
+                value: supply_amount_eth.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(eth.contract_address), supplier);
@@ -730,10 +728,10 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: supply_amount_usdc.into()
+                value: supply_amount_usdc.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(usdc.contract_address), supplier);
@@ -756,14 +754,14 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: borrow_amount_usdc.into()
+                value: borrow_amount_usdc.into(),
             },
             debt: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: borrow_amount_eth.into()
+                value: borrow_amount_eth.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(usdc.contract_address), borrower);
@@ -790,14 +788,14 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: -(borrow_amount_usdc / 10).into()
+                value: -(borrow_amount_usdc / 10).into(),
             },
             debt: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: -(borrow_amount_eth / 10).into()
+                value: -(borrow_amount_eth / 10).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         // prank(CheatTarget::One(singleton.contract_address), borrower, CheatSpan::TargetCalls(1));
@@ -815,10 +813,10 @@ mod TestForking {
             debt_asset: eth.contract_address,
             user: supplier,
             collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -1.into()
+                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -1.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), supplier);
@@ -833,19 +831,20 @@ mod TestForking {
     #[fork("Mainnet")]
     fn test_fork_liquidate_position() {
         let params = setup();
-        let SetupParams { singleton,
-        extension,
-        eth,
-        usdc,
-        supplier,
-        borrower,
-        liquidator,
-        supply_amount_eth,
-        supply_amount_usdc,
-        borrow_amount_eth,
-        borrow_amount_usdc,
-        pool_id } =
-            params;
+        let SetupParams {
+            singleton,
+            extension,
+            eth,
+            usdc,
+            supplier,
+            borrower,
+            liquidator,
+            supply_amount_eth,
+            supply_amount_usdc,
+            borrow_amount_eth,
+            borrow_amount_usdc,
+            pool_id,
+        } = params;
 
         // supply
 
@@ -857,10 +856,10 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: supply_amount_eth.into()
+                value: supply_amount_eth.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(eth.contract_address), supplier);
@@ -881,10 +880,10 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: supply_amount_usdc.into()
+                value: supply_amount_usdc.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(usdc.contract_address), supplier);
@@ -907,14 +906,14 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: borrow_amount_usdc.into()
+                value: borrow_amount_usdc.into(),
             },
             debt: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: borrow_amount_eth.into()
+                value: borrow_amount_eth.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(usdc.contract_address), borrower);
@@ -943,7 +942,7 @@ mod TestForking {
         store(
             extension.contract_address,
             selector!("oracle_address"),
-            array![mock_pragma_oracle.contract_address.into()].span()
+            array![mock_pragma_oracle.contract_address.into()].span(),
         );
 
         // reduce oracle price
@@ -961,7 +960,7 @@ mod TestForking {
             debt_asset: eth.contract_address,
             user: borrower,
             receive_as_shares: false,
-            data: liquidation_data.span()
+            data: liquidation_data.span(),
         };
 
         start_prank(CheatTarget::One(eth.contract_address), liquidator);
@@ -978,19 +977,20 @@ mod TestForking {
     #[fork("Mainnet")]
     fn test_fork_shutdown() {
         let params = setup();
-        let SetupParams { singleton,
-        extension,
-        eth,
-        usdc,
-        supplier,
-        borrower,
-        supply_amount_eth,
-        supply_amount_usdc,
-        borrow_amount_eth,
-        borrow_amount_usdc,
-        pool_id,
-        .. } =
-            params;
+        let SetupParams {
+            singleton,
+            extension,
+            eth,
+            usdc,
+            supplier,
+            borrower,
+            supply_amount_eth,
+            supply_amount_usdc,
+            borrow_amount_eth,
+            borrow_amount_usdc,
+            pool_id,
+            ..,
+        } = params;
 
         // supply
 
@@ -1002,10 +1002,10 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: supply_amount_eth.into()
+                value: supply_amount_eth.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(eth.contract_address), supplier);
@@ -1026,10 +1026,10 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: supply_amount_usdc.into()
+                value: supply_amount_usdc.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(usdc.contract_address), supplier);
@@ -1052,14 +1052,14 @@ mod TestForking {
             collateral: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: borrow_amount_usdc.into()
+                value: borrow_amount_usdc.into(),
             },
             debt: Amount {
                 amount_type: AmountType::Delta,
                 denomination: AmountDenomination::Assets,
-                value: borrow_amount_eth.into()
+                value: borrow_amount_eth.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(usdc.contract_address), borrower);
@@ -1082,7 +1082,7 @@ mod TestForking {
         store(
             extension.contract_address,
             selector!("oracle_address"),
-            array![mock_pragma_oracle.contract_address.into()].span()
+            array![mock_pragma_oracle.contract_address.into()].span(),
         );
 
         // shutdown
@@ -1112,7 +1112,7 @@ mod TestForking {
             user: borrower,
             collateral: Default::default(),
             debt: Amount { amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into() },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(eth.contract_address), borrower);
@@ -1140,10 +1140,10 @@ mod TestForking {
             debt_asset: eth.contract_address,
             user: borrower,
             collateral: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into()
+                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), borrower);

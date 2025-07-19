@@ -1,27 +1,30 @@
 #[starknet::component]
-mod tokenization_component {
-    use alexandria_math::i257::i257;
-    use starknet::{ContractAddress, get_contract_address, deploy_syscall};
-    use vesu::{
-        units::SCALE, data_model::Amount, singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        extension::default_extension_po_v2::IDefaultExtensionCallback,
-        v_token::{IVTokenDispatcher, IVTokenDispatcherTrait}
+pub mod tokenization_component {
+    use alexandria_math::i257::{I257Trait, i257};
+    use core::num::traits::Zero;
+    use starknet::storage::{
+        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
+    use starknet::syscalls::deploy_syscall;
+    use starknet::{ContractAddress, get_contract_address};
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::v_token::{IVTokenDispatcher, IVTokenDispatcherTrait};
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         // class hash of the vToken contract
         v_token_class_hash: felt252,
         // tracks the collateral asset for each vToken in a pool
         // (pool_id, vToken) -> collateral_asset
-        collateral_asset_for_v_token: starknet::storage::map::Map::<(felt252, ContractAddress), ContractAddress>,
+        collateral_asset_for_v_token: starknet::storage::Map<(felt252, ContractAddress), ContractAddress>,
         // tracks the vToken for each collateral asset in a pool
         // (pool_id, collateral_asset) -> vToken
-        v_token_for_collateral_asset: starknet::storage::map::Map::<(felt252, ContractAddress), ContractAddress>
+        v_token_for_collateral_asset: starknet::storage::Map<(felt252, ContractAddress), ContractAddress>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CreateVToken {
+    pub struct CreateVToken {
         #[key]
         v_token: ContractAddress,
         #[key]
@@ -32,19 +35,19 @@ mod tokenization_component {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         CreateVToken: CreateVToken,
     }
 
     #[generate_trait]
-    impl TokenizationTrait<
-        TContractState, +HasComponent<TContractState>, +IDefaultExtensionCallback<TContractState>
+    pub impl TokenizationTrait<
+        TContractState, +HasComponent<TContractState>, +IDefaultExtensionCallback<TContractState>,
     > of Trait<TContractState> {
         /// Sets the class hash from which all vTokens are deployed.
         /// # Arguments
         /// * `v_token_class_hash` - The class hash of the vToken contract
         fn set_v_token_class_hash(ref self: ComponentState<TContractState>, v_token_class_hash: felt252) {
-            assert!(self.v_token_class_hash.read() == Zeroable::zero(), "already-set");
+            assert!(self.v_token_class_hash.read() == Zero::zero(), "already-set");
             self.v_token_class_hash.write(v_token_class_hash);
         }
 
@@ -55,7 +58,7 @@ mod tokenization_component {
         /// # Returns
         /// * address of the vToken contract
         fn v_token_for_collateral_asset(
-            self: @ComponentState<TContractState>, pool_id: felt252, collateral_asset: ContractAddress
+            self: @ComponentState<TContractState>, pool_id: felt252, collateral_asset: ContractAddress,
         ) -> ContractAddress {
             self.v_token_for_collateral_asset.read((pool_id, collateral_asset))
         }
@@ -67,7 +70,7 @@ mod tokenization_component {
         /// # Returns
         /// * address of the collateral asset
         fn collateral_asset_for_v_token(
-            self: @ComponentState<TContractState>, pool_id: felt252, v_token: ContractAddress
+            self: @ComponentState<TContractState>, pool_id: felt252, v_token: ContractAddress,
         ) -> ContractAddress {
             self.collateral_asset_for_v_token.read((pool_id, v_token))
         }
@@ -83,11 +86,11 @@ mod tokenization_component {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             v_token_name: felt252,
-            v_token_symbol: felt252
+            v_token_symbol: felt252,
         ) {
             assert!(
-                self.v_token_for_collateral_asset.read((pool_id, collateral_asset)) == Zeroable::zero(),
-                "v-token-already-created"
+                self.v_token_for_collateral_asset.read((pool_id, collateral_asset)) == Zero::zero(),
+                "v-token-already-created",
             );
 
             let (v_token, _) = (deploy_syscall(
@@ -99,10 +102,10 @@ mod tokenization_component {
                     18,
                     pool_id,
                     get_contract_address().into(),
-                    collateral_asset.into()
+                    collateral_asset.into(),
                 ]
                     .span(),
-                false
+                false,
             ))
                 .unwrap();
 
@@ -126,14 +129,14 @@ mod tokenization_component {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             user: ContractAddress,
-            amount: i257
+            amount: i257,
         ) {
             let v_token = self.v_token_for_collateral_asset.read((pool_id, collateral_asset));
-            assert!(v_token != Zeroable::zero(), "unknown-collateral-asset");
-            if amount > Zeroable::zero() {
-                IVTokenDispatcher { contract_address: v_token }.mint_v_token(user, amount.abs);
-            } else if amount < Zeroable::zero() {
-                IVTokenDispatcher { contract_address: v_token }.burn_v_token(user, amount.abs);
+            assert!(v_token != Zero::zero(), "unknown-collateral-asset");
+            if amount > Zero::zero() {
+                IVTokenDispatcher { contract_address: v_token }.mint_v_token(user, amount.abs());
+            } else if amount < Zero::zero() {
+                IVTokenDispatcher { contract_address: v_token }.burn_v_token(user, amount.abs());
             }
         }
     }

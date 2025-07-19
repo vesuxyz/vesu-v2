@@ -1,10 +1,11 @@
-use alexandria_math::i257::{i257, i257_new, U256IntoI257};
-use core::num::traits::WideMul;
+use alexandria_math::i257::{I257Trait, i257};
+use core::integer;
+use core::num::traits::{WideMul, Zero};
+use core::traits::DivRem;
 use starknet::get_block_timestamp;
-use vesu::{
-    math::{pow_scale}, units::SCALE,
-    data_model::{AmountType, AmountDenomination, Amount, Position, AssetConfig, Context},
-};
+use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, Context, Position};
+use vesu::math::pow_scale;
+use vesu::units::SCALE;
 
 /// Safe division of two u256 numbers
 /// # Arguments
@@ -13,8 +14,8 @@ use vesu::{
 /// * `round_up` - round up the result
 /// # Returns
 /// * `quotient` - quotient
-fn safe_div(numerator: u256, denominator: u256, round_up: bool) -> u256 {
-    let (quotient, remainder) = integer::u256_safe_div_rem(numerator, integer::u256_as_non_zero(denominator));
+pub fn safe_div(numerator: u256, denominator: u256, round_up: bool) -> u256 {
+    let (quotient, remainder) = DivRem::div_rem(numerator, denominator.try_into().unwrap());
     if remainder == 0 || !round_up {
         return quotient;
     } else {
@@ -29,7 +30,7 @@ fn safe_div(numerator: u256, denominator: u256, round_up: bool) -> u256 {
 /// * `asset_scale` - asset scale [asset scale]
 /// # Returns
 /// * `nominal_debt` - computed nominal debt [SCALE]
-fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
+pub fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
     if rate_accumulator == 0 {
         return 0;
     }
@@ -53,7 +54,7 @@ fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u256,
 /// * `asset_scale` - asset scale [asset scale]
 /// # Returns
 /// * `debt` - computed debt [asset scale]
-fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
+pub fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
     if rate_accumulator == 0 {
         return 0;
     }
@@ -75,9 +76,10 @@ fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u256,
 /// * `asset_config` - collateral asset config
 /// # Returns
 /// * `collateral_shares` - collateral shares amount [SCALE]
-fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, round_up: bool) -> u256 {
-    let AssetConfig { reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, .. } =
-        asset_config;
+pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, round_up: bool) -> u256 {
+    let AssetConfig {
+        reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, ..,
+    } = asset_config;
     let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, !round_up);
     let total_assets = reserve + total_debt;
     if total_assets == 0 || total_collateral_shares == 0 {
@@ -86,12 +88,12 @@ fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, roun
         }
         return safe_div(collateral * SCALE, scale, round_up);
     }
-    et scaled_collateral_mul = WideMul::<u256>::wide_mul(collateral * total_collateral_shares, SCALE);
+    let scaled_collateral_mul = WideMul::<u256>::wide_mul(collateral * total_collateral_shares, SCALE);
     let total_assets: NonZero<u256> = total_assets.try_into().unwrap();
     let (scaled_collateral_shares, remainder) = integer::u512_safe_div_rem_by_u256(scaled_collateral_mul, total_assets);
     assert!(scaled_collateral_shares.limb2 == 0 && scaled_collateral_shares.limb3 == 0, "collateral-shares-overflow");
     let mut scaled_collateral_shares = u256 {
-        low: scaled_collateral_shares.limb0, high: scaled_collateral_shares.limb1
+        low: scaled_collateral_shares.limb0, high: scaled_collateral_shares.limb1,
     };
     scaled_collateral_shares =
         if (remainder != 0 && round_up) {
@@ -108,9 +110,10 @@ fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, roun
 /// * `asset_config` - collateral asset config
 /// # Returns
 /// * `collateral` - collateral asset amount [asset scale]
-fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, round_up: bool) -> u256 {
-    let AssetConfig { reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, .. } =
-        asset_config;
+pub fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, round_up: bool) -> u256 {
+    let AssetConfig {
+        reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, ..,
+    } = asset_config;
     let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, round_up);
     if total_collateral_shares == 0 {
         return safe_div(collateral_shares * scale, SCALE, round_up);
@@ -120,7 +123,7 @@ fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, roun
     let scaled_collateral_mul = WideMul::<u256>::wide_mul(collateral_shares * total_assets, SCALE);
     let total_collateral_shares: NonZero<u256> = total_collateral_shares.try_into().unwrap();
     let (scaled_collateral, remainder) = integer::u512_safe_div_rem_by_u256(
-        scaled_collateral_mul, total_collateral_shares
+        scaled_collateral_mul, total_collateral_shares,
     );
     assert!(scaled_collateral.limb2 == 0 && scaled_collateral.limb3 == 0, "collateral-overflow");
     let mut scaled_collateral = u256 { low: scaled_collateral.limb0, high: scaled_collateral.limb1 };
@@ -138,7 +141,7 @@ fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, roun
 /// * `total_debt` - amount of debt outstanding [asset scale]
 /// # Returns
 /// * `utilization` - utilization [SCALE]
-fn calculate_utilization(total_reserve: u256, total_debt: u256) -> u256 {
+pub fn calculate_utilization(total_reserve: u256, total_debt: u256) -> u256 {
     let total_assets = total_reserve + total_debt;
     if total_assets == 0 {
         0
@@ -154,7 +157,7 @@ fn calculate_utilization(total_reserve: u256, total_debt: u256) -> u256 {
 /// * `interest_rate` - interest rate [SCALE]
 /// # Returns
 /// * `rate_accumulator` - new computed rate accumulator [SCALE]
-fn calculate_rate_accumulator(last_updated: u64, last_rate_accumulator: u256, interest_rate: u256) -> u256 {
+pub fn calculate_rate_accumulator(last_updated: u64, last_rate_accumulator: u256, interest_rate: u256) -> u256 {
     let time_delta = if last_updated >= get_block_timestamp() {
         0
     } else {
@@ -169,7 +172,7 @@ fn calculate_rate_accumulator(last_updated: u64, last_rate_accumulator: u256, in
 /// * `new_rate_accumulator` - new rate accumulator [SCALE]
 /// # Returns
 /// * `fee_shares` - fee shares amount [SCALE]
-fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u256) -> u256 {
+pub fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u256) -> u256 {
     let rate_accumulator_delta = if new_rate_accumulator > asset_config.last_rate_accumulator {
         new_rate_accumulator - asset_config.last_rate_accumulator
     } else {
@@ -178,7 +181,7 @@ fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u256) -
     calculate_collateral_shares(
         calculate_debt(asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, false),
         asset_config,
-        false
+        false,
     )
         * asset_config.fee_rate
         / SCALE
@@ -192,58 +195,66 @@ fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u256) -
 /// # Returns
 /// * `collateral_delta` - signed collateral delta [asset scale]
 /// * `collateral_shares_delta` - signed collateral shares delta [SCALE]
-fn deconstruct_collateral_amount(collateral: Amount, position: Position, asset_config: AssetConfig) -> (i257, i257) {
+pub fn deconstruct_collateral_amount(
+    collateral: Amount, position: Position, asset_config: AssetConfig,
+) -> (i257, i257) {
     if collateral.amount_type == AmountType::Delta {
         if collateral.denomination == AmountDenomination::Native {
             let collateral_shares_delta = collateral.value;
             // positive -> round up, negative -> round down
             let delta = calculate_collateral(
-                collateral_shares_delta.abs, asset_config, !collateral_shares_delta.is_negative
+                collateral_shares_delta.abs(), asset_config, !collateral_shares_delta.is_negative(),
             );
-            (i257_new(delta, collateral_shares_delta.is_negative), collateral_shares_delta)
+            (I257Trait::new(delta, collateral_shares_delta.is_negative()), collateral_shares_delta)
         } else {
             let collateral_delta = collateral.value;
             // positive -> round down, negative -> round up
             let collateral_shares_delta = calculate_collateral_shares(
-                collateral_delta.abs, asset_config, collateral_delta.is_negative
+                collateral_delta.abs(), asset_config, collateral_delta.is_negative(),
             );
-            (collateral_delta, i257_new(collateral_shares_delta, collateral_delta.is_negative))
+            (collateral_delta, I257Trait::new(collateral_shares_delta, collateral_delta.is_negative()))
         }
     } else {
-        assert!(!collateral.value.is_negative, "collateral-target-negative");
-        if collateral.denomination == AmountDenomination::Native || collateral.value.abs == 0 {
-            let collateral_shares_target = collateral.value.abs;
+        assert!(!collateral.value.is_negative(), "collateral-target-negative");
+        if collateral.denomination == AmountDenomination::Native || collateral.value.abs() == 0 {
+            let collateral_shares_target = collateral.value.abs();
             if position.collateral_shares >= collateral_shares_target {
                 // negative -> round down
                 let delta = calculate_collateral(
-                    position.collateral_shares - collateral_shares_target, asset_config, false
+                    position.collateral_shares - collateral_shares_target, asset_config, false,
                 );
-                (i257_new(delta, true), i257_new((position.collateral_shares - collateral_shares_target), true))
+                (
+                    I257Trait::new(delta, true),
+                    I257Trait::new((position.collateral_shares - collateral_shares_target), true),
+                )
             } else {
                 // positive -> round up
                 let delta = calculate_collateral(
-                    collateral_shares_target - position.collateral_shares, asset_config, true
+                    collateral_shares_target - position.collateral_shares, asset_config, true,
                 );
-                (i257_new(delta, false), i257_new((collateral_shares_target - position.collateral_shares), false))
+                (
+                    I257Trait::new(delta, false),
+                    I257Trait::new((collateral_shares_target - position.collateral_shares), false),
+                )
             }
         } else {
-            let collateral_target = collateral.value.abs;
+            let collateral_target = collateral.value.abs();
             // round down
             let position_collateral = calculate_collateral(position.collateral_shares, asset_config, false);
             if position_collateral >= collateral_target {
                 // derive collateral shares from collateral amount, since user provided collateral amount should not be
                 // adjusted negative -> round up
                 let shares_delta = calculate_collateral_shares(
-                    position_collateral - collateral_target, asset_config, true
+                    position_collateral - collateral_target, asset_config, true,
                 );
-                (i257_new((position_collateral - collateral_target), true), i257_new(shares_delta, true))
+                (I257Trait::new((position_collateral - collateral_target), true), I257Trait::new(shares_delta, true))
             } else {
                 // derive collateral shares from collateral amount, since user provided collateral amount should not be
                 // adjusted positive -> round down
                 let shares_delta = calculate_collateral_shares(
-                    collateral_target - position_collateral, asset_config, false
+                    collateral_target - position_collateral, asset_config, false,
                 );
-                (i257_new((collateral_target - position_collateral), false), i257_new(shares_delta, false))
+                (I257Trait::new((collateral_target - position_collateral), false), I257Trait::new(shares_delta, false))
             }
         }
     }
@@ -258,64 +269,64 @@ fn deconstruct_collateral_amount(collateral: Amount, position: Position, asset_c
 /// # Returns
 /// * `debt_delta` - signed debt delta [asset scale]
 /// * `nominal_debt_delta` - signed nominal debt delta [SCALE]
-fn deconstruct_debt_amount(
-    debt: Amount, position: Position, rate_accumulator: u256, asset_scale: u256
+pub fn deconstruct_debt_amount(
+    debt: Amount, position: Position, rate_accumulator: u256, asset_scale: u256,
 ) -> (i257, i257) {
     if debt.amount_type == AmountType::Delta {
         return if debt.denomination == AmountDenomination::Native {
             let nominal_debt_delta = debt.value;
             // positive -> round down, negative -> round up
             let debt_delta = calculate_debt(
-                nominal_debt_delta.abs, rate_accumulator, asset_scale, nominal_debt_delta.is_negative
+                nominal_debt_delta.abs(), rate_accumulator, asset_scale, nominal_debt_delta.is_negative(),
             );
-            (i257_new(debt_delta, nominal_debt_delta.is_negative), nominal_debt_delta)
+            (I257Trait::new(debt_delta, nominal_debt_delta.is_negative()), nominal_debt_delta)
         } else {
             let debt_delta = debt.value;
             // positive -> round up, negative -> round down
             let nominal_debt_delta = calculate_nominal_debt(
-                debt_delta.abs, rate_accumulator, asset_scale, !debt_delta.is_negative
+                debt_delta.abs(), rate_accumulator, asset_scale, !debt_delta.is_negative(),
             );
-            (debt_delta, i257_new(nominal_debt_delta, debt_delta.is_negative))
+            (debt_delta, I257Trait::new(nominal_debt_delta, debt_delta.is_negative()))
         };
     } else {
-        assert!(!debt.value.is_negative, "debt-target-negative");
-        if debt.denomination == AmountDenomination::Native || debt.value.abs == 0 {
+        assert!(!debt.value.is_negative(), "debt-target-negative");
+        if debt.denomination == AmountDenomination::Native || debt.value.abs() == 0 {
             let nominal_debt_target = debt.value;
-            if position.nominal_debt >= nominal_debt_target.abs {
+            if position.nominal_debt >= nominal_debt_target.abs() {
                 // negative -> round up
                 let debt_delta = calculate_debt(
-                    position.nominal_debt - nominal_debt_target.abs, rate_accumulator, asset_scale, true
+                    position.nominal_debt - nominal_debt_target.abs(), rate_accumulator, asset_scale, true,
                 );
-                let nominal_debt_delta = position.nominal_debt - nominal_debt_target.abs;
-                (i257_new(debt_delta, true), i257_new(nominal_debt_delta, true))
+                let nominal_debt_delta = position.nominal_debt - nominal_debt_target.abs();
+                (I257Trait::new(debt_delta, true), I257Trait::new(nominal_debt_delta, true))
             } else {
                 // positive -> round down
                 let debt_delta = calculate_debt(
-                    nominal_debt_target.abs - position.nominal_debt, rate_accumulator, asset_scale, false
+                    nominal_debt_target.abs() - position.nominal_debt, rate_accumulator, asset_scale, false,
                 );
-                let nominal_debt_delta = nominal_debt_target.abs - position.nominal_debt;
-                (i257_new(debt_delta, false), i257_new(nominal_debt_delta, false))
+                let nominal_debt_delta = nominal_debt_target.abs() - position.nominal_debt;
+                (I257Trait::new(debt_delta, false), I257Trait::new(nominal_debt_delta, false))
             }
         } else {
             let debt_target = debt.value;
             // round down
             let position_debt = calculate_debt(position.nominal_debt, rate_accumulator, asset_scale, false);
-            if position_debt >= debt_target.abs {
+            if position_debt >= debt_target.abs() {
                 // derive nominal debt from debt amount, since user provided debt amount should not be adjusted
                 // negative -> round down
                 let nominal_delta = calculate_nominal_debt(
-                    position_debt - debt_target.abs, rate_accumulator, asset_scale, false
+                    position_debt - debt_target.abs(), rate_accumulator, asset_scale, false,
                 );
-                let debt_delta = position_debt - debt_target.abs;
-                (i257_new(debt_delta, true), i257_new(nominal_delta, true))
+                let debt_delta = position_debt - debt_target.abs();
+                (I257Trait::new(debt_delta, true), I257Trait::new(nominal_delta, true))
             } else {
                 // derive nominal debt from debt amount, since user provided debt amount should not be adjusted
                 // positive -> round up
                 let nominal_delta = calculate_nominal_debt(
-                    debt_target.abs - position_debt, rate_accumulator, asset_scale, true
+                    debt_target.abs() - position_debt, rate_accumulator, asset_scale, true,
                 );
-                let debt_delta = debt_target.abs - position_debt;
-                (i257_new(debt_delta, false), i257_new(nominal_delta, false))
+                let debt_delta = debt_target.abs() - position_debt;
+                (I257Trait::new(debt_delta, false), I257Trait::new(nominal_delta, false))
             }
         }
     }
@@ -329,7 +340,7 @@ fn deconstruct_debt_amount(
 /// * `max_ltv_ratio` - max loan to value ratio [SCALE]
 /// # Returns
 /// * `is_collateralized` - true if the position is collateralized
-fn is_collateralized(collateral_value: u256, debt_value: u256, max_ltv_ratio: u256) -> bool {
+pub fn is_collateralized(collateral_value: u256, debt_value: u256, max_ltv_ratio: u256) -> bool {
     collateral_value * max_ltv_ratio >= debt_value * SCALE
 }
 
@@ -342,12 +353,12 @@ fn is_collateralized(collateral_value: u256, debt_value: u256, max_ltv_ratio: u2
 /// * `collateral_value` - collateral value [SCALE]
 /// * `debt` - debt amount [asset scale]
 /// * `debt_value` - debt value [SCALE]
-fn calculate_collateral_and_debt_value(context: Context, position: Position) -> (u256, u256, u256, u256) {
+pub fn calculate_collateral_and_debt_value(context: Context, position: Position) -> (u256, u256, u256, u256) {
     let Context { collateral_asset_config, debt_asset_config, .. } = context;
 
     let collateral = calculate_collateral(position.collateral_shares, collateral_asset_config, false);
     let debt = calculate_debt(
-        position.nominal_debt, debt_asset_config.last_rate_accumulator, debt_asset_config.scale, true
+        position.nominal_debt, debt_asset_config.last_rate_accumulator, debt_asset_config.scale, true,
     );
 
     let collateral_value = if collateral_asset_config.scale == 0 {
@@ -375,61 +386,62 @@ fn calculate_collateral_and_debt_value(context: Context, position: Position) -> 
 /// * `collateral_shares_delta` - collateral shares delta [SCALE]
 /// * `debt_delta` - debt delta [asset scale]
 /// * `nominal_debt_delta` - nominal debt delta [SCALE]
-fn apply_position_update_to_context(
-    ref context: Context, collateral: Amount, debt: Amount, bad_debt: u256
+pub fn apply_position_update_to_context(
+    ref context: Context, collateral: Amount, debt: Amount, bad_debt: u256,
 ) -> (i257, i257, i257, i257) {
     let (mut collateral_delta, mut collateral_shares_delta) = deconstruct_collateral_amount(
         collateral, context.position, context.collateral_asset_config,
     );
 
     // update the collateral balances
-    if collateral_shares_delta > Zeroable::zero() {
-        context.position.collateral_shares += collateral_shares_delta.abs;
-        context.collateral_asset_config.total_collateral_shares += collateral_shares_delta.abs;
-        context.collateral_asset_config.reserve += collateral_delta.abs;
-    } else if collateral_shares_delta < Zeroable::zero() {
+    if collateral_shares_delta > Zero::zero() {
+        context.position.collateral_shares += collateral_shares_delta.abs();
+        context.collateral_asset_config.total_collateral_shares += collateral_shares_delta.abs();
+        context.collateral_asset_config.reserve += collateral_delta.abs();
+    } else if collateral_shares_delta < Zero::zero() {
         // limit the collateral shares delta to the position's collateral shares
-        if collateral_shares_delta.abs > context.position.collateral_shares {
-            collateral_shares_delta = i257_new(context.position.collateral_shares, collateral_shares_delta.is_negative);
+        if collateral_shares_delta.abs() > context.position.collateral_shares {
+            collateral_shares_delta =
+                I257Trait::new(context.position.collateral_shares, collateral_shares_delta.is_negative());
             collateral_delta =
-                i257_new(
-                    calculate_collateral(collateral_shares_delta.abs, context.collateral_asset_config, false),
-                    collateral_delta.is_negative
+                I257Trait::new(
+                    calculate_collateral(collateral_shares_delta.abs(), context.collateral_asset_config, false),
+                    collateral_delta.is_negative(),
                 );
         }
-        context.position.collateral_shares -= collateral_shares_delta.abs;
-        context.collateral_asset_config.total_collateral_shares -= collateral_shares_delta.abs;
-        context.collateral_asset_config.reserve -= collateral_delta.abs;
+        context.position.collateral_shares -= collateral_shares_delta.abs();
+        context.collateral_asset_config.total_collateral_shares -= collateral_shares_delta.abs();
+        context.collateral_asset_config.reserve -= collateral_delta.abs();
     }
 
     // deconstruct the debt amount
     let (mut debt_delta, mut nominal_debt_delta) = deconstruct_debt_amount(
-        debt, context.position, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale
+        debt, context.position, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale,
     );
 
     // update the debt balances
-    if nominal_debt_delta > Zeroable::zero() {
-        context.position.nominal_debt += nominal_debt_delta.abs;
-        context.debt_asset_config.total_nominal_debt += nominal_debt_delta.abs;
-        context.debt_asset_config.reserve -= debt_delta.abs;
-    } else if nominal_debt_delta < Zeroable::zero() {
+    if nominal_debt_delta > Zero::zero() {
+        context.position.nominal_debt += nominal_debt_delta.abs();
+        context.debt_asset_config.total_nominal_debt += nominal_debt_delta.abs();
+        context.debt_asset_config.reserve -= debt_delta.abs();
+    } else if nominal_debt_delta < Zero::zero() {
         // limit the nominal debt delta to the position's nominal debt
-        if nominal_debt_delta.abs > context.position.nominal_debt {
-            nominal_debt_delta = i257_new(context.position.nominal_debt, nominal_debt_delta.is_negative);
+        if nominal_debt_delta.abs() > context.position.nominal_debt {
+            nominal_debt_delta = I257Trait::new(context.position.nominal_debt, nominal_debt_delta.is_negative());
             debt_delta =
-                i257_new(
+                I257Trait::new(
                     calculate_debt(
-                        nominal_debt_delta.abs,
+                        nominal_debt_delta.abs(),
                         context.debt_asset_config.last_rate_accumulator,
                         context.debt_asset_config.scale,
-                        true
+                        true,
                     ),
-                    debt_delta.is_negative
+                    debt_delta.is_negative(),
                 );
         }
-        context.position.nominal_debt -= nominal_debt_delta.abs;
-        context.debt_asset_config.total_nominal_debt -= nominal_debt_delta.abs;
-        context.debt_asset_config.reserve += debt_delta.abs - bad_debt; // bad debt is not paid back
+        context.position.nominal_debt -= nominal_debt_delta.abs();
+        context.debt_asset_config.total_nominal_debt -= nominal_debt_delta.abs();
+        context.debt_asset_config.reserve += debt_delta.abs() - bad_debt; // bad debt is not paid back
     }
 
     (collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta)

@@ -1,17 +1,15 @@
 #[cfg(test)]
 mod TestCommon {
-    use alexandria_math::i257::{i257, i257_new, U256IntoI257};
-    use snforge_std::{cheatcodes::{start_warp, stop_warp, CheatTarget}};
-    use vesu::data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination};
-    use vesu::{
-        units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS, PERCENT},
-        common::{
-            calculate_nominal_debt, calculate_debt, calculate_utilization, calculate_collateral_shares,
-            calculate_collateral, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
-            apply_position_update_to_context, calculate_rate_accumulator, calculate_collateral_and_debt_value,
-            calculate_fee_shares
-        }
+    use alexandria_math::i257::{U256IntoI257, i257, i257_new};
+    use snforge_std::cheatcodes::{CheatTarget, start_warp, stop_warp};
+    use vesu::common::{
+        apply_position_update_to_context, calculate_collateral, calculate_collateral_and_debt_value,
+        calculate_collateral_shares, calculate_debt, calculate_fee_shares, calculate_nominal_debt,
+        calculate_rate_accumulator, calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount,
+        is_collateralized,
     };
+    use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, Context, Position};
+    use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE, YEAR_IN_SECONDS};
 
     fn get_default_asset_config() -> AssetConfig {
         let asset_scale = 100_000_000;
@@ -26,7 +24,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         }
     }
 
@@ -117,7 +115,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 0,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         calculate_collateral_shares(initial_collateral, config, false);
@@ -139,7 +137,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 0,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         calculate_collateral(initial_collateral_shares, config, false);
@@ -167,7 +165,7 @@ mod TestCommon {
         let utilization = calculate_utilization(total_reserve, total_outstanding);
         assert!(
             utilization == (total_outstanding * SCALE) / (total_reserve + total_outstanding),
-            "Utilization calculation failed"
+            "Utilization calculation failed",
         );
         assert!(utilization <= SCALE, "Utilization calculation failed");
     }
@@ -188,7 +186,7 @@ mod TestCommon {
     }
 
     #[test]
-    // which ranges to test for rate accumulator? 
+    // which ranges to test for rate accumulator?
     fn test_calculate_rate_accumulator() {
         let last_updated = 95;
         let current_time = last_updated + 5;
@@ -227,13 +225,13 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: SCALE,
-            fee_rate: 10 * PERCENT
+            fee_rate: 10 * PERCENT,
         };
         assert!(calculate_fee_shares(asset_config, SCALE) == 0, "Fee shares should be 0");
         let fee_shares = calculate_fee_shares(asset_config, SCALE + SCALE);
         assert!(
             calculate_collateral(fee_shares, asset_config, false) == asset_scale / 10,
-            "Fee shares should be 10% of the reserve"
+            "Fee shares should be 10% of the reserve",
         );
     }
 
@@ -252,7 +250,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
 
         let collateral_amount = 5 * asset_scale;
@@ -282,7 +280,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -302,13 +300,13 @@ mod TestCommon {
             debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         let (collateral, _, debt, _) = calculate_collateral_and_debt_value(context, context.position);
 
         let expected_collateral = calculate_collateral(
-            position.collateral_shares, context.collateral_asset_config, false
+            position.collateral_shares, context.collateral_asset_config, false,
         );
         let expected_debt = calculate_debt(position.nominal_debt, config.last_rate_accumulator, config.scale, false);
 
@@ -334,7 +332,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -354,11 +352,11 @@ mod TestCommon {
             debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         let (collateral, collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(
-            context, context.position
+            context, context.position,
         );
 
         let expected_collateral_value = collateral * context.collateral_asset_price.value / config.scale;
@@ -377,7 +375,7 @@ mod TestCommon {
         let asset_config = get_default_asset_config();
 
         let collateral_amount_asset_delta = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (12 * asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (12 * asset_scale).into(),
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral, asset_config, false),
@@ -385,7 +383,7 @@ mod TestCommon {
         };
 
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
-            collateral_amount_asset_delta, position, asset_config
+            collateral_amount_asset_delta, position, asset_config,
         );
         let expected_collateral_shares_delta = calculate_collateral_shares(collateral_delta.abs, asset_config, false);
 
@@ -393,7 +391,7 @@ mod TestCommon {
         assert!(collateral_shares_delta.abs == expected_collateral_shares_delta, "Deconstruct collateral failed");
         assert!(
             collateral_delta.is_negative == collateral_amount_asset_delta.value.is_negative,
-            "Deconstruct collateral failed"
+            "Deconstruct collateral failed",
         );
 
         let converted_collateral = calculate_collateral(collateral_shares_delta.abs, asset_config, false);
@@ -409,7 +407,7 @@ mod TestCommon {
         let asset_config = get_default_asset_config();
 
         let collateral_amount_native_delta = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: (10 * asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: (10 * asset_scale).into(),
         };
 
         let position = Position {
@@ -418,15 +416,15 @@ mod TestCommon {
         };
 
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
-            collateral_amount_native_delta, position, asset_config
+            collateral_amount_native_delta, position, asset_config,
         );
 
         assert!(
             collateral_delta == i257_new(
                 calculate_collateral(collateral_shares_delta.abs, asset_config, true),
-                collateral_shares_delta.is_negative
+                collateral_shares_delta.is_negative,
             ),
-            "Deconstruct collateral failed"
+            "Deconstruct collateral failed",
         );
         assert!(collateral_shares_delta == collateral_amount_native_delta.value, "Deconstruct collateral failed");
     }
@@ -440,7 +438,9 @@ mod TestCommon {
         let asset_config = get_default_asset_config();
 
         let collateral_amount_native_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: -(15 * asset_scale).into()
+            amount_type: AmountType::Target,
+            denomination: AmountDenomination::Native,
+            value: -(15 * asset_scale).into(),
         };
 
         let position = Position {
@@ -459,7 +459,7 @@ mod TestCommon {
         let asset_config = get_default_asset_config();
 
         let collateral_amount_native_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (15 * asset_scale).into()
+            amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (15 * asset_scale).into(),
         };
 
         let position = Position {
@@ -468,38 +468,38 @@ mod TestCommon {
         };
 
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
-            collateral_amount_native_target, position, asset_config
+            collateral_amount_native_target, position, asset_config,
         );
 
         let expected_delta = calculate_collateral(
-            position.collateral_shares - collateral_amount_native_target.value.abs, asset_config, false
+            position.collateral_shares - collateral_amount_native_target.value.abs, asset_config, false,
         );
 
         assert!(collateral_delta.abs == expected_delta, "Deconstruct collateral failed");
         assert!(
             collateral_shares_delta == -(position.collateral_shares.into() - collateral_amount_native_target.value),
-            "Deconstruct collateral failed"
+            "Deconstruct collateral failed",
         );
 
         // value exceeds collateral shares
         let collateral_amount_native_target = Amount {
             amount_type: AmountType::Target,
             denomination: AmountDenomination::Native,
-            value: (20 * 10000000000 * asset_scale).into()
+            value: (20 * 10000000000 * asset_scale).into(),
         };
 
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
-            collateral_amount_native_target, position, asset_config
+            collateral_amount_native_target, position, asset_config,
         );
 
         let expected_delta = calculate_collateral(
-            collateral_amount_native_target.value.abs - position.collateral_shares, asset_config, true
+            collateral_amount_native_target.value.abs - position.collateral_shares, asset_config, true,
         );
 
         assert!(collateral_delta.abs == expected_delta, "Deconstruct collateral failed");
         assert!(
             collateral_shares_delta == (collateral_amount_native_target.value - position.collateral_shares.into()),
-            "Deconstruct collateral failed"
+            "Deconstruct collateral failed",
         );
     }
 
@@ -511,7 +511,7 @@ mod TestCommon {
         let asset_config = get_default_asset_config();
 
         let collateral_amount_asset_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: (20 * asset_scale).into()
+            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: (20 * asset_scale).into(),
         };
 
         let position = Position {
@@ -520,40 +520,40 @@ mod TestCommon {
         };
 
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
-            collateral_amount_asset_target, position, asset_config
+            collateral_amount_asset_target, position, asset_config,
         );
 
         let position_collateral = calculate_collateral(position.collateral_shares, asset_config, false);
 
         let expected_shares_delta = calculate_collateral_shares(
-            collateral_amount_asset_target.value.abs - position_collateral, asset_config, false
+            collateral_amount_asset_target.value.abs - position_collateral, asset_config, false,
         );
 
         assert!(collateral_shares_delta.abs == expected_shares_delta, "Deconstruct collateral failed");
         assert!(
             (collateral_amount_asset_target.value.abs - position_collateral).into() == collateral_delta,
-            "Deconstruct collateral failed"
+            "Deconstruct collateral failed",
         );
 
         // collateral exceed value
         let collateral_amount_asset_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: asset_scale.into()
+            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: asset_scale.into(),
         };
 
         let position_collateral = calculate_collateral(position.collateral_shares, asset_config, false);
 
         let expected_shares_delta = calculate_collateral_shares(
-            position_collateral - collateral_amount_asset_target.value.abs, asset_config, true
+            position_collateral - collateral_amount_asset_target.value.abs, asset_config, true,
         );
 
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
-            collateral_amount_asset_target, position, asset_config
+            collateral_amount_asset_target, position, asset_config,
         );
 
         assert!(collateral_shares_delta.abs == expected_shares_delta, "Deconstruct collateral failed");
         assert!(
             -(position_collateral - collateral_amount_asset_target.value.abs).into() == collateral_delta,
-            "Deconstruct collateral failed"
+            "Deconstruct collateral failed",
         );
     }
 
@@ -565,7 +565,7 @@ mod TestCommon {
         let collateral = 20 * asset_scale;
         let initial_debt = 2 * collateral;
         let debt_amount_asset_delta = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: (10 * asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: (10 * asset_scale).into(),
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral, asset_config, false),
@@ -573,16 +573,16 @@ mod TestCommon {
         };
 
         let (debt_delta, nominal_debt_delta) = deconstruct_debt_amount(
-            debt_amount_asset_delta, position, rate_accumulator, asset_scale
+            debt_amount_asset_delta, position, rate_accumulator, asset_scale,
         );
 
         assert!(nominal_debt_delta == debt_amount_asset_delta.value, "Deconstruct debt delta failed");
         assert!(
             debt_delta == i257_new(
                 calculate_debt(nominal_debt_delta.abs, rate_accumulator, asset_scale, false),
-                nominal_debt_delta.is_negative
+                nominal_debt_delta.is_negative,
             ),
-            "Deconstruct nominal debt failed"
+            "Deconstruct nominal debt failed",
         );
     }
 
@@ -595,7 +595,7 @@ mod TestCommon {
         let initial_debt = 2 * collateral;
 
         let debt_amount_asset_delta = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (20 * asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (20 * asset_scale).into(),
         };
 
         let position = Position {
@@ -604,15 +604,15 @@ mod TestCommon {
         };
 
         let (debt_delta, nominal_debt_delta) = deconstruct_debt_amount(
-            debt_amount_asset_delta, position, rate_accumulator, asset_scale
+            debt_amount_asset_delta, position, rate_accumulator, asset_scale,
         );
 
         assert!(debt_delta == debt_amount_asset_delta.value, "Deconstruct debt delta failed");
         assert!(
             nominal_debt_delta == i257_new(
-                calculate_nominal_debt(debt_delta.abs, rate_accumulator, asset_scale, false), debt_delta.is_negative
+                calculate_nominal_debt(debt_delta.abs, rate_accumulator, asset_scale, false), debt_delta.is_negative,
             ),
-            "Deconstruct nominal debt failed"
+            "Deconstruct nominal debt failed",
         );
     }
 
@@ -626,7 +626,9 @@ mod TestCommon {
         let initial_debt = 2 * collateral;
 
         let debt_amount_native_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: -(15 * asset_scale).into()
+            amount_type: AmountType::Target,
+            denomination: AmountDenomination::Native,
+            value: -(15 * asset_scale).into(),
         };
 
         let position = Position {
@@ -646,7 +648,7 @@ mod TestCommon {
         let initial_debt = 2 * collateral;
 
         let debt_amount_native_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (15 * asset_scale).into()
+            amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: (15 * asset_scale).into(),
         };
 
         let position = Position {
@@ -655,17 +657,17 @@ mod TestCommon {
         };
 
         let (debt_delta, nominal_debt_delta) = deconstruct_debt_amount(
-            debt_amount_native_target, position, rate_accumulator, asset_scale
+            debt_amount_native_target, position, rate_accumulator, asset_scale,
         );
 
         let expected_debt_delta = calculate_debt(
-            position.nominal_debt - debt_amount_native_target.value.abs, rate_accumulator, asset_scale, true
+            position.nominal_debt - debt_amount_native_target.value.abs, rate_accumulator, asset_scale, true,
         );
 
         assert!(debt_delta.abs == expected_debt_delta, "Deconstruct debt delta failed");
         assert!(
             nominal_debt_delta.abs == position.nominal_debt - debt_amount_native_target.value.abs,
-            "Deconstruct nominal debt failed"
+            "Deconstruct nominal debt failed",
         );
     }
 
@@ -678,7 +680,7 @@ mod TestCommon {
         let initial_debt = 2 * collateral;
 
         let debt_amount_asset_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: (25 * asset_scale).into()
+            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: (25 * asset_scale).into(),
         };
 
         let position = Position {
@@ -687,12 +689,12 @@ mod TestCommon {
         };
 
         let (debt_delta, nominal_debt_delta) = deconstruct_debt_amount(
-            debt_amount_asset_target, position, rate_accumulator, asset_scale
+            debt_amount_asset_target, position, rate_accumulator, asset_scale,
         );
 
         let position_debt = calculate_debt(position.nominal_debt, rate_accumulator, asset_scale, false);
         let expected_nominal_delta = calculate_nominal_debt(
-            position_debt - debt_amount_asset_target.value.abs, rate_accumulator, asset_scale, false
+            position_debt - debt_amount_asset_target.value.abs, rate_accumulator, asset_scale, false,
         );
 
         assert!(debt_delta.abs == position_debt - debt_amount_asset_target.value.abs, "Deconstruct debt delta failed");
@@ -701,7 +703,7 @@ mod TestCommon {
         // positional debt < debt amount
 
         let debt_amount_asset_target = Amount {
-            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: (50 * asset_scale).into()
+            amount_type: AmountType::Target, denomination: AmountDenomination::Assets, value: (50 * asset_scale).into(),
         };
 
         let position = Position {
@@ -710,13 +712,13 @@ mod TestCommon {
         };
 
         let (debt_delta, nominal_debt_delta) = deconstruct_debt_amount(
-            debt_amount_asset_target, position, rate_accumulator, asset_scale
+            debt_amount_asset_target, position, rate_accumulator, asset_scale,
         );
 
         let position_debt = calculate_debt(position.nominal_debt, rate_accumulator, asset_scale, false);
 
         let expected_nominal_delta = calculate_nominal_debt(
-            debt_amount_asset_target.value.abs - position_debt, rate_accumulator, asset_scale, false
+            debt_amount_asset_target.value.abs - position_debt, rate_accumulator, asset_scale, false,
         );
 
         assert!(debt_delta.abs == debt_amount_asset_target.value.abs - position_debt, "Deconstruct debt delta failed");
@@ -740,7 +742,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -760,20 +762,20 @@ mod TestCommon {
             debt_asset_fee_shares: Zeroable::zero(),
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         let debt = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (10 * asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (10 * asset_scale).into(),
         };
         let collateral = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (20 * asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: (20 * asset_scale).into(),
         };
 
         let bad_debt = 0;
 
         let (expected_debt_delta, expected_nominal_debt_delta) = deconstruct_debt_amount(
-            debt, context.position, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale
+            debt, context.position, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale,
         );
 
         let (expected_collateral_delta, expected_collateral_shares_delta) = deconstruct_collateral_amount(
@@ -786,21 +788,21 @@ mod TestCommon {
             calculated_collateral_delta,
             calculated_collateral_shares_delta,
             calculated_debt_delta,
-            calculated_nominal_debt_delta
+            calculated_nominal_debt_delta,
         ) =
             apply_position_update_to_context(
-            ref context, collateral, debt, bad_debt
+            ref context, collateral, debt, bad_debt,
         );
 
-        //deconstruction works correctly 
+        //deconstruction works correctly
         assert!(expected_collateral_delta == calculated_collateral_delta, "Collateral delta deconstruction incorrect");
         assert!(
             expected_collateral_shares_delta == calculated_collateral_shares_delta,
-            "Collateral shares delta deconstruction incorrect"
+            "Collateral shares delta deconstruction incorrect",
         );
         assert!(expected_debt_delta == calculated_debt_delta, "Debt delta deconstruction incorrect");
         assert!(
-            expected_nominal_debt_delta == calculated_nominal_debt_delta, "Nominal debt delta deconstruction incorrect"
+            expected_nominal_debt_delta == calculated_nominal_debt_delta, "Nominal debt delta deconstruction incorrect",
         );
 
         // context is updated correctly
@@ -808,7 +810,7 @@ mod TestCommon {
         assert!(
             context.position.collateral_shares == original_context.position.collateral_shares
                 + expected_collateral_shares_delta.abs,
-            "Context collateral shares update failed"
+            "Context collateral shares update failed",
         );
         assert!(
             context
@@ -817,26 +819,26 @@ mod TestCommon {
                 .collateral_asset_config
                 .total_collateral_shares
                 + expected_collateral_shares_delta.abs,
-            "Context total collateral shares update failed"
+            "Context total collateral shares update failed",
         );
         assert!(
             context.collateral_asset_config.reserve == original_context.collateral_asset_config.reserve
                 + expected_collateral_delta.abs,
-            "Context reserve update failed"
+            "Context reserve update failed",
         );
 
         assert!(
             context.position.nominal_debt == original_context.position.nominal_debt + expected_nominal_debt_delta.abs,
-            "Context nominal debt update failed"
+            "Context nominal debt update failed",
         );
         assert!(
             context.debt_asset_config.total_nominal_debt == original_context.debt_asset_config.total_nominal_debt
                 + expected_nominal_debt_delta.abs,
-            "Context total nominal debt update failed"
+            "Context total nominal debt update failed",
         );
         assert!(
             context.debt_asset_config.reserve == original_context.debt_asset_config.reserve - expected_debt_delta.abs,
-            "Context reserve debt update failed"
+            "Context reserve debt update failed",
         );
     }
 
@@ -857,7 +859,7 @@ mod TestCommon {
             last_updated: 0,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 0
+            fee_rate: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -877,20 +879,20 @@ mod TestCommon {
             debt_asset_fee_shares: Zeroable::zero(),
             max_ltv: 2,
             user: Zeroable::zero(),
-            position: position
+            position: position,
         };
 
         let debt = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -(asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -(asset_scale).into(),
         };
         let collateral = Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -(asset_scale).into()
+            amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -(asset_scale).into(),
         };
 
         let bad_debt = 0;
 
         let (expected_debt_delta, expected_nominal_debt_delta) = deconstruct_debt_amount(
-            debt, context.position, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale
+            debt, context.position, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale,
         );
 
         let (expected_collateral_delta, expected_collateral_shares_delta) = deconstruct_collateral_amount(
@@ -903,28 +905,28 @@ mod TestCommon {
             calculated_collateral_delta,
             calculated_collateral_shares_delta,
             calculated_debt_delta,
-            calculated_nominal_debt_delta
+            calculated_nominal_debt_delta,
         ) =
             apply_position_update_to_context(
-            ref context, collateral, debt, bad_debt
+            ref context, collateral, debt, bad_debt,
         );
 
-        //deconstruction works correctly 
+        //deconstruction works correctly
         assert!(expected_collateral_delta == calculated_collateral_delta, "Collateral delta deconstruction incorrect");
         assert!(
             expected_collateral_shares_delta == calculated_collateral_shares_delta,
-            "Collateral shares delta deconstruction incorrect"
+            "Collateral shares delta deconstruction incorrect",
         );
         assert!(expected_debt_delta == calculated_debt_delta, "Debt delta deconstruction incorrect");
         assert!(
-            expected_nominal_debt_delta == calculated_nominal_debt_delta, "Nominal debt delta deconstruction incorrect"
+            expected_nominal_debt_delta == calculated_nominal_debt_delta, "Nominal debt delta deconstruction incorrect",
         );
 
         // context is updated correctly
         assert!(
             context.position.collateral_shares == original_context.position.collateral_shares
                 - expected_collateral_shares_delta.abs,
-            "Context collateral shares update failed"
+            "Context collateral shares update failed",
         );
         assert!(
             context
@@ -933,27 +935,27 @@ mod TestCommon {
                 .collateral_asset_config
                 .total_collateral_shares
                 - expected_collateral_shares_delta.abs,
-            "Context total collateral shares update failed"
+            "Context total collateral shares update failed",
         );
         assert!(
             context.collateral_asset_config.reserve == original_context.collateral_asset_config.reserve
                 - expected_collateral_delta.abs,
-            "Context debt reserve update failed"
+            "Context debt reserve update failed",
         );
         assert!(
             context.position.nominal_debt == original_context.position.nominal_debt - expected_nominal_debt_delta.abs,
-            "Context nominal debt update failed"
+            "Context nominal debt update failed",
         );
         assert!(
             context.debt_asset_config.total_nominal_debt == original_context.debt_asset_config.total_nominal_debt
                 - expected_nominal_debt_delta.abs,
-            "Context total nominal debt update failed"
+            "Context total nominal debt update failed",
         );
         assert!(
             context.debt_asset_config.reserve == original_context.debt_asset_config.reserve
                 + expected_debt_delta.abs
                 - bad_debt,
-            "Context collateral reserve debt update failed"
+            "Context collateral reserve debt update failed",
         );
     }
 }

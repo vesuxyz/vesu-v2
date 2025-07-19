@@ -2,32 +2,27 @@
 mod TestPragmaOracle {
     use core::serde::Serde;
     use snforge_std::{
-        start_prank, stop_prank, start_warp, stop_warp, CheatTarget, CheatSpan, prank, store, map_entry_address
+        CheatSpan, CheatTarget, map_entry_address, prank, start_prank, start_warp, stop_prank, stop_warp, store,
     };
     use starknet::{ContractAddress, get_block_timestamp};
-    use vesu::{
-        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
-        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams, DebtCapParams},
-        singleton_v2::{ISingletonV2DispatcherTrait, ISingletonV2Dispatcher},
-        test::{
-            setup_v2::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env},
-            mock_oracle::{
-                {
-                    IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
-                    IMockPragmaSummaryDispatcherTrait
-                }
-            }
-        },
-        extension::{
-            interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension_po_v2::{
-                IDefaultExtensionPOV2DispatcherTrait, IDefaultExtensionPOV2Dispatcher, InterestRateConfig,
-                PragmaOracleParams, LiquidationParams, ShutdownParams, FeeParams, VTokenParams
-            }
-        },
-        data_model::{AssetParams, LTVParams}, math::pow_10, common::{is_collateralized},
-        vendor::pragma::{AggregationMode}
+    use vesu::common::is_collateralized;
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, AssetParams, DebtCapParams, LTVParams, ModifyPositionParams,
     };
+    use vesu::extension::default_extension_po_v2::{
+        FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
+        LiquidationParams, PragmaOracleParams, ShutdownParams, VTokenParams,
+    };
+    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
+    use vesu::math::pow_10;
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::test::mock_oracle::{
+        IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
+        IMockPragmaSummaryDispatcherTrait,
+    };
+    use vesu::test::setup_v2::{COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env, LendingTerms, TestConfig, setup, setup_env};
+    use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE, SCALE_128};
+    use vesu::vendor::pragma::AggregationMode;
 
 
     fn create_custom_pool(
@@ -77,7 +72,7 @@ mod TestPragmaOracle {
             number_of_sources,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
         let debt_asset_oracle_params = PragmaOracleParams {
             pragma_key: DEBT_PRAGMA_KEY,
@@ -85,7 +80,7 @@ mod TestPragmaOracle {
             number_of_sources,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(())
+            aggregation_mode: AggregationMode::Median(()),
         };
 
         let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
@@ -93,29 +88,29 @@ mod TestPragmaOracle {
 
         // create ltv config for collateral and borrow assets
         let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap()
+            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
         };
         let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap()
+            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
         };
 
         let collateral_asset_liquidation_params = LiquidationParams {
-            collateral_asset_index: 0, debt_asset_index: 1, liquidation_factor: 0
+            collateral_asset_index: 0, debt_asset_index: 1, liquidation_factor: 0,
         };
         let debt_asset_liquidation_params = LiquidationParams {
-            collateral_asset_index: 1, debt_asset_index: 0, liquidation_factor: 0
+            collateral_asset_index: 1, debt_asset_index: 0, liquidation_factor: 0,
         };
 
         let collateral_asset_debt_cap_params = DebtCapParams {
-            collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0
+            collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0,
         };
         let debt_asset_debt_cap_params = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
 
         let shutdown_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
+            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap(),
         };
         let shutdown_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (75 * PERCENT).try_into().unwrap()
+            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (75 * PERCENT).try_into().unwrap(),
         };
 
         let shutdown_ltv_params = array![shutdown_ltv_params_0, shutdown_ltv_params_1].span();
@@ -128,7 +123,7 @@ mod TestPragmaOracle {
         let liquidation_params = array![collateral_asset_liquidation_params, debt_asset_liquidation_params].span();
         let debt_caps = array![collateral_asset_debt_cap_params, debt_asset_debt_cap_params].span();
         let shutdown_params = ShutdownParams {
-            recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
+            recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
         };
         let fee_params = FeeParams { fee_recipient: creator };
 
@@ -145,7 +140,7 @@ mod TestPragmaOracle {
                 debt_caps,
                 shutdown_params,
                 fee_params,
-                creator
+                creator,
             );
         stop_prank(CheatTarget::One(extension.contract_address));
         pool_id
@@ -197,9 +192,9 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout() {
-        let Env { singleton, extension, config, users, .. } = setup_env(
-            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
-        );
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let timeout = 10;
@@ -211,7 +206,7 @@ mod TestPragmaOracle {
             collateral_asset.contract_address,
             debt_asset.contract_address,
             timeout,
-            2
+            2,
         );
 
         let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
@@ -228,7 +223,7 @@ mod TestPragmaOracle {
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
         stop_warp(CheatTarget::All);
 
-        // called at timeout - 1 
+        // called at timeout - 1
         start_warp(CheatTarget::All, get_block_timestamp() + timeout - 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
@@ -241,9 +236,9 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout_stale_price() {
-        let Env { singleton, extension, config, users, .. } = setup_env(
-            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
-        );
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let timeout = 10;
@@ -255,14 +250,14 @@ mod TestPragmaOracle {
             collateral_asset.contract_address,
             debt_asset.contract_address,
             timeout,
-            2
+            2,
         );
 
         let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         pragma_oracle.set_last_updated_timestamp(COLL_PRAGMA_KEY, get_block_timestamp());
 
-        // called at timeout + 1 
+        // called at timeout + 1
         start_warp(CheatTarget::All, get_block_timestamp() + timeout + 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
@@ -276,9 +271,9 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_reached() {
-        let Env { singleton, extension, config, users, .. } = setup_env(
-            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
-        );
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
@@ -289,20 +284,20 @@ mod TestPragmaOracle {
             collateral_asset.contract_address,
             debt_asset.contract_address,
             0,
-            min_number_of_sources
+            min_number_of_sources,
         );
 
         let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
 
-        // number of sources == min_number_of_sources + 1 
+        // number of sources == min_number_of_sources + 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
 
-        // number of sources == min_number_of_sources 
+        // number of sources == min_number_of_sources
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
@@ -312,9 +307,9 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_not_reached() {
-        let Env { singleton, extension, config, users, .. } = setup_env(
-            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
-        );
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
@@ -325,13 +320,13 @@ mod TestPragmaOracle {
             collateral_asset.contract_address,
             debt_asset.contract_address,
             0,
-            min_number_of_sources
+            min_number_of_sources,
         );
 
         let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
 
-        // number of sources == min_number_of_sources - 1 
+        // number of sources == min_number_of_sources - 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources - 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
@@ -349,13 +344,13 @@ mod TestPragmaOracle {
             map_entry_address(
                 selector!("oracle_configs"), array![pool_id, collateral_asset.contract_address.into()].span(),
             ),
-            array![COLL_PRAGMA_KEY, 0, 2, 1, 1, 1].span()
+            array![COLL_PRAGMA_KEY, 0, 2, 1, 1, 1].span(),
         );
 
         store(
             default_extension_po.contract_address,
-            map_entry_address(selector!("oracle_configs"), array![pool_id, debt_asset.contract_address.into()].span(),),
-            array![DEBT_PRAGMA_KEY, 0, 2, 1, 1, 1].span()
+            map_entry_address(selector!("oracle_configs"), array![pool_id, debt_asset.contract_address.into()].span()),
+            array![DEBT_PRAGMA_KEY, 0, 2, 1, 1, 1].span(),
         );
 
         let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };

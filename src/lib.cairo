@@ -13,7 +13,6 @@ pub mod extension {
     pub mod default_extension_po_v2;
     pub mod interface;
     pub mod components {
-        pub mod ekubo_oracle;
         pub mod fee_model;
         pub mod interest_rate_model;
         pub mod position_hooks;
@@ -23,7 +22,6 @@ pub mod extension {
 }
 
 pub mod vendor {
-    pub mod ekubo;
     pub mod erc20;
     pub mod erc20_component;
     pub mod ownable;
@@ -32,8 +30,6 @@ pub mod vendor {
 
 pub mod test {
     pub mod mock_asset;
-    pub mod mock_ekubo_core;
-    pub mod mock_ekubo_oracle;
     pub mod mock_extension;
     pub mod mock_oracle;
     pub mod mock_singleton;

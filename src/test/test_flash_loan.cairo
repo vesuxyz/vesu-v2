@@ -5,7 +5,8 @@ trait IFlashLoanGeneric<TContractState> {
 
 #[starknet::contract]
 mod FlashLoanreceiver {
-    use starknet::{get_block_timestamp, ContractAddress, storage::{StoragePointerReadAccess, StoragePointerWriteAccess}};
+    use starknet::ContractAddress;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use vesu::singleton_v2::IFlashloanReceiver;
 
     #[storage]
@@ -16,7 +17,7 @@ mod FlashLoanreceiver {
     #[abi(embed_v0)]
     impl FlashLoanReceiver of IFlashloanReceiver<ContractState> {
         fn on_flash_loan(
-            ref self: ContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>
+            ref self: ContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>,
         ) {
             self.flash_loan_amount.write(amount);
         }
@@ -33,8 +34,9 @@ mod FlashLoanreceiver {
 
 #[starknet::contract]
 mod MaliciousFlashLoanReceiver {
-    use starknet::{get_block_timestamp, ContractAddress, contract_address_const};
-    use vesu::{singleton_v2::IFlashloanReceiver, vendor::erc20::{ERC20ABIDispatcherTrait, ERC20ABIDispatcher}};
+    use starknet::{ContractAddress, contract_address_const};
+    use vesu::singleton_v2::IFlashloanReceiver;
+    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     #[storage]
     struct Storage {}
@@ -42,7 +44,7 @@ mod MaliciousFlashLoanReceiver {
     #[abi(embed_v0)]
     impl FlashLoanReceiver of IFlashloanReceiver<ContractState> {
         fn on_flash_loan(
-            ref self: ContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>
+            ref self: ContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>,
         ) {
             ERC20ABIDispatcher { contract_address: asset }.transfer(contract_address_const::<'BadUser'>(), amount);
         }
@@ -51,18 +53,17 @@ mod MaliciousFlashLoanReceiver {
 
 #[cfg(test)]
 mod FlashLoan {
-    use snforge_std::{start_prank, stop_prank, CheatTarget};
-    use starknet::{contract_address};
-    use super::{IFlashLoanGenericDispatcherTrait, IFlashLoanGenericDispatcher};
-    use vesu::{
-        data_model::{Amount, AmountType, AmountDenomination},
-        singleton_v2::{
-            ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, IFlashloanReceiverDispatcher,
-            IFlashloanReceiverDispatcherTrait, ModifyPositionParams
-        },
-        vendor::erc20::ERC20ABIDispatcherTrait, math::pow_10,
-        test::setup_v2::{setup, deploy_contract, TestConfig, LendingTerms},
+    use snforge_std::{CheatTarget, start_prank, stop_prank};
+    use starknet::contract_address;
+    use vesu::data_model::{Amount, AmountDenomination, AmountType};
+    use vesu::math::pow_10;
+    use vesu::singleton_v2::{
+        IFlashloanReceiverDispatcher, IFlashloanReceiverDispatcherTrait, ISingletonV2Dispatcher,
+        ISingletonV2DispatcherTrait, ModifyPositionParams,
     };
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_contract, setup};
+    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
+    use super::{IFlashLoanGenericDispatcher, IFlashLoanGenericDispatcherTrait};
 
     #[test]
     fn test_flash_loan_fractional_pool_amount() {
@@ -88,7 +89,7 @@ mod FlashLoan {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -109,7 +110,8 @@ mod FlashLoan {
         stop_prank(CheatTarget::One(debt_asset.contract_address));
 
         assert!(
-            debt_asset.balance_of(flashloan_receiver.contract_address) == 0, "Flash loan receiver should have 0 balance"
+            debt_asset.balance_of(flashloan_receiver.contract_address) == 0,
+            "Flash loan receiver should have 0 balance",
         );
 
         start_prank(CheatTarget::One(singleton.contract_address), flashloan_receiver.contract_address);
@@ -119,20 +121,21 @@ mod FlashLoan {
                 debt_asset.contract_address,
                 flash_loan_amount,
                 false,
-                array![].span()
+                array![].span(),
             );
 
         assert!(
             flashloan_receiver_view.flash_loan_amount() == flash_loan_amount,
-            "Flash loan correctly sent to flash loan receiver"
+            "Flash loan correctly sent to flash loan receiver",
         );
         stop_prank(CheatTarget::One(singleton.contract_address));
 
         assert!(
-            debt_asset.balance_of(flashloan_receiver.contract_address) == 0, "Flash loan receiver should have 0 balance"
+            debt_asset.balance_of(flashloan_receiver.contract_address) == 0,
+            "Flash loan receiver should have 0 balance",
         );
         assert!(
-            debt_asset.balance_of(singleton.contract_address) == balance, "Singleton should have maintained balance"
+            debt_asset.balance_of(singleton.contract_address) == balance, "Singleton should have maintained balance",
         );
     }
 
@@ -161,7 +164,7 @@ mod FlashLoan {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -187,20 +190,21 @@ mod FlashLoan {
                 debt_asset.contract_address,
                 flash_loan_amount,
                 false,
-                array![].span()
+                array![].span(),
             );
 
         assert!(
             flashloan_receiver_view.flash_loan_amount() == flash_loan_amount,
-            "Flash loan correctly sent to flash loan receiver"
+            "Flash loan correctly sent to flash loan receiver",
         );
         stop_prank(CheatTarget::One(singleton.contract_address));
 
         assert!(
-            debt_asset.balance_of(flashloan_receiver.contract_address) == 0, "Flash loan receiver should have 0 balance"
+            debt_asset.balance_of(flashloan_receiver.contract_address) == 0,
+            "Flash loan receiver should have 0 balance",
         );
         assert!(
-            debt_asset.balance_of(singleton.contract_address) == balance, "Singleton should have maintained balance"
+            debt_asset.balance_of(singleton.contract_address) == balance, "Singleton should have maintained balance",
         );
     }
 
@@ -213,7 +217,7 @@ mod FlashLoan {
 
         let malicious_flash_loan_receiver_add = deploy_contract("MaliciousFlashLoanReceiver");
         let malicious_flashloan_receiver = IFlashloanReceiverDispatcher {
-            contract_address: malicious_flash_loan_receiver_add
+            contract_address: malicious_flash_loan_receiver_add,
         };
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
@@ -230,7 +234,7 @@ mod FlashLoan {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
@@ -256,7 +260,7 @@ mod FlashLoan {
                 debt_asset.contract_address,
                 flash_loan_amount,
                 false,
-                array![].span()
+                array![].span(),
             );
         stop_prank(CheatTarget::One(singleton.contract_address));
     }
