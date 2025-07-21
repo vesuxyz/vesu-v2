@@ -1,24 +1,23 @@
 #[cfg(test)]
 mod TestShutdown {
-    use snforge_std::{CheatTarget, start_prank, start_warp, stop_prank, stop_warp};
-    use starknet::{contract_address_const, get_block_timestamp, get_contract_address};
+    use core::num::traits::{Bounded, Zero};
+    use snforge_std::{
+        start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_block_timestamp_global,
+        stop_cheat_caller_address,
+    };
+    use starknet::get_block_timestamp;
     use vesu::data_model::{
-        Amount, AmountDenomination, AmountType, LiquidatePositionParams, ModifyPositionParams, Position,
-        TransferPositionParams, UnsignedAmount,
+        Amount, AmountDenomination, AmountType, ModifyPositionParams, TransferPositionParams, UnsignedAmount,
     };
+    use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::ShutdownMode;
-    use vesu::extension::default_extension_po_v2::{
-        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
-    };
-    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
+    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
-    use vesu::test::setup_v2::{
-        COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_env, setup_pool,
-        test_interest_rate_config,
-    };
+    use vesu::test::setup_v2::{COLL_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_pool};
     use vesu::units::{DAY_IN_SECONDS, SCALE, SCALE_128};
     use vesu::v_token_v2::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenV2Dispatcher, IVTokenV2DispatcherTrait};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
 
     #[test]
     fn test_set_shutdown_mode_recovery() {
@@ -65,9 +64,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -89,9 +88,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
@@ -117,9 +116,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -145,9 +144,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -169,9 +168,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Recovery
 
@@ -191,9 +190,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -220,9 +219,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -244,9 +243,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Recovery
 
@@ -270,9 +269,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -288,9 +287,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -317,9 +316,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -341,9 +340,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Recovery
 
@@ -367,9 +366,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -385,9 +384,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -413,9 +412,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -437,18 +436,18 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -456,9 +455,9 @@ mod TestShutdown {
         let v_token = IERC4626Dispatcher {
             contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
-        assert(v_token.max_deposit(Zeroable::zero()) > 0, 'max_deposit neq');
+        assert(v_token.max_deposit(Zero::zero()) > 0, 'max_deposit neq');
         assert(v_token.preview_deposit(10000000) > 0, 'preview_deposit neq');
-        assert(v_token.max_mint(Zeroable::zero()) > 0, 'max_mint neq');
+        assert(v_token.max_mint(Zero::zero()) > 0, 'max_mint neq');
         assert(v_token.preview_mint(100000000) > 0, 'preview_mint neq');
         assert(v_token.max_withdraw(users.lender) == 0, 'max_withdraw neq');
         assert(v_token.preview_withdraw(10000000) == 0, 'preview_withdraw neq');
@@ -467,12 +466,12 @@ mod TestShutdown {
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -491,9 +490,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -520,9 +519,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -544,30 +543,30 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -575,9 +574,9 @@ mod TestShutdown {
         let v_token = IERC4626Dispatcher {
             contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
-        assert(v_token.max_deposit(Zeroable::zero()) == 0, 'max_deposit neq');
+        assert(v_token.max_deposit(Zero::zero()) == 0, 'max_deposit neq');
         assert(v_token.preview_deposit(10000000) == 0, 'preview_deposit neq');
-        assert(v_token.max_mint(Zeroable::zero()) == 0, 'max_mint neq');
+        assert(v_token.max_mint(Zero::zero()) == 0, 'max_mint neq');
         assert(v_token.preview_mint(100000000) == 0, 'preview_mint neq');
         assert(v_token.max_withdraw(users.lender) == 0, 'max_withdraw neq');
         assert(v_token.preview_withdraw(10000000) == 0, 'preview_withdraw neq');
@@ -598,9 +597,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -627,9 +626,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -651,30 +650,30 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -697,9 +696,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -726,9 +725,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -750,30 +749,30 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -796,9 +795,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -824,9 +823,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -848,18 +847,18 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -867,19 +866,19 @@ mod TestShutdown {
         // Subscription
 
         let shutdown_config = extension.shutdown_config(pool_id);
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
-        start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
+        start_cheat_caller_address(debt_asset.contract_address, users.lender);
         debt_asset.transfer(users.borrower, debt_scale);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
+        stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -888,23 +887,23 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
+                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zero::zero(),
             },
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Redemption
 
         let shutdown_config = extension.shutdown_config(pool_id);
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -915,15 +914,15 @@ mod TestShutdown {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             collateral: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
+                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zero::zero(),
             },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -950,9 +949,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -974,18 +973,18 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -994,19 +993,19 @@ mod TestShutdown {
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
-        start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
+        start_cheat_caller_address(debt_asset.contract_address, users.lender);
         debt_asset.transfer(users.borrower, debt_scale);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
+        stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1015,24 +1014,24 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
+                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zero::zero(),
             },
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Redemption
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
 
@@ -1044,14 +1043,14 @@ mod TestShutdown {
             contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
 
-        start_prank(CheatTarget::One(v_token.contract_address), extension.contract_address);
+        start_cheat_caller_address(v_token.contract_address, extension.contract_address);
         IVTokenV2Dispatcher { contract_address: v_token.contract_address }
             .mint_v_token(users.borrower, 1000_0000000000);
-        stop_prank(CheatTarget::One(v_token.contract_address));
+        stop_cheat_caller_address(v_token.contract_address);
 
-        assert(v_token.max_deposit(Zeroable::zero()) == 0, 'max_deposit neq');
+        assert(v_token.max_deposit(Zero::zero()) == 0, 'max_deposit neq');
         assert(v_token.preview_deposit(1000_0000000000) == 0, 'preview_deposit neq');
-        assert(v_token.max_mint(Zeroable::zero()) == 0, 'max_mint neq');
+        assert(v_token.max_mint(Zero::zero()) == 0, 'max_mint neq');
         assert(v_token.preview_mint(1000_0000000000) == 0, 'preview_mint neq');
         assert(v_token.max_withdraw(users.borrower) > 0, 'max_withdraw neq');
         assert(v_token.preview_withdraw(1000_0000000000) > 0, 'preview_withdraw neq');
@@ -1070,9 +1069,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -1099,9 +1098,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -1123,18 +1122,18 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1143,19 +1142,19 @@ mod TestShutdown {
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
-        start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
+        start_cheat_caller_address(debt_asset.contract_address, users.lender);
         debt_asset.transfer(users.borrower, debt_scale);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
+        stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1171,19 +1170,19 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Redemption
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -1204,9 +1203,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -1233,9 +1232,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -1257,18 +1256,18 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1277,19 +1276,19 @@ mod TestShutdown {
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
-        start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
+        start_cheat_caller_address(debt_asset.contract_address, users.lender);
         debt_asset.transfer(users.borrower, debt_scale);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
+        stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1298,24 +1297,24 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
+                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zero::zero(),
             },
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Redemption
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -1336,9 +1335,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     // non-zero-collateral-shares
@@ -1367,9 +1366,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -1391,18 +1390,18 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1410,10 +1409,10 @@ mod TestShutdown {
         // Subscription
 
         let shutdown_config = extension.shutdown_config(pool_id);
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
@@ -1421,10 +1420,10 @@ mod TestShutdown {
         // Redemption
 
         let shutdown_config = extension.shutdown_config(pool_id);
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -1445,9 +1444,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -1458,20 +1457,20 @@ mod TestShutdown {
 
         let borrower = extension.contract_address;
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+        start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         collateral_asset.transfer(borrower, collateral_to_deposit * 2);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), borrower);
-        collateral_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
-        start_prank(CheatTarget::One(debt_asset.contract_address), borrower);
-        debt_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
+        start_cheat_caller_address(collateral_asset.contract_address, borrower);
+        collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+        stop_cheat_caller_address(collateral_asset.contract_address);
+        start_cheat_caller_address(debt_asset.contract_address, borrower);
+        debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+        stop_cheat_caller_address(debt_asset.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(pool_id, collateral_asset.contract_address, 'max_utilization', SCALE / 2);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 1
 
@@ -1490,9 +1489,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -1514,9 +1513,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         //
 
@@ -1534,18 +1533,18 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1554,19 +1553,19 @@ mod TestShutdown {
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
-        start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
+        start_cheat_caller_address(debt_asset.contract_address, users.lender);
         debt_asset.transfer(borrower, collateral_scale);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
+        stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1575,30 +1574,30 @@ mod TestShutdown {
             user: borrower,
             collateral: Default::default(),
             debt: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zeroable::zero(),
+                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: Zero::zero(),
             },
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Redemption
 
         // third user has to borrow from same pair to increase utilization
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(pool_id, collateral_asset.contract_address, 'max_utilization', SCALE / 100);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let shutdown_config = extension.shutdown_config(pool_id);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         extension.update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
 
@@ -1621,9 +1620,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     // Scenario:
@@ -1655,9 +1654,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1673,9 +1672,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -1697,9 +1696,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1719,13 +1718,13 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Pair 1: None -> Recovery
         // warp to non zero block timestamp first
-        start_warp(CheatTarget::All, get_block_timestamp() + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // oracle failure in pair 1 --> recovery
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
@@ -1740,7 +1739,7 @@ mod TestShutdown {
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // warp such that next violation is at a different timestamp
-        start_warp(CheatTarget::All, get_block_timestamp() + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // update shutdown mode
         extension.update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
 
@@ -1759,7 +1758,7 @@ mod TestShutdown {
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Pair 1: Recovery --> None
-        start_warp(CheatTarget::All, get_block_timestamp() + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // oracle recovery in pair 1 --> normal
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 2);
         // update shutdown mode
@@ -1773,7 +1772,7 @@ mod TestShutdown {
     #[test]
     fn test_recovery_mode_unsafe_rate_accumulator() {
         let current_time = 1707509060;
-        start_warp(CheatTarget::All, current_time);
+        start_cheat_block_timestamp_global(current_time);
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 100_000,
@@ -1787,12 +1786,7 @@ mod TestShutdown {
         };
 
         let (singleton, extension, config, users, terms) = setup_pool(
-            Zeroable::zero(),
-            Zeroable::zero(),
-            Zeroable::zero(),
-            Zeroable::zero(),
-            true,
-            Option::Some(interest_rate_config),
+            Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::Some(interest_rate_config),
         );
 
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
@@ -1815,9 +1809,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -1839,12 +1833,12 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let current_time = current_time + (360 * DAY_IN_SECONDS);
-        start_warp(CheatTarget::All, current_time);
+        start_cheat_block_timestamp_global(current_time);
 
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
@@ -1857,9 +1851,9 @@ mod TestShutdown {
         assert!(context.debt_asset_config.last_rate_accumulator > 18 * SCALE);
 
         // Recovery
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -1869,7 +1863,7 @@ mod TestShutdown {
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
 
-        stop_warp(CheatTarget::All);
+        stop_cheat_block_timestamp_global();
     }
 
     // test that collateral is not double counted
@@ -1897,9 +1891,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1915,9 +1909,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Borrower
 
@@ -1939,9 +1933,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1961,9 +1955,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         //
 
@@ -1972,11 +1966,11 @@ mod TestShutdown {
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 2);
         // warp such that next violation is at a different timestamp
-        start_warp(CheatTarget::All, get_block_timestamp() + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // update shutdown mode
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
@@ -2005,9 +1999,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -2025,9 +2019,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Recovery
 
@@ -2055,9 +2049,9 @@ mod TestShutdown {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -2084,9 +2078,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -2104,9 +2098,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Recovery
 
@@ -2134,9 +2128,9 @@ mod TestShutdown {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -2163,9 +2157,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -2187,9 +2181,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Recovery
 
@@ -2217,9 +2211,9 @@ mod TestShutdown {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -2245,9 +2239,9 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // User 2
 
@@ -2269,32 +2263,32 @@ mod TestShutdown {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let shutdown_mode = extension
             .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Recovery, "shutdown-mode-not-recovery");
 
         let shutdown_config = extension.shutdown_config(pool_id);
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.recovery_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let shutdown_mode = extension
             .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Subscription, "shutdown-mode-not-subscription");
 
-        start_warp(CheatTarget::All, get_block_timestamp() + shutdown_config.subscription_period + 1);
+        start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let shutdown_mode = extension
             .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Redemption, "shutdown-mode-not-redemption");

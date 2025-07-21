@@ -2,7 +2,7 @@ use starknet::ContractAddress;
 use vesu::units::PERCENT;
 
 #[starknet::interface]
-trait IStarkgateERC20<TContractState> {
+pub trait IStarkgateERC20<TContractState> {
     fn permissioned_mint(ref self: TContractState, account: ContractAddress, amount: u256);
 }
 
@@ -13,25 +13,27 @@ fn to_percent(value: u256) -> u64 {
 #[cfg(test)]
 mod TestForking {
     use snforge_std::{
-        CheatSpan, CheatTarget, declare, load, map_entry_address, prank, start_prank, start_warp, stop_prank, store,
+        CheatSpan, cheat_caller_address, load, map_entry_address, start_cheat_block_timestamp_global,
+        start_cheat_caller_address, stop_cheat_caller_address, store,
     };
-    use starknet::{
-        ContractAddress, contract_address_const, deploy_syscall, get_block_number, get_block_timestamp,
-        get_caller_address, get_contract_address,
-    };
+    use starknet::syscalls::deploy_syscall;
+    #[feature("deprecated-starknet-consts")]
+    use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
     use vesu::data_model::{
-        Amount, AmountDenomination, AmountType, AssetParams, AssetPrice, DebtCapParams, LTVParams, ModifyPositionParams,
+        Amount, AmountDenomination, AmountType, AssetParams, DebtCapParams, LTVParams, LiquidatePositionParams,
+        ModifyPositionParams,
     };
-    use vesu::extension::components::position_hooks::LiquidationData;
+    use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use vesu::extension::components::position_hooks::{LiquidationData, ShutdownMode};
     use vesu::extension::default_extension_po_v2::{
-        FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
-        LiquidationParams, PragmaOracleParams, ShutdownMode, ShutdownParams, VTokenParams,
+        FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
+        PragmaOracleParams, ShutdownParams, VTokenParams,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
-    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, LiquidatePositionParams};
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
-    use vesu::test::setup_v2::{deploy_contract, deploy_with_args, setup_pool};
-    use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE, SCALE_128};
+    use vesu::test::setup_v2::deploy_contract;
+    use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, SCALE, SCALE_128};
     use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use vesu::vendor::pragma::AggregationMode;
     use super::{IStarkgateERC20Dispatcher, IStarkgateERC20DispatcherTrait, to_percent};
@@ -540,7 +542,7 @@ mod TestForking {
         let eth = ERC20ABIDispatcher { contract_address: eth_asset_params.asset };
         let loaded = load(eth_asset_params.asset, selector!("permitted_minter"), 1);
         let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
-        start_prank(CheatTarget::One(eth_asset_params.asset), minter);
+        start_cheat_caller_address(eth_asset_params.asset, minter);
         IStarkgateERC20Dispatcher { contract_address: eth_asset_params.asset }
             .permissioned_mint(supplier, supply_amount_eth);
         IStarkgateERC20Dispatcher { contract_address: eth_asset_params.asset }
@@ -549,78 +551,79 @@ mod TestForking {
             .permissioned_mint(liquidator, borrow_amount_eth);
         IStarkgateERC20Dispatcher { contract_address: eth_asset_params.asset }
             .permissioned_mint(creator, INFLATION_FEE);
-        stop_prank(CheatTarget::One(eth_asset_params.asset));
-        start_prank(CheatTarget::One(eth.contract_address), creator);
+        stop_cheat_caller_address(eth_asset_params.asset);
+        start_cheat_caller_address(eth.contract_address, creator);
         eth.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
         let btc_asset_params: AssetParams = *asset_params[1];
         let btc = ERC20ABIDispatcher { contract_address: btc_asset_params.asset };
         let loaded = load(btc_asset_params.asset, selector!("permitted_minter"), 1);
         let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
-        start_prank(CheatTarget::One(btc_asset_params.asset), minter);
+        start_cheat_caller_address(btc_asset_params.asset, minter);
         IStarkgateERC20Dispatcher { contract_address: btc_asset_params.asset }
             .permissioned_mint(creator, INFLATION_FEE);
-        stop_prank(CheatTarget::One(btc_asset_params.asset));
-        start_prank(CheatTarget::One(btc.contract_address), creator);
+        stop_cheat_caller_address(btc_asset_params.asset);
+        start_cheat_caller_address(btc.contract_address, creator);
         btc.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(btc.contract_address));
+        stop_cheat_caller_address(btc.contract_address);
 
         let usdc_asset_params: AssetParams = *asset_params[2];
         let usdc = ERC20ABIDispatcher { contract_address: usdc_asset_params.asset };
         let loaded = load(usdc_asset_params.asset, selector!("permitted_minter"), 1);
         let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
-        start_prank(CheatTarget::One(usdc_asset_params.asset), minter);
+        start_cheat_caller_address(usdc_asset_params.asset, minter);
         IStarkgateERC20Dispatcher { contract_address: usdc_asset_params.asset }
             .permissioned_mint(supplier, supply_amount_usdc);
         IStarkgateERC20Dispatcher { contract_address: usdc_asset_params.asset }
             .permissioned_mint(borrower, borrow_amount_usdc);
         IStarkgateERC20Dispatcher { contract_address: usdc_asset_params.asset }
             .permissioned_mint(creator, INFLATION_FEE);
-        stop_prank(CheatTarget::One(usdc_asset_params.asset));
-        start_prank(CheatTarget::One(usdc.contract_address), creator);
+        stop_cheat_caller_address(usdc_asset_params.asset);
+        start_cheat_caller_address(usdc.contract_address, creator);
         usdc.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(usdc.contract_address));
+        stop_cheat_caller_address(usdc.contract_address);
 
         let usdt_asset_params: AssetParams = *asset_params[3];
         let usdt = ERC20ABIDispatcher { contract_address: usdt_asset_params.asset };
         let loaded = load(usdt_asset_params.asset, selector!("permitted_minter"), 1);
         let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
-        start_prank(CheatTarget::One(usdt_asset_params.asset), minter);
+        start_cheat_caller_address(usdt_asset_params.asset, minter);
         IStarkgateERC20Dispatcher { contract_address: usdt_asset_params.asset }
             .permissioned_mint(creator, INFLATION_FEE);
-        stop_prank(CheatTarget::One(usdt_asset_params.asset));
-        start_prank(CheatTarget::One(usdt.contract_address), creator);
+        stop_cheat_caller_address(usdt_asset_params.asset);
+        start_cheat_caller_address(usdt.contract_address, creator);
         usdt.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(usdt.contract_address));
+        stop_cheat_caller_address(usdt.contract_address);
 
         let strk_asset_params: AssetParams = *asset_params[4];
         let strk = ERC20ABIDispatcher { contract_address: strk_asset_params.asset };
         let loaded = load(strk_asset_params.asset, selector!("permitted_minter"), 1);
         let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
-        start_prank(CheatTarget::One(strk_asset_params.asset), minter);
+        start_cheat_caller_address(strk_asset_params.asset, minter);
         IStarkgateERC20Dispatcher { contract_address: strk_asset_params.asset }
             .permissioned_mint(creator, INFLATION_FEE);
-        stop_prank(CheatTarget::One(strk_asset_params.asset));
-        start_prank(CheatTarget::One(strk.contract_address), creator);
+        stop_cheat_caller_address(strk_asset_params.asset);
+        start_cheat_caller_address(strk.contract_address, creator);
         strk.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(strk.contract_address));
+        stop_cheat_caller_address(strk.contract_address);
 
         let wsteth_asset_params: AssetParams = *asset_params[5];
         let wsteth = ERC20ABIDispatcher { contract_address: wsteth_asset_params.asset };
         let loaded = load(wsteth_asset_params.asset, selector!("permitted_minter"), 1);
         let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
-        start_prank(CheatTarget::One(wsteth_asset_params.asset), minter);
+        start_cheat_caller_address(wsteth_asset_params.asset, minter);
         IStarkgateERC20Dispatcher { contract_address: wsteth_asset_params.asset }
             .permissioned_mint(creator, INFLATION_FEE);
-        stop_prank(CheatTarget::One(wsteth_asset_params.asset));
-        start_prank(CheatTarget::One(wsteth.contract_address), creator);
+        stop_cheat_caller_address(wsteth_asset_params.asset);
+        start_cheat_caller_address(wsteth.contract_address, creator);
         wsteth.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(wsteth.contract_address));
+        stop_cheat_caller_address(wsteth.contract_address);
 
         let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
 
-        prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+
         extension
             .create_pool(
                 'DefaultExtensionPOV2',
@@ -635,7 +638,7 @@ mod TestForking {
                 FeeParams { fee_recipient: creator },
                 creator,
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let mut i = 0;
         loop {
@@ -657,7 +660,7 @@ mod TestForking {
             array!['USDC/USD', 0, 2, 0, 0, 1].span(),
         );
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         SetupParams {
             singleton,
@@ -710,15 +713,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(eth.contract_address), supplier);
+        start_cheat_caller_address(eth.contract_address, supplier);
         eth.approve(singleton.contract_address, supply_amount_eth);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), supplier);
+        start_cheat_caller_address(singleton.contract_address, supplier);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -734,15 +737,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(usdc.contract_address), supplier);
+        start_cheat_caller_address(usdc.contract_address, supplier);
         usdc.approve(singleton.contract_address, supply_amount_usdc);
-        stop_prank(CheatTarget::One(usdc.contract_address));
+        stop_cheat_caller_address(usdc.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), supplier);
+        start_cheat_caller_address(singleton.contract_address, supplier);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         // borrow
 
@@ -764,19 +767,19 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(usdc.contract_address), borrower);
+        start_cheat_caller_address(usdc.contract_address, borrower);
         usdc.approve(singleton.contract_address, borrow_amount_usdc);
-        stop_prank(CheatTarget::One(usdc.contract_address));
+        stop_cheat_caller_address(usdc.contract_address);
 
-        start_prank(CheatTarget::One(eth.contract_address), borrower);
+        start_cheat_caller_address(eth.contract_address, borrower);
         eth.approve(singleton.contract_address, borrow_amount_eth);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         // repay partially
 
@@ -798,12 +801,11 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        // prank(CheatTarget::One(singleton.contract_address), borrower, CheatSpan::TargetCalls(1));
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         // withdraw partially
 
@@ -819,11 +821,11 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), supplier);
+        start_cheat_caller_address(singleton.contract_address, supplier);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
     }
 
     #[test]
@@ -862,15 +864,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(eth.contract_address), supplier);
+        start_cheat_caller_address(eth.contract_address, supplier);
         eth.approve(singleton.contract_address, supply_amount_eth);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), supplier);
+        start_cheat_caller_address(singleton.contract_address, supplier);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -886,15 +888,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(usdc.contract_address), supplier);
+        start_cheat_caller_address(usdc.contract_address, supplier);
         usdc.approve(singleton.contract_address, supply_amount_usdc);
-        stop_prank(CheatTarget::One(usdc.contract_address));
+        stop_cheat_caller_address(usdc.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), supplier);
+        start_cheat_caller_address(singleton.contract_address, supplier);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         // borrow
 
@@ -916,19 +918,19 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(usdc.contract_address), borrower);
+        start_cheat_caller_address(usdc.contract_address, borrower);
         usdc.approve(singleton.contract_address, borrow_amount_usdc);
-        stop_prank(CheatTarget::One(usdc.contract_address));
+        stop_cheat_caller_address(usdc.contract_address);
 
-        start_prank(CheatTarget::One(eth.contract_address), borrower);
+        start_cheat_caller_address(eth.contract_address, borrower);
         eth.approve(singleton.contract_address, borrow_amount_eth);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         // liquidate
 
@@ -963,13 +965,13 @@ mod TestForking {
             data: liquidation_data.span(),
         };
 
-        start_prank(CheatTarget::One(eth.contract_address), liquidator);
+        start_cheat_caller_address(eth.contract_address, liquidator);
         eth.approve(singleton.contract_address, borrow_amount_eth);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), liquidator);
+        start_cheat_caller_address(singleton.contract_address, liquidator);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -1008,15 +1010,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(eth.contract_address), supplier);
+        start_cheat_caller_address(eth.contract_address, supplier);
         eth.approve(singleton.contract_address, supply_amount_eth);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), supplier);
+        start_cheat_caller_address(singleton.contract_address, supplier);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1032,15 +1034,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(usdc.contract_address), supplier);
+        start_cheat_caller_address(usdc.contract_address, supplier);
         usdc.approve(singleton.contract_address, supply_amount_usdc);
-        stop_prank(CheatTarget::One(usdc.contract_address));
+        stop_cheat_caller_address(usdc.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), supplier);
+        start_cheat_caller_address(singleton.contract_address, supplier);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         // borrow
 
@@ -1062,15 +1064,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(usdc.contract_address), borrower);
+        start_cheat_caller_address(usdc.contract_address, borrower);
         usdc.approve(singleton.contract_address, borrow_amount_usdc);
-        stop_prank(CheatTarget::One(usdc.contract_address));
+        stop_cheat_caller_address(usdc.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: deploy_contract("MockPragmaOracle") };
         mock_pragma_oracle.set_num_sources_aggregated('USDC/USD', 2);
@@ -1094,7 +1096,7 @@ mod TestForking {
         assert!(shutdown_status.shutdown_mode == ShutdownMode::Recovery, "Shutdown status is not recovery");
         assert!(shutdown_status.violating, "Shutdown status is not violating");
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         extension.update_shutdown_status(pool_id, usdc.contract_address, eth.contract_address);
         let shutdown_status = extension.shutdown_status(pool_id, usdc.contract_address, eth.contract_address);
@@ -1115,15 +1117,15 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(eth.contract_address), borrower);
+        start_cheat_caller_address(eth.contract_address, borrower);
         eth.approve(singleton.contract_address, borrow_amount_eth * 2);
-        stop_prank(CheatTarget::One(eth.contract_address));
+        stop_cheat_caller_address(eth.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         extension.update_shutdown_status(pool_id, usdc.contract_address, eth.contract_address);
         let shutdown_status = extension.shutdown_status(pool_id, usdc.contract_address, eth.contract_address);
@@ -1146,9 +1148,9 @@ mod TestForking {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), borrower);
+        start_cheat_caller_address(singleton.contract_address, borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton.position(pool_id, usdc.contract_address, eth.contract_address, borrower);
         assert!(position.collateral_shares == 0, "Collateral shares not zero");

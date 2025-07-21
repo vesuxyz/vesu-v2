@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod TestCommon {
-    use alexandria_math::i257::{U256IntoI257, i257, i257_new};
-    use snforge_std::cheatcodes::{CheatTarget, start_warp, stop_warp};
+    use alexandria_math::i257::I257Trait;
+    use core::num::traits::{Bounded, Zero};
+    use snforge_std::start_cheat_block_timestamp_global;
     use vesu::common::{
         apply_position_update_to_context, calculate_collateral, calculate_collateral_and_debt_value,
         calculate_collateral_shares, calculate_debt, calculate_fee_shares, calculate_nominal_debt,
@@ -9,7 +10,7 @@ mod TestCommon {
         is_collateralized,
     };
     use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, Context, Position};
-    use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE, YEAR_IN_SECONDS};
+    use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE};
 
     fn get_default_asset_config() -> AssetConfig {
         let asset_scale = 100_000_000;
@@ -94,7 +95,7 @@ mod TestCommon {
     #[test]
     #[should_panic(expected: "nominal-debt-overflow")]
     fn test_calculate_nominal_debt_nominal_debt_overflow() {
-        let initial_debt = integer::BoundedU256::max() / SCALE;
+        let initial_debt = Bounded::<u256>::MAX / SCALE;
         let rate_accumulator = SCALE / 10;
         calculate_nominal_debt(initial_debt, rate_accumulator, SCALE, false);
     }
@@ -102,7 +103,7 @@ mod TestCommon {
     #[test]
     #[should_panic(expected: "collateral-shares-overflow")]
     fn test_calculate_collateral_shares_collateral_shares_overflow() {
-        let initial_collateral = integer::BoundedU256::max() / SCALE;
+        let initial_collateral = Bounded::<u256>::MAX / SCALE;
 
         let config = AssetConfig {
             total_collateral_shares: SCALE,
@@ -124,7 +125,7 @@ mod TestCommon {
     #[test]
     #[should_panic(expected: "collateral-overflow")]
     fn test_calculate_collateral_collateral_overflow() {
-        let initial_collateral_shares = integer::BoundedU256::max() / SCALE;
+        let initial_collateral_shares = Bounded::<u256>::MAX / SCALE;
 
         let config = AssetConfig {
             total_collateral_shares: SCALE / 10,
@@ -190,25 +191,23 @@ mod TestCommon {
     fn test_calculate_rate_accumulator() {
         let last_updated = 95;
         let current_time = last_updated + 5;
-        start_warp(CheatTarget::All, current_time);
+        start_cheat_block_timestamp_global(current_time);
         let last_rate_accumulator = SCALE;
         let interest_rate = 1050000000000000000;
         let accumulator_1 = calculate_rate_accumulator(last_updated, last_rate_accumulator, interest_rate);
         let accumulator_2 = calculate_rate_accumulator(current_time, accumulator_1, interest_rate);
         assert!(accumulator_1 == accumulator_2, "Rate accumulator failed");
-        stop_warp(CheatTarget::All);
     }
 
     #[test]
     fn test_calculate_unsafe_rate_accumulator() {
         let last_updated = 1707509060;
         let current_time = last_updated + (360 * DAY_IN_SECONDS);
-        start_warp(CheatTarget::All, current_time);
+        start_cheat_block_timestamp_global(current_time);
         let last_rate_accumulator = SCALE;
         let interest_rate = 100824704600; // 300% per year
         let accumulator = calculate_rate_accumulator(last_updated, last_rate_accumulator, interest_rate);
         assert!(accumulator > 18 * SCALE, "accumulator should be above 18");
-        stop_warp(CheatTarget::All);
     }
 
     #[test]
@@ -289,9 +288,9 @@ mod TestCommon {
 
         let mut context = Context {
             pool_id: 1,
-            extension: Zeroable::zero(),
-            collateral_asset: Zeroable::zero(),
-            debt_asset: Zeroable::zero(),
+            extension: Zero::zero(),
+            collateral_asset: Zero::zero(),
+            debt_asset: Zero::zero(),
             collateral_asset_config: config,
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
@@ -299,7 +298,7 @@ mod TestCommon {
             collateral_asset_fee_shares: 0,
             debt_asset_fee_shares: 0,
             max_ltv: 2,
-            user: Zeroable::zero(),
+            user: Zero::zero(),
             position: position,
         };
 
@@ -341,9 +340,9 @@ mod TestCommon {
 
         let mut context = Context {
             pool_id: 1,
-            extension: Zeroable::zero(),
-            collateral_asset: Zeroable::zero(),
-            debt_asset: Zeroable::zero(),
+            extension: Zero::zero(),
+            collateral_asset: Zero::zero(),
+            debt_asset: Zero::zero(),
             collateral_asset_config: config,
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
@@ -351,7 +350,7 @@ mod TestCommon {
             collateral_asset_fee_shares: 0,
             debt_asset_fee_shares: 0,
             max_ltv: 2,
-            user: Zeroable::zero(),
+            user: Zero::zero(),
             position: position,
         };
 
@@ -385,18 +384,18 @@ mod TestCommon {
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
             collateral_amount_asset_delta, position, asset_config,
         );
-        let expected_collateral_shares_delta = calculate_collateral_shares(collateral_delta.abs, asset_config, false);
+        let expected_collateral_shares_delta = calculate_collateral_shares(collateral_delta.abs(), asset_config, false);
 
         assert!(collateral_delta == collateral_amount_asset_delta.value, "Delta incorrect");
-        assert!(collateral_shares_delta.abs == expected_collateral_shares_delta, "Deconstruct collateral failed");
+        assert!(collateral_shares_delta.abs() == expected_collateral_shares_delta, "Deconstruct collateral failed");
         assert!(
-            collateral_delta.is_negative == collateral_amount_asset_delta.value.is_negative,
+            collateral_delta.is_negative() == collateral_amount_asset_delta.value.is_negative(),
             "Deconstruct collateral failed",
         );
 
-        let converted_collateral = calculate_collateral(collateral_shares_delta.abs, asset_config, false);
+        let converted_collateral = calculate_collateral(collateral_shares_delta.abs(), asset_config, false);
         // expect a loss of one unit of collateral because collateral_shares_delta calculation is rounding down
-        assert!(converted_collateral <= collateral_amount_asset_delta.value.abs, "Retrieve collateral failed");
+        assert!(converted_collateral <= collateral_amount_asset_delta.value.abs(), "Retrieve collateral failed");
     }
 
     #[test]
@@ -420,9 +419,9 @@ mod TestCommon {
         );
 
         assert!(
-            collateral_delta == i257_new(
-                calculate_collateral(collateral_shares_delta.abs, asset_config, true),
-                collateral_shares_delta.is_negative,
+            collateral_delta == I257Trait::new(
+                calculate_collateral(collateral_shares_delta.abs(), asset_config, true),
+                collateral_shares_delta.is_negative(),
             ),
             "Deconstruct collateral failed",
         );
@@ -472,10 +471,10 @@ mod TestCommon {
         );
 
         let expected_delta = calculate_collateral(
-            position.collateral_shares - collateral_amount_native_target.value.abs, asset_config, false,
+            position.collateral_shares - collateral_amount_native_target.value.abs(), asset_config, false,
         );
 
-        assert!(collateral_delta.abs == expected_delta, "Deconstruct collateral failed");
+        assert!(collateral_delta.abs() == expected_delta, "Deconstruct collateral failed");
         assert!(
             collateral_shares_delta == -(position.collateral_shares.into() - collateral_amount_native_target.value),
             "Deconstruct collateral failed",
@@ -493,10 +492,10 @@ mod TestCommon {
         );
 
         let expected_delta = calculate_collateral(
-            collateral_amount_native_target.value.abs - position.collateral_shares, asset_config, true,
+            collateral_amount_native_target.value.abs() - position.collateral_shares, asset_config, true,
         );
 
-        assert!(collateral_delta.abs == expected_delta, "Deconstruct collateral failed");
+        assert!(collateral_delta.abs() == expected_delta, "Deconstruct collateral failed");
         assert!(
             collateral_shares_delta == (collateral_amount_native_target.value - position.collateral_shares.into()),
             "Deconstruct collateral failed",
@@ -526,12 +525,12 @@ mod TestCommon {
         let position_collateral = calculate_collateral(position.collateral_shares, asset_config, false);
 
         let expected_shares_delta = calculate_collateral_shares(
-            collateral_amount_asset_target.value.abs - position_collateral, asset_config, false,
+            collateral_amount_asset_target.value.abs() - position_collateral, asset_config, false,
         );
 
-        assert!(collateral_shares_delta.abs == expected_shares_delta, "Deconstruct collateral failed");
+        assert!(collateral_shares_delta.abs() == expected_shares_delta, "Deconstruct collateral failed");
         assert!(
-            (collateral_amount_asset_target.value.abs - position_collateral).into() == collateral_delta,
+            (collateral_amount_asset_target.value.abs() - position_collateral).into() == collateral_delta,
             "Deconstruct collateral failed",
         );
 
@@ -543,16 +542,16 @@ mod TestCommon {
         let position_collateral = calculate_collateral(position.collateral_shares, asset_config, false);
 
         let expected_shares_delta = calculate_collateral_shares(
-            position_collateral - collateral_amount_asset_target.value.abs, asset_config, true,
+            position_collateral - collateral_amount_asset_target.value.abs(), asset_config, true,
         );
 
         let (collateral_delta, collateral_shares_delta) = deconstruct_collateral_amount(
             collateral_amount_asset_target, position, asset_config,
         );
 
-        assert!(collateral_shares_delta.abs == expected_shares_delta, "Deconstruct collateral failed");
+        assert!(collateral_shares_delta.abs() == expected_shares_delta, "Deconstruct collateral failed");
         assert!(
-            -(position_collateral - collateral_amount_asset_target.value.abs).into() == collateral_delta,
+            -(position_collateral - collateral_amount_asset_target.value.abs()).into() == collateral_delta,
             "Deconstruct collateral failed",
         );
     }
@@ -578,9 +577,9 @@ mod TestCommon {
 
         assert!(nominal_debt_delta == debt_amount_asset_delta.value, "Deconstruct debt delta failed");
         assert!(
-            debt_delta == i257_new(
-                calculate_debt(nominal_debt_delta.abs, rate_accumulator, asset_scale, false),
-                nominal_debt_delta.is_negative,
+            debt_delta == I257Trait::new(
+                calculate_debt(nominal_debt_delta.abs(), rate_accumulator, asset_scale, false),
+                nominal_debt_delta.is_negative(),
             ),
             "Deconstruct nominal debt failed",
         );
@@ -609,8 +608,9 @@ mod TestCommon {
 
         assert!(debt_delta == debt_amount_asset_delta.value, "Deconstruct debt delta failed");
         assert!(
-            nominal_debt_delta == i257_new(
-                calculate_nominal_debt(debt_delta.abs, rate_accumulator, asset_scale, false), debt_delta.is_negative,
+            nominal_debt_delta == I257Trait::new(
+                calculate_nominal_debt(debt_delta.abs(), rate_accumulator, asset_scale, false),
+                debt_delta.is_negative(),
             ),
             "Deconstruct nominal debt failed",
         );
@@ -661,12 +661,12 @@ mod TestCommon {
         );
 
         let expected_debt_delta = calculate_debt(
-            position.nominal_debt - debt_amount_native_target.value.abs, rate_accumulator, asset_scale, true,
+            position.nominal_debt - debt_amount_native_target.value.abs(), rate_accumulator, asset_scale, true,
         );
 
-        assert!(debt_delta.abs == expected_debt_delta, "Deconstruct debt delta failed");
+        assert!(debt_delta.abs() == expected_debt_delta, "Deconstruct debt delta failed");
         assert!(
-            nominal_debt_delta.abs == position.nominal_debt - debt_amount_native_target.value.abs,
+            nominal_debt_delta.abs() == position.nominal_debt - debt_amount_native_target.value.abs(),
             "Deconstruct nominal debt failed",
         );
     }
@@ -694,10 +694,12 @@ mod TestCommon {
 
         let position_debt = calculate_debt(position.nominal_debt, rate_accumulator, asset_scale, false);
         let expected_nominal_delta = calculate_nominal_debt(
-            position_debt - debt_amount_asset_target.value.abs, rate_accumulator, asset_scale, false,
+            position_debt - debt_amount_asset_target.value.abs(), rate_accumulator, asset_scale, false,
         );
 
-        assert!(debt_delta.abs == position_debt - debt_amount_asset_target.value.abs, "Deconstruct debt delta failed");
+        assert!(
+            debt_delta.abs() == position_debt - debt_amount_asset_target.value.abs(), "Deconstruct debt delta failed",
+        );
         assert!(nominal_debt_delta == -expected_nominal_delta.into(), "Deconstruct nominal debt failed");
 
         // positional debt < debt amount
@@ -718,10 +720,12 @@ mod TestCommon {
         let position_debt = calculate_debt(position.nominal_debt, rate_accumulator, asset_scale, false);
 
         let expected_nominal_delta = calculate_nominal_debt(
-            debt_amount_asset_target.value.abs - position_debt, rate_accumulator, asset_scale, false,
+            debt_amount_asset_target.value.abs() - position_debt, rate_accumulator, asset_scale, false,
         );
 
-        assert!(debt_delta.abs == debt_amount_asset_target.value.abs - position_debt, "Deconstruct debt delta failed");
+        assert!(
+            debt_delta.abs() == debt_amount_asset_target.value.abs() - position_debt, "Deconstruct debt delta failed",
+        );
         assert!(nominal_debt_delta == expected_nominal_delta.into(), "Deconstruct nominal debt failed");
     }
 
@@ -751,17 +755,17 @@ mod TestCommon {
 
         let mut context = Context {
             pool_id: 1,
-            extension: Zeroable::zero(),
-            collateral_asset: Zeroable::zero(),
-            debt_asset: Zeroable::zero(),
+            extension: Zero::zero(),
+            collateral_asset: Zero::zero(),
+            debt_asset: Zero::zero(),
             collateral_asset_config: config,
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: Zeroable::zero(),
-            debt_asset_fee_shares: Zeroable::zero(),
+            collateral_asset_fee_shares: Zero::zero(),
+            debt_asset_fee_shares: Zero::zero(),
             max_ltv: 2,
-            user: Zeroable::zero(),
+            user: Zero::zero(),
             position: position,
         };
 
@@ -809,7 +813,7 @@ mod TestCommon {
 
         assert!(
             context.position.collateral_shares == original_context.position.collateral_shares
-                + expected_collateral_shares_delta.abs,
+                + expected_collateral_shares_delta.abs(),
             "Context collateral shares update failed",
         );
         assert!(
@@ -818,26 +822,26 @@ mod TestCommon {
                 .total_collateral_shares == original_context
                 .collateral_asset_config
                 .total_collateral_shares
-                + expected_collateral_shares_delta.abs,
+                + expected_collateral_shares_delta.abs(),
             "Context total collateral shares update failed",
         );
         assert!(
             context.collateral_asset_config.reserve == original_context.collateral_asset_config.reserve
-                + expected_collateral_delta.abs,
+                + expected_collateral_delta.abs(),
             "Context reserve update failed",
         );
 
         assert!(
-            context.position.nominal_debt == original_context.position.nominal_debt + expected_nominal_debt_delta.abs,
+            context.position.nominal_debt == original_context.position.nominal_debt + expected_nominal_debt_delta.abs(),
             "Context nominal debt update failed",
         );
         assert!(
             context.debt_asset_config.total_nominal_debt == original_context.debt_asset_config.total_nominal_debt
-                + expected_nominal_debt_delta.abs,
+                + expected_nominal_debt_delta.abs(),
             "Context total nominal debt update failed",
         );
         assert!(
-            context.debt_asset_config.reserve == original_context.debt_asset_config.reserve - expected_debt_delta.abs,
+            context.debt_asset_config.reserve == original_context.debt_asset_config.reserve - expected_debt_delta.abs(),
             "Context reserve debt update failed",
         );
     }
@@ -868,17 +872,17 @@ mod TestCommon {
 
         let mut context = Context {
             pool_id: 1,
-            extension: Zeroable::zero(),
-            collateral_asset: Zeroable::zero(),
-            debt_asset: Zeroable::zero(),
+            extension: Zero::zero(),
+            collateral_asset: Zero::zero(),
+            debt_asset: Zero::zero(),
             collateral_asset_config: config,
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: Zeroable::zero(),
-            debt_asset_fee_shares: Zeroable::zero(),
+            collateral_asset_fee_shares: Zero::zero(),
+            debt_asset_fee_shares: Zero::zero(),
             max_ltv: 2,
-            user: Zeroable::zero(),
+            user: Zero::zero(),
             position: position,
         };
 
@@ -925,7 +929,7 @@ mod TestCommon {
         // context is updated correctly
         assert!(
             context.position.collateral_shares == original_context.position.collateral_shares
-                - expected_collateral_shares_delta.abs,
+                - expected_collateral_shares_delta.abs(),
             "Context collateral shares update failed",
         );
         assert!(
@@ -934,26 +938,26 @@ mod TestCommon {
                 .total_collateral_shares == original_context
                 .collateral_asset_config
                 .total_collateral_shares
-                - expected_collateral_shares_delta.abs,
+                - expected_collateral_shares_delta.abs(),
             "Context total collateral shares update failed",
         );
         assert!(
             context.collateral_asset_config.reserve == original_context.collateral_asset_config.reserve
-                - expected_collateral_delta.abs,
+                - expected_collateral_delta.abs(),
             "Context debt reserve update failed",
         );
         assert!(
-            context.position.nominal_debt == original_context.position.nominal_debt - expected_nominal_debt_delta.abs,
+            context.position.nominal_debt == original_context.position.nominal_debt - expected_nominal_debt_delta.abs(),
             "Context nominal debt update failed",
         );
         assert!(
             context.debt_asset_config.total_nominal_debt == original_context.debt_asset_config.total_nominal_debt
-                - expected_nominal_debt_delta.abs,
+                - expected_nominal_debt_delta.abs(),
             "Context total nominal debt update failed",
         );
         assert!(
             context.debt_asset_config.reserve == original_context.debt_asset_config.reserve
-                + expected_debt_delta.abs
+                + expected_debt_delta.abs()
                 - bad_debt,
             "Context collateral reserve debt update failed",
         );

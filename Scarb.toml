@@ -21,11 +21,12 @@ sort-module-level-items = true
 
 [[tool.snforge.fork]]
 name = "Mainnet"
-url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
+# url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
+url = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/rdvL5iHyAP1ZHb84DY8JR"
 block_id.number = "1565065"
 
 [tool.voyager]
-singleton = { path = "src/singleton.cairo" }
+singleton = { path = "src/singleton_v2.cairo" }
 
 [scripts]
 buildRelease = "scarb --profile release build"

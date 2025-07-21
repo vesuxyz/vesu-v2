@@ -31,11 +31,12 @@ pub trait IVTokenV2<TContractState> {
     fn migrate_v_token(ref self: TContractState);
 }
 #[starknet::contract]
-mod VTokenV2 {
+pub mod VTokenV2 {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::{Bounded, Zero};
     use starknet::event::EventEmitter;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const, get_caller_address, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, ModifyPositionParams};
     use vesu::extension::components::position_hooks::ShutdownMode;
@@ -134,7 +135,7 @@ mod VTokenV2 {
     /// * `total_debt` - Total amount outstanding of the asset [asset scale]
     /// # Returns
     /// * The amount of assets that can be withdrawn [asset scale]
-    fn calculate_withdrawable_assets(asset_config: AssetConfig, total_debt: u256) -> u256 {
+    pub fn calculate_withdrawable_assets(asset_config: AssetConfig, total_debt: u256) -> u256 {
         let scale = asset_config.scale;
         let utilization = total_debt * SCALE / (asset_config.reserve + total_debt);
         if utilization > asset_config.max_utilization {

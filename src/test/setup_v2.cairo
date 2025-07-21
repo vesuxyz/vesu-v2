@@ -3,6 +3,7 @@ use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
     start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
 };
+#[feature("deprecated-starknet-consts")]
 use starknet::{ClassHash, ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
 use vesu::data_model::{AssetParams, DebtCapParams, LTVParams};
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
@@ -19,61 +20,61 @@ use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE, SCALE_128};
 use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 use vesu::vendor::pragma::AggregationMode;
 
-const COLL_PRAGMA_KEY: felt252 = 19514442401534788;
-const DEBT_PRAGMA_KEY: felt252 = 5500394072219931460;
-const THIRD_PRAGMA_KEY: felt252 = 18669995996566340;
+pub const COLL_PRAGMA_KEY: felt252 = 19514442401534788;
+pub const DEBT_PRAGMA_KEY: felt252 = 5500394072219931460;
+pub const THIRD_PRAGMA_KEY: felt252 = 18669995996566340;
 
 #[derive(Copy, Drop, Serde)]
-struct Users {
-    owner: ContractAddress,
-    creator: ContractAddress,
-    lender: ContractAddress,
-    borrower: ContractAddress,
-    seeder: ContractAddress,
-    migrator: ContractAddress,
+pub struct Users {
+    pub owner: ContractAddress,
+    pub creator: ContractAddress,
+    pub lender: ContractAddress,
+    pub borrower: ContractAddress,
+    pub seeder: ContractAddress,
+    pub migrator: ContractAddress,
 }
 
 #[derive(Copy, Drop, Serde)]
-struct LendingTerms {
-    liquidity_to_deposit: u256,
-    liquidity_to_deposit_third: u256,
-    collateral_to_deposit: u256,
-    debt_to_draw: u256,
-    rate_accumulator: u256,
-    nominal_debt_to_draw: u256,
+pub struct LendingTerms {
+    pub liquidity_to_deposit: u256,
+    pub liquidity_to_deposit_third: u256,
+    pub collateral_to_deposit: u256,
+    pub debt_to_draw: u256,
+    pub rate_accumulator: u256,
+    pub nominal_debt_to_draw: u256,
 }
 
 #[derive(Copy, Drop, Serde)]
-struct Env {
-    singleton: ISingletonV2Dispatcher,
-    extension: IDefaultExtensionPOV2Dispatcher,
-    config: TestConfig,
-    users: Users,
-    v_token_class_hash: ClassHash,
+pub struct Env {
+    pub singleton: ISingletonV2Dispatcher,
+    pub extension: IDefaultExtensionPOV2Dispatcher,
+    pub config: TestConfig,
+    pub users: Users,
+    pub v_token_class_hash: ClassHash,
 }
 
 #[derive(Copy, Drop, Serde)]
-struct TestConfig {
-    pool_id: felt252,
-    collateral_asset: IERC20Dispatcher,
-    debt_asset: IERC20Dispatcher,
-    third_asset: IERC20Dispatcher,
-    collateral_scale: u256,
-    debt_scale: u256,
-    third_scale: u256,
+pub struct TestConfig {
+    pub pool_id: felt252,
+    pub collateral_asset: IERC20Dispatcher,
+    pub debt_asset: IERC20Dispatcher,
+    pub third_asset: IERC20Dispatcher,
+    pub collateral_scale: u256,
+    pub debt_scale: u256,
+    pub third_scale: u256,
 }
 
-fn deploy_contract(name: ByteArray) -> ContractAddress {
+pub fn deploy_contract(name: ByteArray) -> ContractAddress {
     let (contract_address, _) = declare(name).unwrap().contract_class().deploy(@array![]).unwrap();
     contract_address
 }
 
-fn deploy_with_args(name: ByteArray, constructor_args: Array<felt252>) -> ContractAddress {
+pub fn deploy_with_args(name: ByteArray, constructor_args: Array<felt252>) -> ContractAddress {
     let (contract_address, _) = declare(name).unwrap().contract_class().deploy(@constructor_args).unwrap();
     contract_address
 }
 
-fn deploy_assets(recipient: ContractAddress) -> (IERC20Dispatcher, IERC20Dispatcher, IERC20Dispatcher) {
+pub fn deploy_assets(recipient: ContractAddress) -> (IERC20Dispatcher, IERC20Dispatcher, IERC20Dispatcher) {
     // mint 100 collateral and debt assets
 
     let decimals = 8;
@@ -96,18 +97,18 @@ fn deploy_assets(recipient: ContractAddress) -> (IERC20Dispatcher, IERC20Dispatc
     (collateral_asset, debt_asset, third_asset)
 }
 
-fn deploy_asset(recipient: ContractAddress) -> IERC20Dispatcher {
+pub fn deploy_asset(recipient: ContractAddress) -> IERC20Dispatcher {
     deploy_asset_with_decimals(recipient, 18)
 }
 
-fn deploy_asset_with_decimals(recipient: ContractAddress, decimals: u32) -> IERC20Dispatcher {
+pub fn deploy_asset_with_decimals(recipient: ContractAddress, decimals: u32) -> IERC20Dispatcher {
     let supply = 100 * pow_10(decimals);
     let calldata = array!['Asset', 'ASSET', decimals.into(), supply.low.into(), supply.high.into(), recipient.into()];
     let asset = IERC20Dispatcher { contract_address: deploy_with_args("MockAsset", calldata) };
     asset
 }
 
-fn setup_env(
+pub fn setup_env(
     oracle_address: ContractAddress,
     collateral_address: ContractAddress,
     debt_address: ContractAddress,
@@ -230,7 +231,7 @@ fn setup_env(
     Env { singleton, extension, config, users, v_token_class_hash }
 }
 
-fn test_interest_rate_config() -> InterestRateConfig {
+pub fn test_interest_rate_config() -> InterestRateConfig {
     InterestRateConfig {
         min_target_utilization: 75_000,
         max_target_utilization: 85_000,
@@ -243,7 +244,7 @@ fn test_interest_rate_config() -> InterestRateConfig {
     }
 }
 
-fn create_pool(
+pub fn create_pool(
     extension: IDefaultExtensionPOV2Dispatcher,
     config: TestConfig,
     creator: ContractAddress,
@@ -408,7 +409,7 @@ fn create_pool(
     assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPOV2', "pool name not set");
 }
 
-fn setup_pool(
+pub fn setup_pool(
     oracle_address: ContractAddress,
     collateral_address: ContractAddress,
     debt_address: ContractAddress,
@@ -461,6 +462,6 @@ fn setup_pool(
     (singleton, extension, config, users, terms)
 }
 
-fn setup() -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher, TestConfig, Users, LendingTerms) {
+pub fn setup() -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher, TestConfig, Users, LendingTerms) {
     setup_pool(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::None)
 }

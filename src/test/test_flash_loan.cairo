@@ -34,6 +34,7 @@ mod FlashLoanreceiver {
 
 #[starknet::contract]
 mod MaliciousFlashLoanReceiver {
+    #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const};
     use vesu::singleton_v2::IFlashloanReceiver;
     use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
@@ -53,14 +54,9 @@ mod MaliciousFlashLoanReceiver {
 
 #[cfg(test)]
 mod FlashLoan {
-    use snforge_std::{CheatTarget, start_prank, stop_prank};
-    use starknet::contract_address;
-    use vesu::data_model::{Amount, AmountDenomination, AmountType};
-    use vesu::math::pow_10;
-    use vesu::singleton_v2::{
-        IFlashloanReceiverDispatcher, IFlashloanReceiverDispatcherTrait, ISingletonV2Dispatcher,
-        ISingletonV2DispatcherTrait, ModifyPositionParams,
-    };
+    use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
+    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
+    use vesu::singleton_v2::{IFlashloanReceiverDispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_contract, setup};
     use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
     use super::{IFlashLoanGenericDispatcher, IFlashLoanGenericDispatcherTrait};
@@ -92,9 +88,9 @@ mod FlashLoan {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
@@ -105,16 +101,16 @@ mod FlashLoan {
 
         let flash_loan_amount = (balance / 2);
 
-        start_prank(CheatTarget::One(debt_asset.contract_address), flashloan_receiver.contract_address);
+        start_cheat_caller_address(debt_asset.contract_address, flashloan_receiver.contract_address);
         debt_asset.approve(singleton.contract_address, flash_loan_amount);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
+        stop_cheat_caller_address(debt_asset.contract_address);
 
         assert!(
             debt_asset.balance_of(flashloan_receiver.contract_address) == 0,
             "Flash loan receiver should have 0 balance",
         );
 
-        start_prank(CheatTarget::One(singleton.contract_address), flashloan_receiver.contract_address);
+        start_cheat_caller_address(singleton.contract_address, flashloan_receiver.contract_address);
         singleton
             .flash_loan(
                 flashloan_receiver.contract_address,
@@ -128,7 +124,7 @@ mod FlashLoan {
             flashloan_receiver_view.flash_loan_amount() == flash_loan_amount,
             "Flash loan correctly sent to flash loan receiver",
         );
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert!(
             debt_asset.balance_of(flashloan_receiver.contract_address) == 0,
@@ -167,9 +163,9 @@ mod FlashLoan {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
@@ -180,10 +176,10 @@ mod FlashLoan {
 
         // entire balance of the pool
         let flash_loan_amount = balance;
-        start_prank(CheatTarget::One(debt_asset.contract_address), flashloan_receiver.contract_address);
+        start_cheat_caller_address(debt_asset.contract_address, flashloan_receiver.contract_address);
         debt_asset.approve(singleton.contract_address, flash_loan_amount);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
-        start_prank(CheatTarget::One(singleton.contract_address), flashloan_receiver.contract_address);
+        stop_cheat_caller_address(debt_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, flashloan_receiver.contract_address);
         singleton
             .flash_loan(
                 flashloan_receiver.contract_address,
@@ -197,7 +193,7 @@ mod FlashLoan {
             flashloan_receiver_view.flash_loan_amount() == flash_loan_amount,
             "Flash loan correctly sent to flash loan receiver",
         );
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert!(
             debt_asset.balance_of(flashloan_receiver.contract_address) == 0,
@@ -237,9 +233,9 @@ mod FlashLoan {
             data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
@@ -250,10 +246,10 @@ mod FlashLoan {
 
         // entire balance of the pool
         let flash_loan_amount = balance;
-        start_prank(CheatTarget::One(debt_asset.contract_address), malicious_flashloan_receiver.contract_address);
+        start_cheat_caller_address(debt_asset.contract_address, malicious_flashloan_receiver.contract_address);
         debt_asset.approve(singleton.contract_address, flash_loan_amount);
-        stop_prank(CheatTarget::One(debt_asset.contract_address));
-        start_prank(CheatTarget::One(singleton.contract_address), malicious_flashloan_receiver.contract_address);
+        stop_cheat_caller_address(debt_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, malicious_flashloan_receiver.contract_address);
         singleton
             .flash_loan(
                 malicious_flashloan_receiver.contract_address,
@@ -262,6 +258,6 @@ mod FlashLoan {
                 false,
                 array![].span(),
             );
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 }

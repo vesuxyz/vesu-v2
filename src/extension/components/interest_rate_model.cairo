@@ -21,7 +21,7 @@ pub struct InterestRateConfig {
     pub target_rate_percent: u256 // [SCALE]
 }
 
-impl InterestRateConfigPacking of StorePacking<InterestRateConfig, (felt252, felt252)> {
+pub impl InterestRateConfigPacking of StorePacking<InterestRateConfig, (felt252, felt252)> {
     fn pack(value: InterestRateConfig) -> (felt252, felt252) {
         let min_target_utilization: u32 = value.min_target_utilization.try_into().expect('pack-min-target-utilization');
         let max_target_utilization: u32 = value.max_target_utilization.try_into().expect('pack-max-target-utilization');
@@ -265,7 +265,7 @@ pub mod interest_rate_model_component {
     /// # Returns
     /// * `interest_rate` - new interest rate [SCALE]
     /// * `full_utilization_rate` - new full utilization interest rate [SCALE]
-    fn calculate_interest_rate(
+    pub fn calculate_interest_rate(
         interest_rate_config: InterestRateConfig, utilization: u256, time_delta: u64, last_full_utilization_rate: u256,
     ) -> (u256, u256) {
         let utilization = utilization / UTILIZATION_SCALE_TO_SCALE;

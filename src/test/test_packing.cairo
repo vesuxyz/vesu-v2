@@ -2,7 +2,6 @@
 mod TestPacking {
     use vesu::data_model::AssetConfig;
     use vesu::packing::AssetConfigPacking;
-    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::units::{PERCENT, SCALE};
 
     #[test]
@@ -18,7 +17,7 @@ mod TestPacking {
             last_updated: 1706553699,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 1 * PERCENT,
+            fee_rate: PERCENT,
         };
 
         let packed = AssetConfigPacking::pack(config);

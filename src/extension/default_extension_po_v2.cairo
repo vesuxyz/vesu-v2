@@ -178,6 +178,7 @@ mod DefaultExtensionPOV2 {
         StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::replace_class_syscall;
+    #[feature("deprecated-starknet-consts")]
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
     use vesu::data_model::{
         Amount, AmountDenomination, AmountType, AssetParams, AssetPrice, Context, DebtCapParams, LTVConfig, LTVParams,

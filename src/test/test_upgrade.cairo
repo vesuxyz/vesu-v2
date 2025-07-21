@@ -1,23 +1,15 @@
 #[cfg(test)]
 mod TestUpgrade {
     use snforge_std::{
-        CheatSpan, CheatTarget, declare, get_class_hash, load, map_entry_address, prank, replace_bytecode, start_prank,
-        start_warp, stop_prank, store,
+        DeclareResultTrait, declare, get_class_hash, start_cheat_caller_address, stop_cheat_caller_address,
     };
-    use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetParams, ModifyPositionParams};
-    use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    #[feature("deprecated-starknet-consts")]
+    use starknet::contract_address_const;
     use vesu::extension::default_extension_po_v2::{
-        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams, VTokenParams,
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
-    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
-    use vesu::test::setup_v2::deploy_with_args;
-    use vesu::test::test_forking::{IStarkgateERC20Dispatcher, IStarkgateERC20DispatcherTrait};
-    use vesu::units::SCALE;
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use vesu::vendor::ownable::{IOwnableDispatcher, IOwnableDispatcherTrait};
-    use vesu::vendor::pragma::AggregationMode;
 
     fn setup(pool_id: felt252) -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher) {
         let singleton = ISingletonV2Dispatcher {
@@ -37,9 +29,9 @@ mod TestUpgrade {
 
         let owner = IOwnableDispatcher { contract_address: singleton.contract_address }.owner();
         let extension_v1_class_hash = get_class_hash(extension.contract_address);
-        let extension_v2_class_hash = declare("DefaultExtensionPOV2").class_hash;
+        let extension_v2_class_hash = *declare("DefaultExtensionPOV2").unwrap().contract_class().class_hash;
 
-        start_prank(CheatTarget::One(extension.contract_address), owner);
+        start_cheat_caller_address(extension.contract_address, owner);
 
         let pool_ids = array![
             0x4dc4f0ca6ea4961e4c8373265bfd5317678f4fe374d76f3fd7135f57763bf28 // 0x3de03fafe6120a3d21dc77e101de62e165b2cdfe84d12540853bd962b970f99,
@@ -136,6 +128,7 @@ mod TestUpgrade {
             }
 
             i += 1;
-        };
+        }
+        stop_cheat_caller_address(extension.contract_address);
     }
 }

@@ -29,7 +29,7 @@ pub trait IVToken<TContractState> {
     fn burn_v_token(ref self: TContractState, from: ContractAddress, amount: u256) -> bool;
 }
 #[starknet::contract]
-mod VToken {
+pub mod VToken {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::{Bounded, Zero};
     use starknet::event::EventEmitter;
@@ -128,7 +128,7 @@ mod VToken {
     /// * `total_debt` - Total amount outstanding of the asset [asset scale]
     /// # Returns
     /// * The amount of assets that can be withdrawn [asset scale]
-    fn calculate_withdrawable_assets(asset_config: AssetConfig, total_debt: u256) -> u256 {
+    pub fn calculate_withdrawable_assets(asset_config: AssetConfig, total_debt: u256) -> u256 {
         let scale = asset_config.scale;
         let utilization = total_debt * SCALE / (asset_config.reserve + total_debt);
         if utilization > asset_config.max_utilization {

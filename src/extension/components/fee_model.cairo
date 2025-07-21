@@ -10,6 +10,7 @@ pub mod fee_model_component {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::Zero;
     use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+    #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, UpdatePositionResponse};
     use vesu::extension::components::fee_model::FeeConfig;
