@@ -16,7 +16,7 @@ pub mod fee_model_component {
     use vesu::extension::components::fee_model::FeeConfig;
     use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
-    use vesu::v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait};
+    use vesu::v_token_v2::{IVTokenV2SafeDispatcher, IVTokenV2SafeDispatcherTrait};
     use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 
     #[storage]
@@ -96,10 +96,17 @@ pub mod fee_model_component {
             };
 
             let unmigrated = if _is_v1_pool(pool_id) {
-                let v_token_v1 = IERC20Dispatcher {
-                    contract_address: IVTokenV2Dispatcher { contract_address: v_token.contract_address }.v_token_v1(),
-                };
-                v_token_v1.total_supply() - v_token_v1.balance_of(contract_address_const::<'0x0'>())
+                #[feature("safe_dispatcher")]
+                let response = IVTokenV2SafeDispatcher { contract_address: v_token.contract_address }.v_token_v1();
+                match response {
+                    Result::Ok(v_token_v1) => {
+                        let v_token_v1 = IERC20Dispatcher {
+                            contract_address: v_token_v1,
+                        };
+                        v_token_v1.total_supply() - v_token_v1.balance_of(contract_address_const::<'0x0'>())
+                    },
+                    Result::Err(_) => 0
+                }
             } else {
                 0
             };
