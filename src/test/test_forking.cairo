@@ -33,10 +33,10 @@ mod TestForking {
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
     use vesu::test::setup_v2::deploy_contract;
+    use vesu::test::test_forking::{IStarkgateERC20Dispatcher, IStarkgateERC20DispatcherTrait, to_percent};
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, SCALE, SCALE_128};
     use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use vesu::vendor::pragma::AggregationMode;
-    use super::{IStarkgateERC20Dispatcher, IStarkgateERC20DispatcherTrait, to_percent};
 
     struct SetupParams {
         singleton: ISingletonV2Dispatcher,

@@ -81,7 +81,7 @@ impl PairPacking of StorePacking<Pair, felt252> {
 pub mod position_hooks_component {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
-    use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_block_timestamp, get_contract_address};
     use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
     use vesu::data_model::{Context, LTVConfig, Position, UnsignedAmount, assert_ltv_config};
@@ -97,21 +97,21 @@ pub mod position_hooks_component {
     pub struct Storage {
         // contains the shutdown configuration for each pool
         // pool_id -> shutdown configuration
-        pub shutdown_configs: starknet::storage::Map<felt252, ShutdownConfig>,
+        pub shutdown_configs: Map<felt252, ShutdownConfig>,
         // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
         // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
-        pub shutdown_ltv_configs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        pub shutdown_ltv_configs: Map<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // contains the current shutdown mode for a pool
         // pool_id -> shutdown mode
-        pub fixed_shutdown_mode: starknet::storage::Map<felt252, ShutdownState>,
+        pub fixed_shutdown_mode: Map<felt252, ShutdownState>,
         // contains the liquidation configuration for each pair in a pool
         // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
-        pub liquidation_configs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
+        pub liquidation_configs: Map<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
         // tracks the total collateral shares and the total nominal debt for each pair
         // (pool_id, collateral asset, debt asset) -> pair configuration
-        pub pairs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), Pair>,
+        pub pairs: Map<(felt252, ContractAddress, ContractAddress), Pair>,
         // tracks the debt caps for each asset
-        pub debt_caps: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), u256>,
+        pub debt_caps: Map<(felt252, ContractAddress, ContractAddress), u256>,
     }
 
     #[derive(Drop, starknet::Event)]

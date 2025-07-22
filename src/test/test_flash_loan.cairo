@@ -8,6 +8,7 @@ mod FlashLoanreceiver {
     use starknet::ContractAddress;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use vesu::singleton_v2::IFlashloanReceiver;
+    use vesu::test::test_flash_loan::IFlashLoanGeneric;
 
     #[storage]
     struct Storage {
@@ -25,7 +26,7 @@ mod FlashLoanreceiver {
 
 
     #[abi(embed_v0)]
-    impl GenericTrait of super::IFlashLoanGeneric<ContractState> {
+    impl FlashLoanGenericImpl of IFlashLoanGeneric<ContractState> {
         fn flash_loan_amount(self: @ContractState) -> u256 {
             self.flash_loan_amount.read()
         }
@@ -58,8 +59,8 @@ mod FlashLoan {
     use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
     use vesu::singleton_v2::{IFlashloanReceiverDispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_contract, setup};
+    use vesu::test::test_flash_loan::{IFlashLoanGenericDispatcher, IFlashLoanGenericDispatcherTrait};
     use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
-    use super::{IFlashLoanGenericDispatcher, IFlashLoanGenericDispatcherTrait};
 
     #[test]
     fn test_flash_loan_fractional_pool_amount() {

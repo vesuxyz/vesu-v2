@@ -211,23 +211,15 @@ mod TestPragmaOracle {
 
         // called at timeout
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout);
-
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
-
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
-
-        assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
-        // No stop_cheat_block_timestamp_global needed
+        assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
 
         // called at timeout - 1
-        start_cheat_block_timestamp_global(get_block_timestamp() + timeout - 1);
-
+        start_cheat_block_timestamp_global(get_block_timestamp() - 1);
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
-
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
-
-        assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
-        // No stop_cheat_block_timestamp_global needed
+        assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
     }
 
     #[test]
@@ -255,14 +247,10 @@ mod TestPragmaOracle {
 
         // called at timeout + 1
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout + 1);
-
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
-
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
-
         // stale price
-        assert!(!collateral_asset_price.is_valid, "Debt asset validity should be false");
-        // No stop_cheat_block_timestamp_global needed
+        assert!(!collateral_asset_price.is_valid, "Collateral asset validity should be false");
     }
 
     #[test]

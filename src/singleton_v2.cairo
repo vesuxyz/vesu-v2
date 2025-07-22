@@ -182,7 +182,7 @@ mod SingletonV2 {
     use core::num::traits::Zero;
     use core::poseidon;
     use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::replace_class_syscall;
     use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
@@ -212,22 +212,22 @@ mod SingletonV2 {
     struct Storage {
         // tracks a nonce for each creator of a pool to deterministically derive the pool_id from it
         // creator -> nonce
-        creator_nonce: starknet::storage::Map<ContractAddress, felt252>,
+        creator_nonce: Map<ContractAddress, felt252>,
         // tracks the address of the extension contract for each pool
         // pool_id -> extension
-        extensions: starknet::storage::Map<felt252, ContractAddress>,
+        extensions: Map<felt252, ContractAddress>,
         // tracks the configuration / state of each asset in each pool
         // (pool_id, asset) -> asset configuration
-        asset_configs: starknet::storage::Map<(felt252, ContractAddress), AssetConfig>,
+        asset_configs: Map<(felt252, ContractAddress), AssetConfig>,
         // tracks the max. allowed loan-to-value ratio for each asset pairing in each pool
         // (pool_id, collateral_asset, debt_asset) -> ltv configuration
-        ltv_configs: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        ltv_configs: Map<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // tracks the state of each position in each pool
         // (pool_id, collateral_asset, debt_asset, user) -> position
-        positions: starknet::storage::Map<(felt252, ContractAddress, ContractAddress, ContractAddress), Position>,
+        positions: Map<(felt252, ContractAddress, ContractAddress, ContractAddress), Position>,
         // tracks the delegation status for each delegator to a delegatee for a specific pool
         // (pool_id, delegator, delegatee) -> delegation
-        delegations: starknet::storage::Map<(felt252, ContractAddress, ContractAddress), bool>,
+        delegations: Map<(felt252, ContractAddress, ContractAddress), bool>,
         // tracks the reentrancy lock status to prohibit reentrancy when loading the context or the asset config
         lock: bool,
         // tracks the singleton v1 address
@@ -236,9 +236,9 @@ mod SingletonV2 {
         migrator: ContractAddress,
         // tracks the migrated positions
         // (pool_id, collateral_asset, debt_asset, user) -> migrated
-        migrated_positions: starknet::storage::Map<(felt252, ContractAddress, ContractAddress, ContractAddress), bool>,
+        migrated_positions: Map<(felt252, ContractAddress, ContractAddress, ContractAddress), bool>,
         // tracks the whitelisted extensions
-        whitelisted_extensions: starknet::storage::Map<ContractAddress, bool>,
+        whitelisted_extensions: Map<ContractAddress, bool>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
@@ -802,7 +802,7 @@ mod SingletonV2 {
     }
 
     #[abi(embed_v0)]
-    impl SingletonV2Impl of super::ISingletonV2<ContractState> {
+    impl SingletonV2Impl of ISingletonV2<ContractState> {
         /// Returns the nonce of the creator of the previously created pool
         /// # Arguments
         /// * `creator` - address of the pool creator

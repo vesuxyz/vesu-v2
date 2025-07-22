@@ -43,6 +43,7 @@ pub mod VToken {
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
+    use vesu::v_token::{IERC4626, IVToken};
     use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use vesu::vendor::erc20_component::ERC20Component;
 
@@ -190,7 +191,7 @@ pub mod VToken {
     }
 
     #[abi(embed_v0)]
-    impl VToken of super::IVToken<ContractState> {
+    impl VTokenImpl of IVToken<ContractState> {
         /// Returns the address of the extension associated with the vToken
         /// # Returns
         /// * address of the extension
@@ -238,7 +239,7 @@ pub mod VToken {
     }
 
     #[abi(embed_v0)]
-    impl IERC4626 of super::IERC4626<ContractState> {
+    impl ERC4626Impl of IERC4626<ContractState> {
         /// Returns the address of the underlying asset of the vToken
         /// # Returns
         /// * address of the asset

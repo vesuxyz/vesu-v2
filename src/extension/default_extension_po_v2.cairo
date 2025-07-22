@@ -175,7 +175,7 @@ mod DefaultExtensionPOV2 {
     use core::num::traits::Zero;
     use starknet::event::EventEmitter;
     use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::replace_class_syscall;
     #[feature("deprecated-starknet-consts")]
@@ -219,9 +219,9 @@ mod DefaultExtensionPOV2 {
         // address of the singleton contract
         singleton: ContractAddress,
         // tracks the owner for each pool
-        owner: starknet::storage::Map<felt252, ContractAddress>,
+        owner: Map<felt252, ContractAddress>,
         // tracks the name for each pool
-        pool_names: starknet::storage::Map<felt252, felt252>,
+        pool_names: Map<felt252, felt252>,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
@@ -238,7 +238,7 @@ mod DefaultExtensionPOV2 {
         #[substorage(v0)]
         tokenization: tokenization_component::Storage,
         // tracks the address that can transition the shutdown mode of a pool
-        shutdown_mode_agent: starknet::storage::Map<felt252, ContractAddress>,
+        shutdown_mode_agent: Map<felt252, ContractAddress>,
     }
 
     #[derive(Drop, starknet::Event)]

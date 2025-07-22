@@ -13,7 +13,7 @@
 pub mod ERC20Component {
     use core::num::traits::{Bounded, Zero};
     use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_caller_address};
     use vesu::vendor::erc20 as interface;
@@ -24,8 +24,8 @@ pub mod ERC20Component {
         pub ERC20_symbol: felt252,
         pub ERC20_decimals: u8,
         pub ERC20_total_supply: u256,
-        pub ERC20_balances: starknet::storage::Map<ContractAddress, u256>,
-        pub ERC20_allowances: starknet::storage::Map<(ContractAddress, ContractAddress), u256>,
+        pub ERC20_balances: Map<ContractAddress, u256>,
+        pub ERC20_allowances: Map<(ContractAddress, ContractAddress), u256>,
     }
 
     #[event]

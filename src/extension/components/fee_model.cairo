@@ -9,7 +9,7 @@ pub struct FeeConfig {
 pub mod fee_model_component {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::Zero;
-    use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, UpdatePositionResponse};
@@ -22,7 +22,7 @@ pub mod fee_model_component {
     #[storage]
     pub struct Storage {
         // pool_id -> fee configuration
-        pub fee_configs: starknet::storage::Map<felt252, FeeConfig>,
+        pub fee_configs: Map<felt252, FeeConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

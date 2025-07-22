@@ -290,9 +290,7 @@ mod TestDefaultExtensionPOV2 {
             aggregation_mode: AggregationMode::Median(()),
         };
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
-        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -439,7 +437,7 @@ mod TestDefaultExtensionPOV2 {
         asset.approve(extension.contract_address, INFLATION_FEE);
         stop_cheat_caller_address(asset.contract_address);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
         stop_cheat_caller_address(extension.contract_address);
 

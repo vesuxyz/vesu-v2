@@ -11,14 +11,14 @@ pub trait IMockPragmaSummary<TContractState> {
 #[starknet::contract]
 mod MockPragmaSummary {
     use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use vesu::test::mock_oracle::IMockPragmaSummary;
     use vesu::vendor::pragma::{AggregationMode, DataType};
 
     #[storage]
     struct Storage {
-        twaps: starknet::storage::Map<felt252, u128>,
+        twaps: Map<felt252, u128>,
         decimals: u32,
     }
 
@@ -56,7 +56,7 @@ pub trait IMockPragmaOracle<TContractState> {
 
 #[starknet::contract]
 mod MockPragmaOracle {
-    use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{get_block_timestamp, get_caller_address};
     use vesu::test::mock_oracle::IMockPragmaOracle;
     use vesu::vendor::pragma::{AggregationMode, DataType, PragmaPricesResponse};
@@ -78,9 +78,9 @@ mod MockPragmaOracle {
 
     #[storage]
     struct Storage {
-        prices: starknet::storage::Map<felt252, u128>,
-        num_sources_aggregated: starknet::storage::Map<felt252, u32>,
-        last_updated_timestamp: starknet::storage::Map<felt252, u64>,
+        prices: Map<felt252, u128>,
+        num_sources_aggregated: Map<felt252, u32>,
+        last_updated_timestamp: Map<felt252, u64>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -95,7 +95,7 @@ mod MockPragmaOracle {
     }
 
     #[abi(embed_v0)]
-    impl MockPragmaOracleImpl of super::IMockPragmaOracle<ContractState> {
+    impl MockPragmaOracleImpl of IMockPragmaOracle<ContractState> {
         fn get_num_sources_aggregated(ref self: ContractState, key: felt252) -> u32 {
             let num_sources_aggregated = self.num_sources_aggregated.read(key);
             if num_sources_aggregated == 0 {

@@ -6,6 +6,7 @@ pub trait IMintable<TContractState> {
 #[starknet::contract]
 mod MockAsset {
     use starknet::ContractAddress;
+    use vesu::test::mock_asset::IMintable;
     use vesu::vendor::erc20_component::ERC20Component;
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
@@ -45,7 +46,7 @@ mod MockAsset {
     }
 
     #[abi(embed_v0)]
-    impl Mintable of super::IMintable<ContractState> {
+    impl MintableImpl of IMintable<ContractState> {
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
             self.erc20._mint(recipient, amount);
             true
@@ -65,9 +66,10 @@ trait IReentrant<TContractState> {
 mod MockAssetReentrant {
     use core::num::traits::Zero;
     use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_caller_address};
+    use vesu::test::mock_asset::IReentrant;
 
     #[storage]
     struct Storage {
@@ -75,8 +77,8 @@ mod MockAssetReentrant {
         ERC20_symbol: felt252,
         ERC20_decimals: u8,
         ERC20_total_supply: u256,
-        ERC20_balances: starknet::storage::Map<ContractAddress, u256>,
-        ERC20_allowances: starknet::storage::Map<(ContractAddress, ContractAddress), u256>,
+        ERC20_balances: Map<ContractAddress, u256>,
+        ERC20_allowances: Map<(ContractAddress, ContractAddress), u256>,
     }
 
     pub mod Errors {
@@ -102,7 +104,7 @@ mod MockAssetReentrant {
     }
 
     #[abi(embed_v0)]
-    impl Reentrant of super::IReentrant<ContractState> {
+    impl ReentrantImpl of IReentrant<ContractState> {
         fn transfer_from(
             ref self: ContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256,
         ) -> bool {

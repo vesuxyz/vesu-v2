@@ -21,7 +21,7 @@ pub fn assert_oracle_config(oracle_config: OracleConfig) {
 pub mod pragma_oracle_component {
     use core::num::traits::Zero;
     use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::extension::components::pragma_oracle::{OracleConfig, assert_oracle_config};
@@ -37,7 +37,7 @@ pub mod pragma_oracle_component {
         pub oracle_address: ContractAddress,
         pub summary_address: ContractAddress,
         // (pool_id, asset) -> oracle configuration
-        pub oracle_configs: starknet::storage::Map<(felt252, ContractAddress), OracleConfig>,
+        pub oracle_configs: Map<(felt252, ContractAddress), OracleConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

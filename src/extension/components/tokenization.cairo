@@ -3,7 +3,7 @@ pub mod tokenization_component {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
     use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, get_contract_address};
@@ -17,10 +17,10 @@ pub mod tokenization_component {
         v_token_class_hash: felt252,
         // tracks the collateral asset for each vToken in a pool
         // (pool_id, vToken) -> collateral_asset
-        collateral_asset_for_v_token: starknet::storage::Map<(felt252, ContractAddress), ContractAddress>,
+        collateral_asset_for_v_token: Map<(felt252, ContractAddress), ContractAddress>,
         // tracks the vToken for each collateral asset in a pool
         // (pool_id, collateral_asset) -> vToken
-        v_token_for_collateral_asset: starknet::storage::Map<(felt252, ContractAddress), ContractAddress>,
+        v_token_for_collateral_asset: Map<(felt252, ContractAddress), ContractAddress>,
     }
 
     #[derive(Drop, starknet::Event)]

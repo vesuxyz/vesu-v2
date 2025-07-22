@@ -106,7 +106,7 @@ fn assert_interest_rate_config(interest_rate_config: InterestRateConfig) {
 
 #[starknet::component]
 pub mod interest_rate_model_component {
-    use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::calculate_rate_accumulator;
     use vesu::extension::components::interest_rate_model::{
@@ -119,7 +119,7 @@ pub mod interest_rate_model_component {
     #[storage]
     pub struct Storage {
         // (pool_id, asset) -> interest rate configuration
-        pub interest_rate_configs: starknet::storage::Map<(felt252, ContractAddress), InterestRateConfig>,
+        pub interest_rate_configs: Map<(felt252, ContractAddress), InterestRateConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

@@ -79,7 +79,9 @@ pub mod OwnableComponent {
     use core::num::traits::Zero;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::{ContractAddress, get_caller_address};
-    use super::{IOwnable, IOwnableCamelOnly, IOwnableTwoStep, IOwnableTwoStepCamelOnly, OwnableABI, OwnableTwoStepABI};
+    use vesu::vendor::ownable::{
+        IOwnable, IOwnableCamelOnly, IOwnableTwoStep, IOwnableTwoStepCamelOnly, OwnableABI, OwnableTwoStepABI,
+    };
 
     #[storage]
     pub struct Storage {
