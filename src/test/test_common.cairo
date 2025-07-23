@@ -31,7 +31,7 @@ mod TestCommon {
 
     #[test]
     #[fuzzer(runs: 256, seed: 100)]
-    fn test_calculate_nominial_debt_calculate_debt_inverse_relation(seed: u128) {
+    fn test_calculate_nominal_debt_calculate_debt_inverse_relation(seed: u128) {
         let asset_scale = 100_000_000;
         let debt = seed.into() * asset_scale + seed.into();
         let rate_accumulator = SCALE;

@@ -6,7 +6,7 @@ use vesu::data_model::{
 };
 
 #[starknet::interface]
-pub trait IFlashloanReceiver<TContractState> {
+pub trait IFlashLoanReceiver<TContractState> {
     fn on_flash_loan(
         ref self: TContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>,
     );
@@ -200,7 +200,7 @@ mod SingletonV2 {
     use vesu::math::pow_10;
     use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
     use vesu::singleton_v2::{
-        IFlashloanReceiverDispatcher, IFlashloanReceiverDispatcherTrait, ISingletonV2, ISingletonV2Dispatcher,
+        IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait, ISingletonV2, ISingletonV2Dispatcher,
         ISingletonV2DispatcherTrait,
     };
     use vesu::units::INFLATION_FEE_SHARES;
@@ -1763,7 +1763,7 @@ mod SingletonV2 {
             data: Span<felt252>,
         ) {
             transfer_asset(asset, get_contract_address(), receiver, amount, is_legacy);
-            IFlashloanReceiverDispatcher { contract_address: receiver }
+            IFlashLoanReceiverDispatcher { contract_address: receiver }
                 .on_flash_loan(get_caller_address(), asset, amount, data);
             transfer_asset(asset, receiver, get_contract_address(), amount, is_legacy);
 
