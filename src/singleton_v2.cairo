@@ -181,6 +181,9 @@ mod SingletonV2 {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
     use core::poseidon;
+    use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
@@ -204,9 +207,6 @@ mod SingletonV2 {
         ISingletonV2DispatcherTrait,
     };
     use vesu::units::INFLATION_FEE_SHARES;
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
-    use vesu::vendor::ownable::OwnableComponent;
-    use vesu::vendor::ownable::OwnableComponent::InternalImpl;
 
     #[storage]
     struct Storage {

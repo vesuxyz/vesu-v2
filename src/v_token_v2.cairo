@@ -34,6 +34,10 @@ pub trait IVTokenV2<TContractState> {
 pub mod VTokenV2 {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::{Bounded, Zero};
+    use openzeppelin::token::erc20::{
+        DefaultConfig, ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait, ERC20Component,
+        ERC20HooksEmptyImpl,
+    };
     use starknet::event::EventEmitter;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     #[feature("deprecated-starknet-consts")]
@@ -47,15 +51,12 @@ pub mod VTokenV2 {
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
     use vesu::v_token_v2::{IERC4626, IVTokenV2};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
-    use vesu::vendor::erc20_component::ERC20Component;
+    use vesu::vendor::erc20::IERC20Metadata;
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
 
     #[abi(embed_v0)]
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
-    #[abi(embed_v0)]
-    impl ERC20MetadataImpl = ERC20Component::ERC20MetadataImpl<ContractState>;
     #[abi(embed_v0)]
     impl ERC20CamelOnlyImpl = ERC20Component::ERC20CamelOnlyImpl<ContractState>;
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
@@ -74,6 +75,10 @@ pub mod VTokenV2 {
         is_legacy: bool,
         // The address of the vTokenV1 contract
         v_token_v1: ContractAddress,
+        // The name of the vToken
+        name: felt252,
+        // The symbol of the vToken
+        symbol: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -112,13 +117,13 @@ pub mod VTokenV2 {
         ref self: ContractState,
         name: felt252,
         symbol: felt252,
-        decimals: u8,
         pool_id: felt252,
         extension: ContractAddress,
         asset: ContractAddress,
         v_token_v1: ContractAddress,
     ) {
-        self.erc20.initializer(name, symbol, decimals);
+        self.name.write(name);
+        self.symbol.write(symbol);
         self.pool_id.write(pool_id);
         self.extension.write(extension);
         self.asset.write(asset);
@@ -143,6 +148,21 @@ pub mod VTokenV2 {
             return 0;
         }
         (asset_config.reserve + total_debt) - (total_debt * ((SCALE * scale) / asset_config.max_utilization)) / scale
+    }
+
+    #[abi(embed_v0)]
+    impl ERC20Metadata of IERC20Metadata<ContractState> {
+        fn name(self: @ContractState) -> felt252 {
+            self.name.read()
+        }
+
+        fn symbol(self: @ContractState) -> felt252 {
+            self.symbol.read()
+        }
+
+        fn decimals(self: @ContractState) -> u8 {
+            ERC20Component::DEFAULT_DECIMALS
+        }
     }
 
     #[generate_trait]
@@ -226,7 +246,7 @@ pub mod VTokenV2 {
         /// * true if the minting was successful
         fn mint_v_token(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
             assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
-            self.erc20._mint(recipient, amount);
+            self.erc20.mint(recipient, amount);
             true
         }
 
@@ -240,7 +260,7 @@ pub mod VTokenV2 {
         fn burn_v_token(ref self: ContractState, from: ContractAddress, amount: u256) -> bool {
             assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
             self.erc20._spend_allowance(from, get_caller_address(), amount);
-            self.erc20._burn(from, amount);
+            self.erc20.burn(from, amount);
             true
         }
 
@@ -256,7 +276,7 @@ pub mod VTokenV2 {
             let v_token_v1 = IERC20Dispatcher { contract_address: self.v_token_v1.read() };
             let amount = v_token_v1.balance_of(get_caller_address());
             v_token_v1.transfer_from(get_caller_address(), contract_address_const::<'0x0'>(), amount);
-            self.erc20._mint(get_caller_address(), amount);
+            self.erc20.mint(get_caller_address(), amount);
         }
     }
 
@@ -361,7 +381,7 @@ pub mod VTokenV2 {
 
             let shares = self.singleton().modify_position(params).collateral_shares_delta.abs();
 
-            self.erc20._mint(receiver, shares);
+            self.erc20.mint(receiver, shares);
 
             self.emit(Deposit { sender: get_caller_address(), owner: receiver, assets, shares });
 
@@ -429,7 +449,7 @@ pub mod VTokenV2 {
             // take inflation fee into account for the first deposit
             let shares = response.collateral_shares_delta.abs();
 
-            self.erc20._mint(receiver, shares);
+            self.erc20.mint(receiver, shares);
 
             // refund the difference between the estimated and actual amount of assets
             self.transfer_asset(get_contract_address(), get_caller_address(), assets_estimate - assets);
@@ -507,7 +527,7 @@ pub mod VTokenV2 {
             if get_caller_address() != owner {
                 self.erc20._spend_allowance(owner, get_caller_address(), shares);
             }
-            self.erc20._burn(owner, shares);
+            self.erc20.burn(owner, shares);
 
             self.transfer_asset(get_contract_address(), receiver, assets);
 
@@ -567,7 +587,7 @@ pub mod VTokenV2 {
             if get_caller_address() != owner {
                 self.erc20._spend_allowance(owner, get_caller_address(), shares);
             }
-            self.erc20._burn(owner, shares);
+            self.erc20.burn(owner, shares);
 
             let params = ModifyPositionParams {
                 pool_id: self.pool_id.read(),

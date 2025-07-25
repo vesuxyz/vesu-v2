@@ -2,6 +2,7 @@
 mod TestLiquidatePosition {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
     use starknet::get_caller_address;
     use vesu::data_model::{
@@ -16,7 +17,6 @@ mod TestLiquidatePosition {
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, LendingTerms, TestConfig, setup};
     use vesu::units::{SCALE, SCALE_128};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     #[test]
     #[should_panic(expected: "caller-not-singleton")]
@@ -889,7 +889,7 @@ mod TestLiquidatePosition {
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
         // print debt asset balance of liquidator
-        let balance_before = ERC20ABIDispatcher { contract_address: debt_asset.contract_address }
+        let balance_before = IERC20Dispatcher { contract_address: debt_asset.contract_address }
             .balance_of(users.lender);
 
         let params = LiquidatePositionParams {
@@ -905,8 +905,7 @@ mod TestLiquidatePosition {
         singleton.liquidate_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let balance_after = ERC20ABIDispatcher { contract_address: debt_asset.contract_address }
-            .balance_of(users.lender);
+        let balance_after = IERC20Dispatcher { contract_address: debt_asset.contract_address }.balance_of(users.lender);
         let balance_delta = balance_before - balance_after;
         assert(balance_delta <= debt / 2, 'not more than specified');
 
