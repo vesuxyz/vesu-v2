@@ -42,13 +42,7 @@ mod TestVTokenV2 {
             v_token_v2_class_hash.try_into().unwrap(),
             0,
             array![
-                'v' + name,
-                'v' + symbol,
-                18,
-                pool_id,
-                extension.into(),
-                asset.contract_address.into(),
-                v_token_v1.into(),
+                'v' + name, 'v' + symbol, pool_id, extension.into(), asset.contract_address.into(), v_token_v1.into(),
             ]
                 .span(),
             true,
