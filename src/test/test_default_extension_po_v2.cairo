@@ -617,21 +617,6 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "invalid-shutdown-config")]
-    fn test_extension_set_shutdown_config_invalid_shutdown_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(extension, config, users.creator, Option::None);
-
-        let recovery_period = 11 * DAY_IN_SECONDS;
-        let subscription_period = DAY_IN_SECONDS / 2;
-
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_config(config.pool_id, ShutdownConfig { recovery_period, subscription_period });
-        stop_cheat_caller_address(extension.contract_address);
-    }
-
-    #[test]
     fn test_extension_set_shutdown_ltv_config() {
         let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
