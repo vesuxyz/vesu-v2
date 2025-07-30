@@ -41,19 +41,15 @@ enum ShutdownMode {
 #[derive(PartialEq, Copy, Drop, Serde)]
 struct ShutdownStatus {
     shutdown_mode: ShutdownMode,
-    violating: bool,
-    previous_violation_timestamp: u64,
-    count_at_violation_timestamp: u128,
+    violating: bool
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-struct FixedShutdownMode {
-    // fixed shutdown mode (overwrites the inferred shutdown mode)
-    fixed_shutdown_mode: ShutdownMode,
-    // timestamp at which the fixed shutdown mode was last updated
-    last_fixed_timestamp: u64,
-    // contains the cumulative time of how long the shutdown mode was overwritten for each pool
-    fixed_offset: u64,
+struct ShutdownState {
+    // current set shutdown mode (overwrites the inferred shutdown mode)
+    shutdown_mode: ShutdownMode,
+    // timestamp at which the shutdown mode was last updated
+    last_updated: u64
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -86,13 +82,13 @@ mod position_hooks_component {
     use vesu::{
         units::SCALE, math::pow_10,
         data_model::{Amount, Context, Position, LTVConfig, assert_ltv_config, UnsignedAmount},
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
         common::{calculate_collateral, is_collateralized, calculate_collateral_and_debt_value, calculate_debt},
         extension::{
-            default_extension_po::{IDefaultExtensionCallback, ITimestampManagerCallback, ITokenizationCallback},
+            default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback},
             components::position_hooks::{
                 ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, LiquidationData, Pair,
-                assert_shutdown_config, assert_liquidation_config, FixedShutdownMode
+                assert_shutdown_config, assert_liquidation_config, ShutdownState
             }
         }
     };
@@ -105,18 +101,12 @@ mod position_hooks_component {
         // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
         // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
         shutdown_ltv_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
-        // contains the fixed (overwritten) shutdown mode state for a pool
-        // pool_id -> fixed shutdown mode
-        fixed_shutdown_mode: LegacyMap::<felt252, FixedShutdownMode>,
+        // contains the current shutdown mode for a pool
+        // pool_id -> shutdown mode
+        fixed_shutdown_mode: LegacyMap::<felt252, ShutdownState>,
         // contains the liquidation configuration for each pair in a pool
         // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
         liquidation_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
-        // contains the timestamp for each pair at which the pair first caused violation (triggered recovery mode)
-        // (pool_id, collateral asset, debt asset) -> timestamp
-        violation_timestamps: LegacyMap::<(felt252, ContractAddress, ContractAddress), u64>,
-        // contains the number of pairs that caused a violation at each timestamp
-        // timestamp -> number of items
-        violation_timestamp_counts: LegacyMap::<(felt252, u64), u128>,
         // tracks the total collateral shares and the total nominal debt for each pair
         // (pool_id, collateral asset, debt asset) -> pair configuration
         pairs: LegacyMap::<(felt252, ContractAddress, ContractAddress), Pair>,
@@ -154,6 +144,14 @@ mod position_hooks_component {
     }
 
     #[derive(Drop, starknet::Event)]
+    struct SetShutdownMode {
+        #[key]
+        pool_id: felt252,
+        shutdown_mode: ShutdownMode,
+        last_updated: u64
+    }
+
+    #[derive(Drop, starknet::Event)]
     struct SetDebtCap {
         #[key]
         pool_id: felt252,
@@ -170,30 +168,8 @@ mod position_hooks_component {
         SetLiquidationConfig: SetLiquidationConfig,
         SetShutdownConfig: SetShutdownConfig,
         SetShutdownLTVConfig: SetShutdownLTVConfig,
+        SetShutdownMode: SetShutdownMode,
         SetDebtCap: SetDebtCap
-    }
-
-    // Infers the shutdown_config from the timestamp at which the violation occurred and the current time
-    fn infer_shutdown_mode_from_timestamp(
-        shutdown_config: ShutdownConfig, mut entered_timestamp: u64, overwritten_time_offset: u64
-    ) -> ShutdownMode {
-        let ShutdownConfig { recovery_period, subscription_period } = shutdown_config;
-        let current_timestamp = get_block_timestamp();
-        entered_timestamp =
-            if entered_timestamp + overwritten_time_offset <= current_timestamp {
-                entered_timestamp + overwritten_time_offset
-            } else {
-                entered_timestamp
-            };
-        if entered_timestamp == 0 || (recovery_period == 0 && subscription_period == 0) {
-            ShutdownMode::None
-        } else if current_timestamp - entered_timestamp < recovery_period {
-            ShutdownMode::Recovery
-        } else if current_timestamp - entered_timestamp < recovery_period + subscription_period {
-            ShutdownMode::Subscription
-        } else {
-            ShutdownMode::Redemption
-        }
     }
 
     #[generate_trait]
@@ -201,7 +177,6 @@ mod position_hooks_component {
         TContractState,
         +HasComponent<TContractState>,
         +IDefaultExtensionCallback<TContractState>,
-        +ITimestampManagerCallback<TContractState>,
         +ITokenizationCallback<TContractState>,
         +Drop<TContractState>
     > of Trait<TContractState> {
@@ -317,34 +292,8 @@ mod position_hooks_component {
         /// # Returns
         /// * `shutdown_status` - shutdown status of the pool
         fn shutdown_status(self: @ComponentState<TContractState>, ref context: Context) -> ShutdownStatus {
-            let violation_timestamp_manager = self.get_contract();
-            let mut oldest_violating_timestamp = violation_timestamp_manager.last(context.pool_id);
-
             // if pool is in either subscription period, redemption period, then return mode
-            let shutdown_config = self.shutdown_configs.read(context.pool_id);
-            let FixedShutdownMode { fixed_shutdown_mode, fixed_offset, .. } = self
-                .fixed_shutdown_mode
-                .read(context.pool_id);
-            let mut shutdown_mode = infer_shutdown_mode_from_timestamp(
-                shutdown_config, oldest_violating_timestamp, fixed_offset
-            );
-
-            // skip the violation checks if the shutdown mode has been fixed
-            if fixed_shutdown_mode != ShutdownMode::None {
-                return ShutdownStatus {
-                    shutdown_mode: fixed_shutdown_mode,
-                    violating: false,
-                    previous_violation_timestamp: 0,
-                    count_at_violation_timestamp: 0
-                };
-            }
-
-            // skip the violation checks if the shutdown process has progressed beyond the recovery period
-            if shutdown_mode != ShutdownMode::None && shutdown_mode != ShutdownMode::Recovery {
-                return ShutdownStatus {
-                    shutdown_mode, violating: false, previous_violation_timestamp: 0, count_at_violation_timestamp: 0
-                };
-            }
+            let ShutdownState { mut shutdown_mode, .. } = self.fixed_shutdown_mode.read(context.pool_id);
 
             // check oracle status
             let invalid_oracle = !context.collateral_asset_price.is_valid || !context.debt_asset_price.is_valid;
@@ -360,93 +309,45 @@ mod position_hooks_component {
             // either the oracle price is invalid or the pair is not collateralized or unsafe rate accumulator
             let violating = invalid_oracle || !collateralized || !safe_rate_accumulator;
 
-            let previous_violation_timestamp = self
-                .violation_timestamps
-                .read((context.pool_id, context.collateral_asset, context.debt_asset));
-            let count_at_violation_timestamp = self
-                .violation_timestamp_counts
-                .read((context.pool_id, previous_violation_timestamp));
+            // set shutdown mode to recovery if there is a violation and the shutdown mode is not set already
+            if shutdown_mode == ShutdownMode::None && violating {
+                shutdown_mode = ShutdownMode::Recovery;
+            }
 
-            oldest_violating_timestamp =
-                // first violation timestamp added to an empty list (previous_violation_timestamp has to be 0 as well)
-                if violating && oldest_violating_timestamp == 0 {
-                    get_block_timestamp()
-                // oldest violation timestamp removed from the list (move to the next oldest violation timestamp)
-                } else if !violating
-                    && oldest_violating_timestamp == previous_violation_timestamp
-                    && count_at_violation_timestamp == 1 { // only one entry for that timestamp remaining in the list
-                    violation_timestamp_manager
-                        .previous(context.pool_id, oldest_violating_timestamp) // get next oldest one
-                // neither the first or the last violation timestamp of the list
-                } else {
-                    oldest_violating_timestamp
-                };
-
-            // infer shutdown mode from the oldest violating timestamp
-            shutdown_mode =
-                infer_shutdown_mode_from_timestamp(shutdown_config, oldest_violating_timestamp, fixed_offset);
-
-            ShutdownStatus { shutdown_mode, violating, previous_violation_timestamp, count_at_violation_timestamp }
+            ShutdownStatus { shutdown_mode, violating }
         }
 
-        /// Note: In a scenario where there are pairs associated with the oldest timestamp which are not causing
-        /// a violation anymore and if no other pairs (incl. current pair) are also not causing a violation anymore,
-        /// then `update_shutdown_status` needs to be manually called on the pairs associated with the oldest
-        /// timestamp to transition the pool back from recovery mode to normal mode.
+        /// Transitions the pool into recovery mode if a pair is violating the constraints
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// # Returns
         /// * `shutdown_mode` - the shutdown mode of the pool
         fn update_shutdown_status(ref self: ComponentState<TContractState>, ref context: Context) -> ShutdownMode {
-            let mut violation_timestamp_manager = self.get_contract_mut();
+            let Context { pool_id, collateral_asset, collateral_asset_config, .. } = context;
 
             // check if the shutdown mode has been overwritten
-            let FixedShutdownMode { fixed_shutdown_mode, .. } = self.fixed_shutdown_mode.read(context.pool_id);
-            if fixed_shutdown_mode != ShutdownMode::None {
-                return fixed_shutdown_mode;
-            }
-
-            let ShutdownStatus { shutdown_mode,
-            violating,
-            previous_violation_timestamp,
-            count_at_violation_timestamp } =
-                self
-                .shutdown_status(ref context);
-
-            let Context { pool_id, collateral_asset, debt_asset, .. } = context;
-            // if there is no current violation and a timestamp exists, then remove it for the pair (recovered)
-            if !violating && previous_violation_timestamp != 0 { // implies count_at_violation_timestamp > 0
-                self
-                    .violation_timestamp_counts
-                    .write((pool_id, previous_violation_timestamp), count_at_violation_timestamp - 1);
-                self.violation_timestamps.write((pool_id, collateral_asset, debt_asset), 0);
-                // remove the violation timestamp from the list if it's the last one
-                if count_at_violation_timestamp == 1 {
-                    violation_timestamp_manager.remove(pool_id, previous_violation_timestamp);
-                }
-            }
-
-            // if there is a current violation and no timestamp exists for the pair, then set the it (recovery)
-            if violating && previous_violation_timestamp == 0 {
-                let count_at_current_violation_timestamp = self
-                    .violation_timestamp_counts
-                    .read((pool_id, get_block_timestamp()));
-                self
-                    .violation_timestamp_counts
-                    .write((pool_id, get_block_timestamp()), count_at_current_violation_timestamp + 1);
-                self.violation_timestamps.write((pool_id, collateral_asset, debt_asset), get_block_timestamp());
-                // add the violation timestamp to the list if it's the first entry for that timestamp
-                if count_at_current_violation_timestamp == 0 {
-                    violation_timestamp_manager.push_front(pool_id, get_block_timestamp());
-                }
-            }
+            let ShutdownState { shutdown_mode, .. } = self.fixed_shutdown_mode.read(pool_id);
 
             if shutdown_mode == ShutdownMode::Redemption {
                 // set max_utilization to 100% if it's not already set
-                if context.collateral_asset_config.max_utilization != SCALE {
-                    ISingletonDispatcher { contract_address: self.get_contract().singleton() }
-                        .set_asset_parameter(context.pool_id, context.collateral_asset, 'max_utilization', SCALE);
+                if collateral_asset_config.max_utilization != SCALE {
+                    ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
+                        .set_asset_parameter(pool_id, collateral_asset, 'max_utilization', SCALE);
                 }
+            }
+
+            // check if the shutdown mode has been set to a non-none value
+            if shutdown_mode != ShutdownMode::None {
+                return shutdown_mode;
+            }
+
+            let ShutdownStatus { shutdown_mode, violating } = self.shutdown_status(ref context);
+
+            // if there is a current violation and no timestamp exists for the pair, then set the it (recovery)
+            if violating {
+                self
+                    .fixed_shutdown_mode
+                    .write(pool_id, ShutdownState { shutdown_mode, last_updated: get_block_timestamp() });
             }
 
             shutdown_mode
@@ -457,56 +358,51 @@ mod position_hooks_component {
         /// * `context` - contextual state of the user (position owner)
         /// * `shutdown_mode` - shutdown mode
         fn set_shutdown_mode(
-            ref self: ComponentState<TContractState>, pool_id: felt252, new_fixed_shutdown_mode: ShutdownMode
+            ref self: ComponentState<TContractState>, pool_id: felt252, new_shutdown_mode: ShutdownMode
         ) {
-            // track for how many seconds the shutdown state was overwritten
-            let FixedShutdownMode { fixed_shutdown_mode, last_fixed_timestamp, fixed_offset, .. } = self
-                .fixed_shutdown_mode
-                .read(pool_id);
+            let ShutdownState { shutdown_mode, last_updated, .. } = self.fixed_shutdown_mode.read(pool_id);
 
             // can only transition to recovery mode if the shutdown mode is in normal mode
             assert!(
-                fixed_shutdown_mode != ShutdownMode::None || new_fixed_shutdown_mode == ShutdownMode::Recovery,
-                "fixed-shutdown-mode-not-none-or-recovery"
+                shutdown_mode != ShutdownMode::None || new_shutdown_mode == ShutdownMode::Recovery,
+                "shutdown-mode-not-none"
             );
             // can only transition back to normal mode or subscription mode if the shutdown mode is in recovery mode
             assert!(
-                fixed_shutdown_mode != ShutdownMode::Recovery
-                    || (new_fixed_shutdown_mode == ShutdownMode::None
-                        || new_fixed_shutdown_mode == ShutdownMode::Subscription),
-                "fixed-shutdown-mode-not-none-or-subscription"
+                shutdown_mode != ShutdownMode::Recovery
+                    || (new_shutdown_mode == ShutdownMode::None || new_shutdown_mode == ShutdownMode::Subscription),
+                "shutdown-mode-not-recovery"
             );
             // can only transition to redemption mode if the shutdown mode is in subscription mode
             assert!(
-                fixed_shutdown_mode != ShutdownMode::Subscription
-                    || new_fixed_shutdown_mode == ShutdownMode::Redemption,
-                "fixed-shutdown-mode-not-redemption"
+                shutdown_mode != ShutdownMode::Subscription || new_shutdown_mode == ShutdownMode::Redemption,
+                "shutdown-mode-not-subscription"
             );
             // can not transition into any shutdown mode if the shutdown mode is in redemption mode
-            assert!(fixed_shutdown_mode != ShutdownMode::Redemption, "fixed-shutdown-mode-in-redemption");
+            assert!(shutdown_mode != ShutdownMode::Redemption, "shutdown-mode-in-redemption");
 
-            self
-                .fixed_shutdown_mode
-                .write(
-                    pool_id,
-                    FixedShutdownMode {
-                        // update when moving from non fixed to fixed
-                        last_fixed_timestamp: if fixed_shutdown_mode == ShutdownMode::None
-                            && new_fixed_shutdown_mode != ShutdownMode::None {
-                            get_block_timestamp()
-                        } else {
-                            last_fixed_timestamp
-                        },
-                        // update when moving from fixed to non fixed
-                        fixed_offset: if fixed_shutdown_mode != ShutdownMode::None
-                            && new_fixed_shutdown_mode == ShutdownMode::None {
-                            fixed_offset + get_block_timestamp() - last_fixed_timestamp
-                        } else {
-                            fixed_offset
-                        },
-                        fixed_shutdown_mode: new_fixed_shutdown_mode,
-                    }
-                );
+            let ShutdownConfig { recovery_period, subscription_period } = self.shutdown_configs.read(pool_id);
+
+            // can only transition to subscription mode if the recovery period has passed
+            assert!(
+                new_shutdown_mode != ShutdownMode::Subscription || last_updated
+                    + recovery_period < get_block_timestamp(),
+                "shutdown-mode-recovery-period"
+            );
+
+            // can only transition to redemption mode if the subscription period has passed
+            assert!(
+                new_shutdown_mode != ShutdownMode::Redemption || last_updated
+                    + subscription_period < get_block_timestamp(),
+                "shutdown-mode-subscription-period"
+            );
+
+            let shutdown_state = ShutdownState {
+                shutdown_mode: new_shutdown_mode, last_updated: get_block_timestamp()
+            };
+            self.fixed_shutdown_mode.write(pool_id, shutdown_state);
+
+            self.emit(SetShutdownMode { pool_id, shutdown_mode, last_updated: shutdown_state.last_updated });
         }
 
         /// Updates the tracked total collateral shares and the total nominal debt assigned to a specific pair.
@@ -628,7 +524,7 @@ mod position_hooks_component {
             caller: ContractAddress
         ) -> (UnsignedAmount, UnsignedAmount) {
             if from_context.debt_asset == Zeroable::zero() && from_context.user == get_contract_address() {
-                ISingletonDispatcher { contract_address: self.get_contract().singleton() }
+                ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                     .modify_delegation(from_context.pool_id, caller, true);
             }
             (collateral, debt)
@@ -710,7 +606,7 @@ mod position_hooks_component {
             // burn vTokens if collateral shares are transferred from the corresponding vToken pairing
             if from_context.debt_asset == Zeroable::zero() && from_context.user == get_contract_address() {
                 assert!(from_context.collateral_asset == to_context.collateral_asset, "v-token-from-asset-mismatch");
-                ISingletonDispatcher { contract_address: self.get_contract().singleton() }
+                ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
                     .modify_delegation(from_context.pool_id, caller, false);
                 let mut tokenization = self.get_contract_mut();
                 tokenization

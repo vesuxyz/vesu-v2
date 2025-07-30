@@ -39,13 +39,14 @@ mod VTokenV2 {
     };
     use vesu::{
         data_model::{ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetConfig}, units::SCALE,
-        v2::{
-            singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait}, v_token_v2::IVTokenV2,
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        extension::{
             default_extension_po_v2::{
                 IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, ShutdownMode
             },
+            interface::{IExtensionDispatcher, IExtensionDispatcherTrait}
         },
-        extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
+        v_token_v2::IVTokenV2,
         vendor::{
             erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, erc20_component::ERC20Component
         },

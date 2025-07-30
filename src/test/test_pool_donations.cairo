@@ -5,10 +5,10 @@ mod TestPoolDonation {
     };
     use starknet::get_block_timestamp;
     use vesu::{
-        units::{SCALE, PERCENT, DAY_IN_SECONDS}, math::pow_10, test::setup::{setup, TestConfig, LendingTerms},
-        singleton::{ISingletonDispatcherTrait, ModifyPositionParams},
-        data_model::{AssetParams, LTVParams, Amount, AmountType, AmountDenomination},
-        vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait}
+        units::{SCALE, PERCENT, DAY_IN_SECONDS}, math::pow_10, data_model::{Amount, AmountType, AmountDenomination},
+        singleton_v2::{ISingletonV2DispatcherTrait, ModifyPositionParams},
+        vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait},
+        test::setup_v2::{setup, TestConfig, LendingTerms},
     };
 
     #[test]

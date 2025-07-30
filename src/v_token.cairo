@@ -35,10 +35,12 @@ mod VToken {
     use starknet::{ContractAddress, get_caller_address, get_contract_address, event::EventEmitter};
     use vesu::{
         data_model::{ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetConfig}, units::SCALE,
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension_po::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, ShutdownMode},
+            default_extension_po_v2::{
+                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, ShutdownMode
+            },
         },
         v_token::IVToken,
         vendor::{
@@ -140,15 +142,15 @@ mod VToken {
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
         /// Returns the address of the singleton
-        fn singleton(self: @ContractState) -> ISingletonDispatcher {
-            ISingletonDispatcher {
+        fn singleton(self: @ContractState) -> ISingletonV2Dispatcher {
+            ISingletonV2Dispatcher {
                 contract_address: IExtensionDispatcher { contract_address: self.extension.read() }.singleton()
             }
         }
 
         /// Returns true if the pool accepts deposits
         fn can_deposit(self: @ContractState) -> bool {
-            let shutdown_status = IDefaultExtensionDispatcher { contract_address: self.extension.read() }
+            let shutdown_status = IDefaultExtensionPOV2Dispatcher { contract_address: self.extension.read() }
                 .shutdown_status(self.pool_id.read(), self.asset.read(), Zeroable::zero());
             !(shutdown_status.shutdown_mode == ShutdownMode::Subscription
                 || shutdown_status.shutdown_mode == ShutdownMode::Redemption)
@@ -156,7 +158,7 @@ mod VToken {
 
         /// Returns true if the pool allows for withdrawals
         fn can_withdraw(self: @ContractState) -> bool {
-            let shutdown_status = IDefaultExtensionDispatcher { contract_address: self.extension.read() }
+            let shutdown_status = IDefaultExtensionPOV2Dispatcher { contract_address: self.extension.read() }
                 .shutdown_status(self.pool_id.read(), self.asset.read(), Zeroable::zero());
             !(shutdown_status.shutdown_mode == ShutdownMode::Recovery
                 || shutdown_status.shutdown_mode == ShutdownMode::Subscription)

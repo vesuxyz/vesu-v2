@@ -4,21 +4,27 @@ use snforge_std::{
 };
 use starknet::{ClassHash, ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
 use vesu::{
-    units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
-    data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams, DebtCapParams},
-    extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-    v2::{
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+    math::pow_10, units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
+    data_model::{AssetParams, LTVParams, DebtCapParams},
+    singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+    extension::{
+        interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
         default_extension_po_v2::{
             IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, InterestRateConfig,
             PragmaOracleParams, LiquidationParams, ShutdownParams, FeeParams, VTokenParams
         }
     },
-    vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, math::{pow_10},
-    vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode},
-    test::mock_oracle::{
-        IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
-        IMockPragmaSummaryDispatcherTrait
+    vendor::{
+        erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
+        pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode}, ekubo::construct_oracle_pool_key,
+    },
+    test::{
+        mock_oracle::{
+            IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
+            IMockPragmaSummaryDispatcherTrait
+        },
+        mock_ekubo_core::{IMockEkuboCoreDispatcher, IMockEkuboCoreDispatcherTrait},
+        mock_ekubo_oracle::{IMockEkuboOracleDispatcher, IMockEkuboOracleDispatcherTrait}
     }
 };
 
@@ -65,6 +71,8 @@ struct TestConfig {
     debt_scale: u256,
     third_scale: u256
 }
+
+const EKUBO_TWAP_PERIOD: u64 = 5 * 60; // 5 minutes
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     declare(name).deploy(@array![]).unwrap()
@@ -146,17 +154,12 @@ fn setup_env(
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
     let v_token_class_hash = declare("VToken").class_hash;
-    let v_token_v2_class_hash = declare("VTokenV2").class_hash;
-    let extension_utils_class_hash = declare("DefaultExtensionPOV2Utils").class_hash;
 
     let args = array![
         singleton.contract_address.into(),
         mock_pragma_oracle.contract_address.into(),
         mock_pragma_summary.contract_address.into(),
-        v_token_class_hash.into(),
-        v_token_v2_class_hash.into(),
-        users.migrator.into(),
-        extension_utils_class_hash.into()
+        v_token_class_hash.into()
     ];
     let extension = IDefaultExtensionPOV2Dispatcher {
         contract_address: deploy_with_args("DefaultExtensionPOV2", args)
@@ -469,15 +472,10 @@ fn setup_pool(
     }
 
     start_prank(CheatTarget::One(extension.contract_address), users.creator);
-    extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', 0);
-    extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', 0);
-    extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', 0);
-    stop_prank(CheatTarget::One(extension.contract_address));
-
-    start_prank(CheatTarget::One(extension.contract_address), users.creator);
     extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', SCALE / 10_000);
     extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', SCALE / 10_000);
     extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', SCALE / 10_000);
+    extension.set_shutdown_mode_agent(pool_id, get_contract_address());
     stop_prank(CheatTarget::One(extension.contract_address));
 
     (singleton, extension, config, users, terms)

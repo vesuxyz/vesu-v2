@@ -8,9 +8,9 @@ mod TestPragmaOracle {
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
         data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams, DebtCapParams},
-        singleton::{ISingletonDispatcherTrait, ISingletonDispatcher},
+        singleton_v2::{ISingletonV2DispatcherTrait, ISingletonV2Dispatcher},
         test::{
-            setup::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env},
+            setup_v2::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env},
             mock_oracle::{
                 {
                     IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
@@ -20,9 +20,9 @@ mod TestPragmaOracle {
         },
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension_po::{
-                IDefaultExtensionDispatcherTrait, IDefaultExtensionDispatcher, InterestRateConfig, PragmaOracleParams,
-                LiquidationParams, ShutdownParams, FeeParams, VTokenParams
+            default_extension_po_v2::{
+                IDefaultExtensionPOV2DispatcherTrait, IDefaultExtensionPOV2Dispatcher, InterestRateConfig,
+                PragmaOracleParams, LiquidationParams, ShutdownParams, FeeParams, VTokenParams
             }
         },
         data_model::{AssetParams, LTVParams}, math::pow_10, common::{is_collateralized},
@@ -31,9 +31,9 @@ mod TestPragmaOracle {
 
 
     fn create_custom_pool(
-        extension: IDefaultExtensionDispatcher,
+        extension: IDefaultExtensionPOV2Dispatcher,
         creator: ContractAddress,
-        singleton: ISingletonDispatcher,
+        singleton: ISingletonV2Dispatcher,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         timeout: u64,

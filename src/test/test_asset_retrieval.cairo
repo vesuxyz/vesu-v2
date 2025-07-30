@@ -4,9 +4,9 @@ mod TestAssetRetrieval {
     use starknet::{contract_address_const, get_block_timestamp};
     use vesu::{
         data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams},
-        singleton::ISingletonDispatcherTrait, extension::default_extension_po::{IDefaultExtensionDispatcherTrait},
-        units::{PERCENT, DAY_IN_SECONDS}, test::{setup::{setup, TestConfig, LendingTerms},},
-        vendor::erc20::ERC20ABIDispatcherTrait
+        singleton_v2::ISingletonV2DispatcherTrait,
+        extension::default_extension_po_v2::{IDefaultExtensionPOV2DispatcherTrait}, units::{PERCENT, DAY_IN_SECONDS},
+        test::setup_v2::{setup, TestConfig, LendingTerms}, vendor::erc20::ERC20ABIDispatcherTrait
     };
 
     #[test]

@@ -4,20 +4,17 @@ mod TestDefaultExtensionPOV2 {
     use starknet::{get_contract_address, contract_address_const};
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
-        test::v2::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait},
-        test::v2::setup_v2::{
+        data_model::{AssetParams, LTVParams, LTVConfig}, singleton_v2::{ISingletonV2DispatcherTrait},
+        extension::default_extension_po_v2::{
+            InterestRateConfig, PragmaOracleParams, IDefaultExtensionPOV2DispatcherTrait, ShutdownParams, FeeParams,
+            VTokenParams, LiquidationConfig, ShutdownConfig, FeeConfig, ShutdownMode
+        },
+        vendor::{erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, pragma::{AggregationMode}},
+        test::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait},
+        test::setup_v2::{
             setup_env, create_pool, TestConfig, deploy_assets, deploy_asset, Env, COLL_PRAGMA_KEY,
             test_interest_rate_config
         },
-        vendor::{erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, pragma::{AggregationMode}},
-        v2::{
-            singleton_v2::{ISingletonV2DispatcherTrait},
-            default_extension_po_v2::{
-                InterestRateConfig, PragmaOracleParams, LiquidationParams, IDefaultExtensionPOV2DispatcherTrait,
-                ShutdownParams, FeeParams, VTokenParams, LiquidationConfig, ShutdownConfig, FeeConfig, ShutdownMode
-            },
-        },
-        data_model::{AssetParams, LTVParams, LTVConfig},
     };
 
     #[test]
@@ -52,7 +49,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'empty-asset-params')]
+    #[should_panic(expected: "empty-asset-params")]
     fn test_create_pool_empty_asset_params() {
         let Env { extension, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
@@ -64,7 +61,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -80,7 +77,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -89,7 +86,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'interest-rate-params-mismatch')]
+    #[should_panic(expected: "interest-rate-params-mismatch")]
     fn test_create_pool_interest_rate_params_mismatch() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
@@ -113,7 +110,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -133,7 +130,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -142,7 +139,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'pragma-oracle-params-mismatch')]
+    #[should_panic(expected: "pragma-oracle-params-mismatch")]
     fn test_create_pool_pragma_oracle_params_mismatch() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
@@ -166,7 +163,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -186,7 +183,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -195,7 +192,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'v-token-params-mismatch')]
+    #[should_panic(expected: "v-token-params-mismatch")]
     fn test_create_pool_v_token_params_mismatch() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
@@ -226,7 +223,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![collateral_asset_oracle_params].span();
         let liquidation_params = array![].span();
-        let debt_caps = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -246,7 +243,7 @@ mod TestDefaultExtensionPOV2 {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
-                debt_caps,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -255,7 +252,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_add_asset_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -466,7 +463,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_asset_parameter_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -499,7 +496,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_set_pool_owner_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -524,7 +521,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_set_ltv_config_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -565,7 +562,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_liquidation_config_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -634,7 +631,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_shutdown_config_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -694,7 +691,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_shutdown_ltv_config_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -801,7 +798,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_oracle_parameter_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -946,7 +943,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_interest_rate_parameter_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -1005,7 +1002,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_fee_config_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -1040,7 +1037,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_debt_cap_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -1078,7 +1075,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner')]
+    #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_shutdown_mode_agent_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -1123,7 +1120,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: 'caller-not-owner-or-agent')]
+    #[should_panic(expected: "caller-not-owner-or-agent")]
     fn test_extension_set_shutdown_mode_caller_not_owner_or_agent() {
         let Env { extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
@@ -1135,8 +1132,8 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: ('Caller is not singleton owner',))]
-    fn test_default_extension_po_v2_upgrade_only_owner() {
+    #[should_panic(expected: "caller-not-singleton-owner")]
+    fn test_extension_upgrade_only_owner() {
         let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let new_classhash = declare("MockExtensionPOV2Upgrade").class_hash;
         start_prank(CheatTarget::One(extension.contract_address), contract_address_const::<'not_owner'>());
@@ -1144,7 +1141,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_default_extension_po_v2_upgrade() {
+    fn test_extension_upgrade() {
         let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
 
         let new_classhash = declare("MockExtensionPOV2Upgrade").class_hash;
@@ -1154,24 +1151,10 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: ('invalid upgrade name',))]
-    fn test_default_extension_po_v2_upgrade_wrong_name() {
+    #[should_panic(expected: "invalid-upgrade-name")]
+    fn test_extension_upgrade_wrong_name() {
         let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         let new_classhash = declare("MockSingletonUpgradeWrongName").class_hash;
         extension.upgrade(new_classhash);
-    }
-
-    #[test]
-    #[should_panic(expected: ('Caller is not singleton owner',))]
-    fn test_default_extension_po_v2_set_extension_utils_class_hash_only_owner() {
-        let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
-        start_prank(CheatTarget::One(extension.contract_address), contract_address_const::<'not_owner'>());
-        extension.set_extension_utils_class_hash(1.try_into().unwrap());
-    }
-
-    #[test]
-    fn test_default_extension_po_v2_set_extension_utils_class_hash() {
-        let Env { extension, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
-        extension.set_extension_utils_class_hash(1.try_into().unwrap());
     }
 }

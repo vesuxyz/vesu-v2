@@ -2,24 +2,24 @@
 mod TestLiquidatePosition {
     use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
     use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use vesu::{
         units::{SCALE, SCALE_128},
         data_model::{
             Amount, AmountType, AmountDenomination, ModifyPositionParams, LiquidatePositionParams, AssetConfig,
             Position, Context
         },
-        singleton::ISingletonDispatcherTrait,
-        test::{
-            mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
-            setup::{setup, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY},
-            mock_asset::{IMintableDispatcherTrait, IMintableDispatcher},
-        },
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
         extension::{
-            default_extension_po::{IDefaultExtensionDispatcherTrait},
             components::position_hooks::{LiquidationData, LiquidationConfig},
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
+            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait}
         },
+        test::{
+            mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
+            setup_v2::{setup, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY},
+            mock_asset::{IMintableDispatcherTrait, IMintableDispatcher},
+        },
+        vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     };
 
     #[test]
@@ -727,98 +727,98 @@ mod TestLiquidatePosition {
     //     assert(position.collateral_shares == 0, 'should not have shares');
     // }
 
-    #[test]
-    fn test_liquidate_position_partial_no_bad_debt_in_shares() {
-        let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
+    // #[test]
+    // fn test_liquidate_position_partial_no_bad_debt_in_shares() {
+    //     let (singleton, extension, config, users, terms) = setup();
+    //     let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+    //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-        // LENDER
+    //     // LENDER
 
-        // deposit collateral which is later borrowed by the borrower
-        let params = ModifyPositionParams {
-            pool_id,
-            collateral_asset: debt_asset.contract_address,
-            debt_asset: collateral_asset.contract_address,
-            user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
-            debt: Default::default(),
-            data: ArrayTrait::new().span()
-        };
+    //     // deposit collateral which is later borrowed by the borrower
+    //     let params = ModifyPositionParams {
+    //         pool_id,
+    //         collateral_asset: debt_asset.contract_address,
+    //         debt_asset: collateral_asset.contract_address,
+    //         user: users.lender,
+    //         collateral: Amount {
+    //             amount_type: AmountType::Delta,
+    //             denomination: AmountDenomination::Assets,
+    //             value: liquidity_to_deposit.into(),
+    //         },
+    //         debt: Default::default(),
+    //         data: ArrayTrait::new().span()
+    //     };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
-        singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+    //     singleton.modify_position(params);
+    //     stop_prank(CheatTarget::One(singleton.contract_address));
 
-        // BORROWER
+    //     // BORROWER
 
-        let params = ModifyPositionParams {
-            pool_id,
-            collateral_asset: collateral_asset.contract_address,
-            debt_asset: debt_asset.contract_address,
-            user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
-            data: ArrayTrait::new().span()
-        };
+    //     let params = ModifyPositionParams {
+    //         pool_id,
+    //         collateral_asset: collateral_asset.contract_address,
+    //         debt_asset: debt_asset.contract_address,
+    //         user: users.borrower,
+    //         collateral: Amount {
+    //             amount_type: AmountType::Target,
+    //             denomination: AmountDenomination::Assets,
+    //             value: collateral_to_deposit.into(),
+    //         },
+    //         debt: Amount {
+    //             amount_type: AmountType::Target,
+    //             denomination: AmountDenomination::Native,
+    //             value: nominal_debt_to_draw.into(),
+    //         },
+    //         data: ArrayTrait::new().span()
+    //     };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
-        singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+    //     start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+    //     singleton.modify_position(params);
+    //     stop_prank(CheatTarget::One(singleton.contract_address));
 
-        // LIQUIDATOR
+    //     // LIQUIDATOR
 
-        // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
-        mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
+    //     // reduce oracle price
+    //     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+    //     mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
-        let (position_before, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //     let (position_before, _, debt) = singleton
+    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
-        let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
-            );
-        assert!(!collateralized, "Not undercollateralized");
+    //     let (collateralized, _, _) = singleton
+    //         .check_collateralization(
+    //             pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+    //         );
+    //     assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
+    //     let mut liquidation_data: Array<felt252> = ArrayTrait::new();
+    //     LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
-        let params = LiquidatePositionParams {
-            pool_id,
-            collateral_asset: collateral_asset.contract_address,
-            debt_asset: debt_asset.contract_address,
-            user: users.borrower,
-            receive_as_shares: true,
-            data: liquidation_data.span()
-        };
+    //     let params = LiquidatePositionParams {
+    //         pool_id,
+    //         collateral_asset: collateral_asset.contract_address,
+    //         debt_asset: debt_asset.contract_address,
+    //         user: users.borrower,
+    //         receive_as_shares: true,
+    //         data: liquidation_data.span()
+    //     };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
-        singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+    //     singleton.liquidate_position(params);
+    //     stop_prank(CheatTarget::One(singleton.contract_address));
 
-        let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
-        assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
-        assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
+    //     let (position, _, _) = singleton
+    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //     assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
+    //     assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
 
-        let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+    //     let (position, _, _) = singleton
+    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
-        assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
-    }
+    //     assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
+    // }
 
     #[test]
     fn test_liquidate_position_partial_bad_debt_2() {

@@ -105,12 +105,12 @@ mod interest_rate_model_component {
     use vesu::{
         units::SCALE, common::calculate_rate_accumulator,
         extension::{
-            default_extension_po::{IDefaultExtensionCallback, ITokenizationCallback},
+            default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback},
             components::interest_rate_model::{
                 InterestRateConfig, assert_interest_rate_config, UTILIZATION_SCALE, UTILIZATION_SCALE_TO_SCALE
             }
         },
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait}
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait}
     };
 
     #[storage]
@@ -172,7 +172,8 @@ mod interest_rate_model_component {
             let mut interest_rate_config: InterestRateConfig = self.interest_rate_configs.read((pool_id, asset));
             assert!(interest_rate_config.max_target_utilization != 0, "interest-rate-config-not-set");
 
-            ISingletonDispatcher { contract_address: self.get_contract().singleton() }.claim_fee_shares(pool_id, asset);
+            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
+                .claim_fee_shares(pool_id, asset);
 
             if parameter == 'min_target_utilization' {
                 interest_rate_config.min_target_utilization = value;

@@ -32,7 +32,7 @@ fn assert_asset_config(asset_config: AssetConfig) {
 }
 
 fn assert_asset_config_exists(asset_config: AssetConfig) {
-    assert!(asset_config.last_rate_accumulator != 0, "asset-config-nonexistent");
+    assert!(asset_config.scale != 0, "asset-config-nonexistent");
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]

@@ -7,14 +7,64 @@ use vesu::{
             interest_rate_model::InterestRateConfig,
             position_hooks::{ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, Pair},
             fee_model::FeeConfig, pragma_oracle::OracleConfig,
-        },
-        default_extension_po::{
-            LiquidationParams, ShutdownParams, PragmaOracleParams, ITimestampManagerCallback, IDefaultExtension,
-            FeeParams, VTokenParams, IDefaultExtensionCallback, ITokenizationCallback
         }
     },
-    vendor::pragma::{AggregationMode}
+    vendor::pragma::AggregationMode
 };
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+struct VTokenParams {
+    v_token_name: felt252,
+    v_token_symbol: felt252
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+struct PragmaOracleParams {
+    pragma_key: felt252,
+    timeout: u64, // [seconds]
+    number_of_sources: u32,
+    start_time_offset: u64, // [seconds]
+    time_window: u64, // [seconds]
+    aggregation_mode: AggregationMode
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+struct ShutdownParams {
+    recovery_period: u64, // [seconds]
+    subscription_period: u64, // [seconds]
+    ltv_params: Span<LTVParams>,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+struct LiquidationParams {
+    collateral_asset_index: usize,
+    debt_asset_index: usize,
+    liquidation_factor: u64 // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+struct FeeParams {
+    fee_recipient: ContractAddress
+}
+
+#[starknet::interface]
+trait IDefaultExtensionCallback<TContractState> {
+    fn singleton(self: @TContractState) -> ContractAddress;
+}
+
+#[starknet::interface]
+trait ITokenizationCallback<TContractState> {
+    fn v_token_for_collateral_asset(
+        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress
+    ) -> ContractAddress;
+    fn mint_or_burn_v_token(
+        ref self: TContractState,
+        pool_id: felt252,
+        collateral_asset: ContractAddress,
+        user: ContractAddress,
+        amount: i257
+    );
+}
 
 #[starknet::interface]
 trait IDefaultExtensionPOV2<TContractState> {
@@ -42,12 +92,6 @@ trait IDefaultExtensionPOV2<TContractState> {
     fn pairs(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
     ) -> Pair;
-    fn violation_timestamp_for_pair(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
-    ) -> u64;
-    fn violation_timestamp_count(self: @TContractState, pool_id: felt252, violation_timestamp: u64) -> u128;
-    fn oldest_violation_timestamp(self: @TContractState, pool_id: felt252) -> u64;
-    fn next_violation_timestamp(self: @TContractState, pool_id: felt252, violation_timestamp: u64) -> u64;
     fn v_token_for_collateral_asset(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress
     ) -> ContractAddress;
@@ -123,24 +167,6 @@ trait IDefaultExtensionPOV2<TContractState> {
     fn set_fee_config(ref self: TContractState, pool_id: felt252, fee_config: FeeConfig);
     fn claim_fees(ref self: TContractState, pool_id: felt252, collateral_asset: ContractAddress);
 
-    fn migrate_pool(
-        ref self: TContractState,
-        pool_id: felt252,
-        name: felt252,
-        v_token_configs: Span<(felt252, felt252, ContractAddress, ContractAddress)>,
-        interest_rate_configs: Span<(ContractAddress, InterestRateConfig)>,
-        pragma_oracle_configs: Span<(ContractAddress, OracleConfig)>,
-        liquidation_configs: Span<(ContractAddress, ContractAddress, LiquidationConfig)>,
-        pairs: Span<(ContractAddress, ContractAddress, Pair)>,
-        debt_caps: Span<(ContractAddress, ContractAddress, u256)>,
-        shutdown_ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
-        shutdown_config: ShutdownConfig,
-        fee_config: FeeConfig,
-        owner: ContractAddress
-    );
-    fn set_migrator(ref self: TContractState, migrator: ContractAddress);
-
-    fn set_extension_utils_class_hash(ref self: TContractState, extension: felt252);
     // Upgrade
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -154,24 +180,18 @@ mod DefaultExtensionPOV2 {
         contract_address_const, deploy_syscall, syscalls::{replace_class_syscall, call_contract_syscall}
     };
     use vesu::{
-        map_list::{map_list_component, map_list_component::MapListTrait},
+        units::INFLATION_FEE,
         data_model::{
             Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig, ModifyPositionParams,
             AmountDenomination, AmountType, DebtCapParams
         },
-        v2::{
-            singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-            default_extension_po_v2::{
-                LiquidationParams, ShutdownParams, PragmaOracleParams, ITimestampManagerCallback, IDefaultExtension,
-                FeeParams, VTokenParams, IDefaultExtensionCallback, ITokenizationCallback, IDefaultExtensionPOV2,
-                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, IDefaultExtensionPOV2Utils,
-                IDefaultExtensionPOV2UtilsLibraryDispatcher, IDefaultExtensionPOV2UtilsDispatcherTrait
-            },
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        vendor::{
+            erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
+            ownable::{IOwnableDispatcher, IOwnableDispatcherTrait},
         },
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, units::INFLATION_FEE,
-        vendor::ownable::{IOwnableDispatcher, IOwnableDispatcherTrait},
         extension::{
-            interface::{IExtension},
+            interface::IExtension,
             components::{
                 interest_rate_model::{
                     InterestRateConfig, interest_rate_model_component,
@@ -184,14 +204,18 @@ mod DefaultExtensionPOV2 {
                 pragma_oracle::{pragma_oracle_component, pragma_oracle_component::PragmaOracleTrait, OracleConfig},
                 fee_model::{fee_model_component, fee_model_component::FeeModelTrait, FeeConfig},
                 tokenization::{tokenization_component, tokenization_component::TokenizationTrait}
-            }
+            },
+            default_extension_po_v2::{
+                LiquidationParams, ShutdownParams, PragmaOracleParams, FeeParams, VTokenParams,
+                IDefaultExtensionCallback, ITokenizationCallback, IDefaultExtensionPOV2,
+                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait
+            },
         },
     };
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
     component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
-    component!(path: map_list_component, storage: timestamp_manager, event: MapListEvents);
     component!(path: fee_model_component, storage: fee_model, event: FeeModelEvents);
     component!(path: tokenization_component, storage: tokenization, event: TokenizationEvents);
 
@@ -213,21 +237,12 @@ mod DefaultExtensionPOV2 {
         // storage for the pragma oracle component
         #[substorage(v0)]
         pragma_oracle: pragma_oracle_component::Storage,
-        // storage for the timestamp manager component
-        #[substorage(v0)]
-        timestamp_manager: map_list_component::Storage,
         // storage for the fee model component
         #[substorage(v0)]
         fee_model: fee_model_component::Storage,
         // storage for the tokenization component
         #[substorage(v0)]
         tokenization: tokenization_component::Storage,
-        // tracks the class hash of the vTokenV2 contract
-        v_token_v2_class_hash: felt252,
-        // tracks the migrator address
-        migrator: ContractAddress,
-        // tracks the class hash of the extension migrator contract
-        extension_utils_class_hash: felt252,
         // tracks the address that can transition the shutdown mode of a pool
         shutdown_mode_agent: LegacyMap::<felt252, ContractAddress>,
     }
@@ -262,17 +277,10 @@ mod DefaultExtensionPOV2 {
         PositionHooksEvents: position_hooks_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
-        MapListEvents: map_list_component::Event,
         FeeModelEvents: fee_model_component::Event,
         TokenizationEvents: tokenization_component::Event,
         SetAssetParameter: SetAssetParameter,
         SetPoolOwner: SetPoolOwner,
-        CreateVToken: tokenization_component::CreateVToken,
-        SetInterestRateConfig: interest_rate_model_component::SetInterestRateConfig,
-        SetOracleConfig: pragma_oracle_component::SetOracleConfig,
-        SetLiquidationConfig: position_hooks_component::SetLiquidationConfig,
-        SetDebtCap: position_hooks_component::SetDebtCap,
-        SetShutdownLTVConfig: position_hooks_component::SetShutdownLTVConfig,
         ContractUpgraded: ContractUpgraded,
     }
 
@@ -282,54 +290,72 @@ mod DefaultExtensionPOV2 {
         singleton: ContractAddress,
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
-        v_token_class_hash: felt252,
-        v_token_v2_class_hash: felt252,
-        migrator: ContractAddress,
-        extension_utils_class_hash: felt252
+        v_token_class_hash: felt252
     ) {
         self.singleton.write(singleton);
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
         self.tokenization.set_v_token_class_hash(v_token_class_hash);
-        self.v_token_v2_class_hash.write(v_token_v2_class_hash);
-        self.migrator.write(migrator);
-        self.extension_utils_class_hash.write(extension_utils_class_hash);
+    }
+
+    /// Helper method for transferring an amount of an asset from one address to another. Reverts if the transfer fails.
+    /// # Arguments
+    /// * `asset` - address of the asset
+    /// * `sender` - address of the sender of the assets
+    /// * `to` - address of the receiver of the assets
+    /// * `amount` - amount of assets to transfer [asset scale]
+    /// * `is_legacy` - whether the asset is a legacy ERC20 (only supporting camelCase instead of snake_case)
+    fn transfer_asset(
+        asset: ContractAddress, sender: ContractAddress, to: ContractAddress, amount: u256, is_legacy: bool
+    ) {
+        let erc20 = IERC20Dispatcher { contract_address: asset };
+        if sender == get_contract_address() {
+            assert!(erc20.transfer(to, amount), "transfer-failed");
+        } else if is_legacy {
+            assert!(erc20.transferFrom(sender, to, amount), "transferFrom-failed");
+        } else {
+            assert!(erc20.transfer_from(sender, to, amount), "transfer-from-failed");
+        }
+    }
+
+    #[generate_trait]
+    impl InternalFunctions of InternalFunctionsTrait {
+        fn assert_singleton_owner(ref self: ContractState) {
+            let owner = IOwnableDispatcher { contract_address: self.singleton.read() }.owner();
+            assert!(get_caller_address() == owner, "caller-not-singleton-owner");
+        }
+
+        fn burn_inflation_fee(ref self: ContractState, pool_id: felt252, asset: ContractAddress, is_legacy: bool) {
+            let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
+
+            // burn inflation fee
+            let asset = IERC20Dispatcher { contract_address: asset };
+            transfer_asset(
+                asset.contract_address, get_caller_address(), get_contract_address(), INFLATION_FEE, is_legacy
+            );
+            assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
+            singleton
+                .modify_position(
+                    ModifyPositionParams {
+                        pool_id,
+                        collateral_asset: asset.contract_address,
+                        debt_asset: Zeroable::zero(),
+                        user: contract_address_const::<'ZERO'>(),
+                        collateral: Amount {
+                            amount_type: AmountType::Delta,
+                            denomination: AmountDenomination::Assets,
+                            value: i257_new(INFLATION_FEE, false),
+                        },
+                        debt: Default::default(),
+                        data: ArrayTrait::new().span()
+                    }
+                );
+        }
     }
 
     impl DefaultExtensionCallbackImpl of IDefaultExtensionCallback<ContractState> {
         fn singleton(self: @ContractState) -> ContractAddress {
             self.singleton.read()
-        }
-    }
-
-    impl TimestampManagerCallbackImpl of ITimestampManagerCallback<ContractState> {
-        /// See timestamp_manager.contains()
-        fn contains(self: @ContractState, pool_id: felt252, item: u64) -> bool {
-            self.timestamp_manager.contains(pool_id, item)
-        }
-        /// See timestamp_manager.push_front()
-        fn push_front(ref self: ContractState, pool_id: felt252, item: u64) {
-            self.timestamp_manager.push_front(pool_id, item)
-        }
-        /// See timestamp_manager.remove()
-        fn remove(ref self: ContractState, pool_id: felt252, item: u64) {
-            self.timestamp_manager.remove(pool_id, item)
-        }
-        /// See timestamp_manager.first()
-        fn first(self: @ContractState, pool_id: felt252) -> u64 {
-            self.timestamp_manager.first(pool_id)
-        }
-        /// See timestamp_manager.last()
-        fn last(self: @ContractState, pool_id: felt252) -> u64 {
-            self.timestamp_manager.last(pool_id)
-        }
-        /// See timestamp_manager.previous()
-        fn previous(self: @ContractState, pool_id: felt252, item: u64) -> u64 {
-            self.timestamp_manager.previous(pool_id, item)
-        }
-        /// See timestamp_manager.all()
-        fn all(self: @ContractState, pool_id: felt252) -> Array<u64> {
-            self.timestamp_manager.all(pool_id)
         }
     }
 
@@ -487,48 +513,6 @@ mod DefaultExtensionPOV2 {
             self.position_hooks.pairs.read((pool_id, collateral_asset, debt_asset))
         }
 
-        /// Returns the timestamp at which a given pair in a given pool transitioned to recovery mode
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// # Returns
-        /// * `violation_timestamp` - timestamp at which the pair transitioned to recovery mode
-        fn violation_timestamp_for_pair(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
-        ) -> u64 {
-            self.position_hooks.violation_timestamps.read((pool_id, collateral_asset, debt_asset))
-        }
-
-        /// Returns the count of how many pairs in a given pool transitioned to recovery mode at a given timestamp
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `violation_timestamp` - timestamp at which the pair transitioned to recovery mode
-        /// # Returns
-        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs transitioned to recovery mode at that timestamp
-        fn violation_timestamp_count(self: @ContractState, pool_id: felt252, violation_timestamp: u64) -> u128 {
-            self.position_hooks.violation_timestamp_counts.read((pool_id, violation_timestamp))
-        }
-
-        /// Returns the oldest timestamp at which a pair in a given pool transitioned to recovery mode
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// # Returns
-        /// * `oldest_violation_timestamp` - oldest timestamp at which a pair transitioned to recovery mode
-        fn oldest_violation_timestamp(self: @ContractState, pool_id: felt252) -> u64 {
-            self.timestamp_manager.last(pool_id)
-        }
-
-        /// Returns the next (older) violation timestamp for a given violation timestamp for a given pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `violation_timestamp` - violation timestamp
-        /// # Returns
-        /// * `next_violation_timestamp` - next (older) violation timestamp
-        fn next_violation_timestamp(self: @ContractState, pool_id: felt252, violation_timestamp: u64) -> u64 {
-            self.timestamp_manager.next(pool_id, violation_timestamp.into())
-        }
-
         /// Returns the address of the vToken deployed for the collateral asset for a given pool
         /// # Arguments
         /// * `pool_id` - id of the pool
@@ -582,11 +566,11 @@ mod DefaultExtensionPOV2 {
             fee_params: FeeParams,
             owner: ContractAddress
         ) -> felt252 {
-            assert(asset_params.len() > 0, 'empty-asset-params');
+            assert!(asset_params.len() > 0, "empty-asset-params");
             // assert that all arrays have equal length
-            assert(asset_params.len() == interest_rate_configs.len(), 'interest-rate-params-mismatch');
-            assert(asset_params.len() == pragma_oracle_params.len(), 'pragma-oracle-params-mismatch');
-            assert(asset_params.len() == v_token_params.len(), 'v-token-params-mismatch');
+            assert!(asset_params.len() == interest_rate_configs.len(), "interest-rate-params-mismatch");
+            assert!(asset_params.len() == pragma_oracle_params.len(), "pragma-oracle-params-mismatch");
+            assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
 
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
@@ -600,9 +584,6 @@ mod DefaultExtensionPOV2 {
 
             let mut asset_params_copy = asset_params;
             let mut i = 0;
-            let extension_utils = IDefaultExtensionPOV2UtilsLibraryDispatcher {
-                class_hash: self.extension_utils_class_hash.read().try_into().unwrap()
-            };
             while !asset_params_copy
                 .is_empty() {
                     let asset_params = *asset_params_copy.pop_front().unwrap();
@@ -638,7 +619,7 @@ mod DefaultExtensionPOV2 {
                     self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
                     // burn inflation fee
-                    extension_utils.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
+                    self.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
 
                     i += 1;
                 };
@@ -709,7 +690,7 @@ mod DefaultExtensionPOV2 {
             interest_rate_config: InterestRateConfig,
             pragma_oracle_params: PragmaOracleParams
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             let asset = asset_params.asset;
 
             // set the oracle config
@@ -739,10 +720,7 @@ mod DefaultExtensionPOV2 {
             singleton.set_asset_config(pool_id, asset_params);
 
             // burn inflation fee
-            let extension_utils = IDefaultExtensionPOV2UtilsLibraryDispatcher {
-                class_hash: self.extension_utils_class_hash.read().try_into().unwrap()
-            };
-            extension_utils.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
+            self.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
         }
 
         /// Sets the debt cap for a given asset in a pool
@@ -758,7 +736,7 @@ mod DefaultExtensionPOV2 {
             debt_asset: ContractAddress,
             debt_cap: u256
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, debt_cap);
         }
 
@@ -771,7 +749,7 @@ mod DefaultExtensionPOV2 {
         fn set_interest_rate_parameter(
             ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.interest_rate_model.set_interest_rate_parameter(pool_id, asset, parameter, value);
         }
 
@@ -784,7 +762,7 @@ mod DefaultExtensionPOV2 {
         fn set_oracle_parameter(
             ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.pragma_oracle.set_oracle_parameter(pool_id, asset, parameter, value);
         }
 
@@ -801,7 +779,7 @@ mod DefaultExtensionPOV2 {
             debt_asset: ContractAddress,
             ltv_config: LTVConfig
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             ISingletonV2Dispatcher { contract_address: self.singleton.read() }
                 .set_ltv_config(pool_id, collateral_asset, debt_asset, ltv_config);
         }
@@ -819,7 +797,7 @@ mod DefaultExtensionPOV2 {
             debt_asset: ContractAddress,
             liquidation_config: LiquidationConfig
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.position_hooks.set_liquidation_config(pool_id, collateral_asset, debt_asset, liquidation_config);
         }
 
@@ -832,7 +810,7 @@ mod DefaultExtensionPOV2 {
         fn set_asset_parameter(
             ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             ISingletonV2Dispatcher { contract_address: self.singleton.read() }
                 .set_asset_parameter(pool_id, asset, parameter, value);
         }
@@ -842,7 +820,7 @@ mod DefaultExtensionPOV2 {
         /// * `pool_id` - id of the pool
         /// * `shutdown_config` - shutdown config
         fn set_shutdown_config(ref self: ContractState, pool_id: felt252, shutdown_config: ShutdownConfig) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.position_hooks.set_shutdown_config(pool_id, shutdown_config);
         }
 
@@ -859,7 +837,7 @@ mod DefaultExtensionPOV2 {
             debt_asset: ContractAddress,
             shutdown_ltv_config: LTVConfig
         ) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.position_hooks.set_shutdown_ltv_config(pool_id, collateral_asset, debt_asset, shutdown_ltv_config);
         }
 
@@ -868,7 +846,7 @@ mod DefaultExtensionPOV2 {
         /// * `pool_id` - id of the pool
         /// * `owner` - address of the new owner
         fn set_pool_owner(ref self: ContractState, pool_id: felt252, owner: ContractAddress) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.owner.write(pool_id, owner);
             self.emit(SetPoolOwner { pool_id, owner });
         }
@@ -878,7 +856,7 @@ mod DefaultExtensionPOV2 {
         /// * `pool_id` - id of the pool
         /// * `shutdown_mode_agent` - address of the shutdown mode agent
         fn set_shutdown_mode_agent(ref self: ContractState, pool_id: felt252, shutdown_mode_agent: ContractAddress) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.shutdown_mode_agent.write(pool_id, shutdown_mode_agent);
         }
 
@@ -887,10 +865,14 @@ mod DefaultExtensionPOV2 {
         /// * `pool_id` - id of the pool
         /// * `shutdown_mode` - shutdown mode
         fn set_shutdown_mode(ref self: ContractState, pool_id: felt252, shutdown_mode: ShutdownMode) {
-            assert(
-                get_caller_address() == self.owner.read(pool_id)
-                    || get_caller_address() == self.shutdown_mode_agent.read(pool_id),
-                'caller-not-owner-or-agent'
+            let shutdown_mode_agent = self.shutdown_mode_agent.read(pool_id);
+            assert!(
+                get_caller_address() == self.owner.read(pool_id) || get_caller_address() == shutdown_mode_agent,
+                "caller-not-owner-or-agent"
+            );
+            assert!(
+                get_caller_address() != shutdown_mode_agent || shutdown_mode == ShutdownMode::Recovery,
+                "shutdown-mode-not-recovery"
             );
             self.position_hooks.set_shutdown_mode(pool_id, shutdown_mode);
         }
@@ -936,7 +918,7 @@ mod DefaultExtensionPOV2 {
         /// * `pool_id` - id of the pool
         /// * `fee_config` - new fee configuration parameters
         fn set_fee_config(ref self: ContractState, pool_id: felt252, fee_config: FeeConfig) {
-            assert(get_caller_address() == self.owner.read(pool_id), 'caller-not-owner');
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.fee_model.set_fee_config(pool_id, fee_config);
         }
 
@@ -949,62 +931,22 @@ mod DefaultExtensionPOV2 {
             self.fee_model.claim_fees(pool_id, collateral_asset);
         }
 
-        fn migrate_pool(
-            ref self: ContractState,
-            pool_id: felt252,
-            name: felt252,
-            v_token_configs: Span<(felt252, felt252, ContractAddress, ContractAddress)>,
-            interest_rate_configs: Span<(ContractAddress, InterestRateConfig)>,
-            pragma_oracle_configs: Span<(ContractAddress, OracleConfig)>,
-            liquidation_configs: Span<(ContractAddress, ContractAddress, LiquidationConfig)>,
-            pairs: Span<(ContractAddress, ContractAddress, Pair)>,
-            debt_caps: Span<(ContractAddress, ContractAddress, u256)>,
-            shutdown_ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
-            shutdown_config: ShutdownConfig,
-            fee_config: FeeConfig,
-            owner: ContractAddress
-        ) {
-            let extension_utils = IDefaultExtensionPOV2UtilsLibraryDispatcher {
-                class_hash: self.extension_utils_class_hash.read().try_into().unwrap()
-            };
-            extension_utils
-                .migrate_pool(
-                    pool_id,
-                    name,
-                    v_token_configs,
-                    interest_rate_configs,
-                    pragma_oracle_configs,
-                    liquidation_configs,
-                    pairs,
-                    debt_caps,
-                    shutdown_ltv_configs,
-                    shutdown_config,
-                    fee_config,
-                    owner
-                );
-        }
-
-        fn set_migrator(ref self: ContractState, migrator: ContractAddress) {
-            assert(self.migrator.read() == get_caller_address(), 'caller-not-migrator');
-            self.migrator.write(migrator);
-        }
-
-        fn set_extension_utils_class_hash(ref self: ContractState, extension: felt252) {
-            self.assert_singleton_owner();
-            self.extension_utils_class_hash.write(extension);
-        }
-
-        // Upgrade
+        /// Returns the name of the contract
+        /// # Returns
+        /// * `name` - the name of the contract
         fn upgrade_name(self: @ContractState) -> felt252 {
             'Vesu default extension po v2'
         }
 
+        /// Upgrades the contract to a new implementation
+        /// # Arguments
+        /// * `new_implementation` - the new implementation class hash
         fn upgrade(ref self: ContractState, new_implementation: ClassHash) {
             self.assert_singleton_owner();
             replace_class_syscall(new_implementation).unwrap();
             // Check to prevent mistakes when upgrading the contract
             let new_name = IDefaultExtensionPOV2Dispatcher { contract_address: get_contract_address() }.upgrade_name();
-            assert(new_name == self.upgrade_name(), 'invalid upgrade name');
+            assert!(new_name == self.upgrade_name(), "invalid-upgrade-name");
             self.emit(ContractUpgraded { new_implementation });
         }
     }
@@ -1098,7 +1040,7 @@ mod DefaultExtensionPOV2 {
             data: Span<felt252>,
             caller: ContractAddress
         ) -> (Amount, Amount) {
-            assert(get_caller_address() == self.singleton.read(), 'caller-not-singleton');
+            assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
             (collateral, debt)
         }
 
@@ -1124,7 +1066,7 @@ mod DefaultExtensionPOV2 {
             data: Span<felt252>,
             caller: ContractAddress
         ) -> bool {
-            assert(get_caller_address() == self.singleton.read(), 'caller-not-singleton');
+            assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
             self
                 .position_hooks
                 .after_modify_position(
@@ -1154,7 +1096,7 @@ mod DefaultExtensionPOV2 {
             data: Span<felt252>,
             caller: ContractAddress
         ) -> (UnsignedAmount, UnsignedAmount) {
-            assert(get_caller_address() == self.singleton.read(), 'caller-not-singleton');
+            assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
             self.position_hooks.before_transfer_position(from_context, to_context, collateral, debt, data, caller)
         }
 
@@ -1182,7 +1124,7 @@ mod DefaultExtensionPOV2 {
             data: Span<felt252>,
             caller: ContractAddress
         ) -> bool {
-            assert(get_caller_address() == self.singleton.read(), 'caller-not-singleton');
+            assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
             self
                 .position_hooks
                 .after_transfer_position(
@@ -1212,7 +1154,7 @@ mod DefaultExtensionPOV2 {
         fn before_liquidate_position(
             ref self: ContractState, context: Context, data: Span<felt252>, caller: ContractAddress
         ) -> (u256, u256, u256) {
-            assert(get_caller_address() == self.singleton.read(), 'caller-not-singleton');
+            assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
             self.position_hooks.before_liquidate_position(context, data, caller)
         }
 
@@ -1240,7 +1182,7 @@ mod DefaultExtensionPOV2 {
             data: Span<felt252>,
             caller: ContractAddress
         ) -> bool {
-            assert(get_caller_address() == self.singleton.read(), 'caller-not-singleton');
+            assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
             self
                 .position_hooks
                 .after_liquidate_position(
@@ -1253,311 +1195,6 @@ mod DefaultExtensionPOV2 {
                     data,
                     caller
                 )
-        }
-    }
-
-    // Could be a group of functions about a same topic
-    #[generate_trait]
-    impl InternalFunctions of InternalFunctionsTrait {
-        fn assert_singleton_owner(ref self: ContractState) {
-            let owner = IOwnableDispatcher { contract_address: self.singleton.read() }.owner();
-            assert(get_caller_address() == owner, 'Caller is not singleton owner');
-        }
-    }
-}
-
-#[starknet::interface]
-trait IDefaultExtensionPOV2Utils<TContractState> {
-    fn burn_inflation_fee(ref self: TContractState, pool_id: felt252, asset: ContractAddress, is_legacy: bool);
-    fn migrate_pool(
-        ref self: TContractState,
-        pool_id: felt252,
-        name: felt252,
-        v_token_configs: Span<(felt252, felt252, ContractAddress, ContractAddress)>,
-        interest_rate_configs: Span<(ContractAddress, InterestRateConfig)>,
-        pragma_oracle_configs: Span<(ContractAddress, OracleConfig)>,
-        liquidation_configs: Span<(ContractAddress, ContractAddress, LiquidationConfig)>,
-        pairs: Span<(ContractAddress, ContractAddress, Pair)>,
-        debt_caps: Span<(ContractAddress, ContractAddress, u256)>,
-        shutdown_ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
-        shutdown_config: ShutdownConfig,
-        fee_config: FeeConfig,
-        owner: ContractAddress
-    );
-}
-
-#[starknet::contract]
-mod DefaultExtensionPOV2Utils {
-    use alexandria_math::i257::{i257, i257_new};
-    use starknet::{
-        ContractAddress, get_contract_address, get_caller_address, event::EventEmitter, deploy_syscall,
-        contract_address_const
-    };
-    use vesu::{
-        map_list::{map_list_component, map_list_component::MapListTrait},
-        data_model::{LTVConfig, Amount, AmountType, AmountDenomination, ModifyPositionParams},
-        v2::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, units::INFLATION_FEE,
-        extension::{
-            components::{
-                interest_rate_model::{
-                    InterestRateConfig, interest_rate_model_component,
-                    interest_rate_model_component::InterestRateModelTrait
-                },
-                position_hooks::{
-                    position_hooks_component, position_hooks_component::PositionHooksTrait, ShutdownConfig,
-                    LiquidationConfig, Pair
-                },
-                pragma_oracle::{pragma_oracle_component, pragma_oracle_component::PragmaOracleTrait, OracleConfig},
-                fee_model::{fee_model_component, fee_model_component::FeeModelTrait, FeeConfig},
-                tokenization::{tokenization_component, tokenization_component::TokenizationTrait}
-            }
-        },
-    };
-
-    component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
-    component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
-    component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
-    component!(path: map_list_component, storage: timestamp_manager, event: MapListEvents);
-    component!(path: fee_model_component, storage: fee_model, event: FeeModelEvents);
-    component!(path: tokenization_component, storage: tokenization, event: TokenizationEvents);
-
-
-    #[storage]
-    struct Storage {
-        // address of the singleton contract
-        singleton: ContractAddress,
-        // tracks the owner for each pool
-        owner: LegacyMap::<felt252, ContractAddress>,
-        // tracks the name for each pool
-        pool_names: LegacyMap::<felt252, felt252>,
-        // storage for the position hooks component
-        #[substorage(v0)]
-        position_hooks: position_hooks_component::Storage,
-        // storage for the interest rate model component
-        #[substorage(v0)]
-        interest_rate_model: interest_rate_model_component::Storage,
-        // storage for the pragma oracle component
-        #[substorage(v0)]
-        pragma_oracle: pragma_oracle_component::Storage,
-        // storage for the timestamp manager component
-        #[substorage(v0)]
-        timestamp_manager: map_list_component::Storage,
-        // storage for the fee model component
-        #[substorage(v0)]
-        fee_model: fee_model_component::Storage,
-        // storage for the tokenization component
-        #[substorage(v0)]
-        tokenization: tokenization_component::Storage,
-        // tracks the class hash of the vTokenV2 contract
-        v_token_v2_class_hash: felt252,
-        // tracks the migrator address
-        migrator: ContractAddress,
-        // tracks the address that can transition the shutdown mode of a pool
-        shutdown_mode_agent: LegacyMap::<felt252, ContractAddress>,
-    }
-
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        PositionHooksEvents: position_hooks_component::Event,
-        InterestRateModelEvents: interest_rate_model_component::Event,
-        PragmaOracleEvents: pragma_oracle_component::Event,
-        MapListEvents: map_list_component::Event,
-        FeeModelEvents: fee_model_component::Event,
-        TokenizationEvents: tokenization_component::Event,
-        CreateVToken: tokenization_component::CreateVToken,
-        SetInterestRateConfig: interest_rate_model_component::SetInterestRateConfig,
-        SetOracleConfig: pragma_oracle_component::SetOracleConfig,
-        SetLiquidationConfig: position_hooks_component::SetLiquidationConfig,
-        SetDebtCap: position_hooks_component::SetDebtCap,
-        SetShutdownLTVConfig: position_hooks_component::SetShutdownLTVConfig,
-        SetShutdownConfig: position_hooks_component::SetShutdownConfig,
-        SetFeeConfig: fee_model_component::SetFeeConfig,
-    }
-
-    #[constructor]
-    fn constructor(ref self: ContractState) {
-        panic!("Cannot construct");
-    }
-
-    /// Helper method for transferring an amount of an asset from one address to another. Reverts if the transfer fails.
-    /// # Arguments
-    /// * `asset` - address of the asset
-    /// * `sender` - address of the sender of the assets
-    /// * `to` - address of the receiver of the assets
-    /// * `amount` - amount of assets to transfer [asset scale]
-    /// * `is_legacy` - whether the asset is a legacy ERC20 (only supporting camelCase instead of snake_case)
-    fn transfer_asset(
-        asset: ContractAddress, sender: ContractAddress, to: ContractAddress, amount: u256, is_legacy: bool
-    ) {
-        let erc20 = IERC20Dispatcher { contract_address: asset };
-        if sender == get_contract_address() {
-            assert(erc20.transfer(to, amount), 'transfer-failed');
-        } else if is_legacy {
-            assert(erc20.transferFrom(sender, to, amount), 'transferFrom-failed');
-        } else {
-            assert(erc20.transfer_from(sender, to, amount), 'transfer-from-failed');
-        }
-    }
-
-    #[abi(embed_v0)]
-    impl DefaultExtensionPOV2UtilsImpl of super::IDefaultExtensionPOV2Utils<ContractState> {
-        fn burn_inflation_fee(ref self: ContractState, pool_id: felt252, asset: ContractAddress, is_legacy: bool) {
-            let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-
-            // burn inflation fee
-            let asset = IERC20Dispatcher { contract_address: asset };
-            transfer_asset(
-                asset.contract_address, get_caller_address(), get_contract_address(), INFLATION_FEE, is_legacy
-            );
-            assert(asset.approve(singleton.contract_address, INFLATION_FEE), 'approve-failed');
-            singleton
-                .modify_position(
-                    ModifyPositionParams {
-                        pool_id,
-                        collateral_asset: asset.contract_address,
-                        debt_asset: Zeroable::zero(),
-                        user: contract_address_const::<'ZERO'>(),
-                        collateral: Amount {
-                            amount_type: AmountType::Delta,
-                            denomination: AmountDenomination::Assets,
-                            value: i257_new(INFLATION_FEE, false),
-                        },
-                        debt: Default::default(),
-                        data: ArrayTrait::new().span()
-                    }
-                );
-        }
-
-        fn migrate_pool(
-            ref self: ContractState,
-            pool_id: felt252,
-            name: felt252,
-            v_token_configs: Span<(felt252, felt252, ContractAddress, ContractAddress)>,
-            interest_rate_configs: Span<(ContractAddress, InterestRateConfig)>,
-            pragma_oracle_configs: Span<(ContractAddress, OracleConfig)>,
-            liquidation_configs: Span<(ContractAddress, ContractAddress, LiquidationConfig)>,
-            pairs: Span<(ContractAddress, ContractAddress, Pair)>,
-            debt_caps: Span<(ContractAddress, ContractAddress, u256)>,
-            shutdown_ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
-            shutdown_config: ShutdownConfig,
-            fee_config: FeeConfig,
-            owner: ContractAddress
-        ) {
-            assert(get_caller_address() == self.migrator.read(), 'caller-not-migrator');
-
-            self.pool_names.write(pool_id, name);
-            self.owner.write(pool_id, owner);
-
-            let mut interest_rate_configs = interest_rate_configs;
-            while !interest_rate_configs
-                .is_empty() {
-                    let (asset, interest_rate_config) = *interest_rate_configs.pop_front().unwrap();
-                    self.interest_rate_model.interest_rate_configs.write((pool_id, asset), interest_rate_config);
-                    self
-                        .emit(
-                            interest_rate_model_component::SetInterestRateConfig {
-                                pool_id, asset, interest_rate_config
-                            }
-                        );
-                };
-
-            let mut pragma_oracle_configs = pragma_oracle_configs;
-            while !pragma_oracle_configs
-                .is_empty() {
-                    let (asset, oracle_config) = *pragma_oracle_configs.pop_front().unwrap();
-                    self.pragma_oracle.oracle_configs.write((pool_id, asset), oracle_config);
-                    self.emit(pragma_oracle_component::SetOracleConfig { pool_id, asset, oracle_config });
-                };
-
-            let mut liquidation_configs = liquidation_configs;
-            while !liquidation_configs
-                .is_empty() {
-                    let (collateral_asset, debt_asset, liquidation_config) = *liquidation_configs.pop_front().unwrap();
-                    self
-                        .position_hooks
-                        .liquidation_configs
-                        .write((pool_id, collateral_asset, debt_asset), liquidation_config);
-                    self
-                        .emit(
-                            position_hooks_component::SetLiquidationConfig {
-                                pool_id, collateral_asset, debt_asset, liquidation_config
-                            }
-                        );
-                };
-
-            let mut pairs = pairs;
-            while !pairs
-                .is_empty() {
-                    let (collateral_asset, debt_asset, pair) = *pairs.pop_front().unwrap();
-                    self.position_hooks.pairs.write((pool_id, collateral_asset, debt_asset), pair);
-                };
-
-            let mut debt_caps = debt_caps;
-            while !debt_caps
-                .is_empty() {
-                    let (collateral_asset, debt_asset, debt_cap) = *debt_caps.pop_front().unwrap();
-                    self.position_hooks.debt_caps.write((pool_id, collateral_asset, debt_asset), debt_cap);
-                    self.emit(position_hooks_component::SetDebtCap { pool_id, collateral_asset, debt_asset, debt_cap });
-                };
-
-            let mut shutdown_ltv_configs = shutdown_ltv_configs;
-            while !shutdown_ltv_configs
-                .is_empty() {
-                    let (collateral_asset, debt_asset, shutdown_ltv_config) = *shutdown_ltv_configs
-                        .pop_front()
-                        .unwrap();
-                    self
-                        .position_hooks
-                        .shutdown_ltv_configs
-                        .write((pool_id, collateral_asset, debt_asset), shutdown_ltv_config);
-                    self
-                        .emit(
-                            position_hooks_component::SetShutdownLTVConfig {
-                                pool_id, collateral_asset, debt_asset, shutdown_ltv_config
-                            }
-                        );
-                };
-
-            self.position_hooks.shutdown_configs.write(pool_id, shutdown_config);
-            self.emit(position_hooks_component::SetShutdownConfig { pool_id, shutdown_config });
-
-            self.fee_model.fee_configs.write(pool_id, fee_config);
-            self.emit(fee_model_component::SetFeeConfig { pool_id, fee_config });
-
-            // do last to ensure that the configs are set when reentering the contract during vToken deployment
-            let mut v_token_configs = v_token_configs;
-            while !v_token_configs
-                .is_empty() {
-                    let (v_token_name, v_token_symbol, collateral_asset, v_token_v1) = *v_token_configs
-                        .pop_front()
-                        .unwrap();
-                    let (v_token, _) = (deploy_syscall(
-                        self.v_token_v2_class_hash.read().try_into().unwrap(),
-                        0,
-                        array![
-                            v_token_name.into(),
-                            v_token_symbol.into(),
-                            18,
-                            pool_id,
-                            get_contract_address().into(),
-                            collateral_asset.into(),
-                            v_token_v1.into()
-                        ]
-                            .span(),
-                        false
-                    ))
-                        .unwrap();
-
-                    self.tokenization.v_token_for_collateral_asset.write((pool_id, collateral_asset), v_token);
-                    self.tokenization.collateral_asset_for_v_token.write((pool_id, v_token), collateral_asset);
-
-                    ISingletonV2Dispatcher { contract_address: self.singleton.read() }
-                        .modify_delegation(pool_id, v_token, true);
-
-                    self.emit(tokenization_component::CreateVToken { v_token, pool_id, collateral_asset });
-                };
         }
     }
 }

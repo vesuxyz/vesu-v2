@@ -8,8 +8,9 @@ mod TestTransferPosition {
         data_model::{
             UnsignedAmount, Amount, AmountDenomination, AmountType, ModifyPositionParams, TransferPositionParams
         },
-        singleton::ISingletonDispatcherTrait, extension::default_extension_po::{IDefaultExtensionDispatcherTrait},
-        v_token::{IVTokenDispatcher, IVTokenDispatcherTrait}, test::setup::{setup, TestConfig, LendingTerms},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
+        extension::default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
+        v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait}, test::setup_v2::{setup, TestConfig, LendingTerms},
     };
 
     #[test]

@@ -7,7 +7,7 @@ mod TestVToken {
     };
     use starknet::{ContractAddress, get_contract_address, get_caller_address, deploy_syscall, contract_address_const};
     use vesu::{
-        extension::default_extension_po::IDefaultExtensionDispatcherTrait,
+        extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait,
         units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS},
         data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination, ModifyPositionParams},
         math::pow_10,
@@ -18,8 +18,8 @@ mod TestVToken {
         },
         vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
         v_token::{IVTokenDispatcher, IVTokenDispatcherTrait, IERC4626Dispatcher, IERC4626DispatcherTrait, VToken},
-        test::setup::{deploy_contract, deploy_asset, setup, TestConfig, LendingTerms, deploy_with_args},
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+        test::setup_v2::{deploy_contract, deploy_asset, setup, TestConfig, LendingTerms, deploy_with_args},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
     };
 
     fn deploy_v_token() -> ContractAddress {

@@ -4,16 +4,16 @@ mod TestInterestRateModel {
     use starknet::{get_block_timestamp};
     use vesu::{
         units::{SCALE, PERCENT, FRACTION, YEAR_IN_SECONDS, DAY_IN_SECONDS}, math::{pow_scale},
-        common::{calculate_utilization, calculate_debt, calculate_nominal_debt}, singleton::AssetConfig,
+        common::{calculate_utilization, calculate_debt, calculate_nominal_debt},
         extension::{
-            default_extension_po::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait},
+            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
             components::interest_rate_model::{
                 interest_rate_model_component::calculate_interest_rate, InterestRateConfig, InterestRateConfigPacking
             }
         },
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait, AssetConfig},
         data_model::{ModifyPositionParams, Amount, AmountType, AmountDenomination},
-        test::setup::{setup, TestConfig, LendingTerms}
+        test::setup_v2::{setup, TestConfig, LendingTerms}
     };
 
     fn interest_rate_config() -> InterestRateConfig {

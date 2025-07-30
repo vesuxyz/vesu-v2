@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestPacking {
     use vesu::{
-        units::{SCALE, PERCENT}, singleton::{ISingletonDispatcherTrait}, data_model::{AssetConfig},
+        units::{SCALE, PERCENT}, singleton_v2::{ISingletonV2DispatcherTrait}, data_model::{AssetConfig},
         packing::{AssetConfigPacking},
     };
 
