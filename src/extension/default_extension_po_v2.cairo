@@ -242,22 +242,19 @@ mod DefaultExtensionPOV2 {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetAssetParameter {
-        #[key]
-        pool_id: felt252,
-        #[key]
-        asset: ContractAddress,
-        #[key]
-        parameter: felt252,
-        value: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SetPoolOwner {
         #[key]
         pool_id: felt252,
         #[key]
         owner: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct SetShutdownModeAgent {
+        #[key]
+        pool_id: felt252,
+        #[key]
+        agent: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -273,8 +270,8 @@ mod DefaultExtensionPOV2 {
         PragmaOracleEvents: pragma_oracle_component::Event,
         FeeModelEvents: fee_model_component::Event,
         TokenizationEvents: tokenization_component::Event,
-        SetAssetParameter: SetAssetParameter,
         SetPoolOwner: SetPoolOwner,
+        SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
     }
 
@@ -844,6 +841,7 @@ mod DefaultExtensionPOV2 {
         fn set_shutdown_mode_agent(ref self: ContractState, pool_id: felt252, shutdown_mode_agent: ContractAddress) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.shutdown_mode_agent.write(pool_id, shutdown_mode_agent);
+            self.emit(SetShutdownModeAgent { pool_id, agent: shutdown_mode_agent });
         }
 
         /// Sets the shutdown mode for a given pool and overwrites the inferred shutdown mode
@@ -1010,7 +1008,7 @@ mod DefaultExtensionPOV2 {
         }
 
         /// Modify position callback. Called by the Singleton contract before updating the position.
-        /// See `before_modify_position` in `position_hooks.cairo`.
+        /// Note: Collateral and debt deltas are supplied by the user and not checked in the Singleton
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// * `collateral` - amount of collateral to be set/added/removed

@@ -58,8 +58,8 @@ pub fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u
     if rate_accumulator == 0 {
         return 0;
     }
-    let scaled_nominal_debt = WideMul::<u256>::wide_mul(nominal_debt * rate_accumulator, asset_scale);
-    let (debt, remainder) = integer::u512_safe_div_rem_by_u256(scaled_nominal_debt, SCALE.try_into().unwrap());
+    let scaled_debt = WideMul::<u256>::wide_mul(nominal_debt * rate_accumulator, asset_scale);
+    let (debt, remainder) = integer::u512_safe_div_rem_by_u256(scaled_debt, SCALE.try_into().unwrap());
     assert!(debt.limb2 == 0 && debt.limb3 == 0, "debt-overflow");
     let mut debt = u256 { low: debt.limb0, high: debt.limb1 };
     debt = if (remainder != 0 && round_up) {
