@@ -36,6 +36,7 @@ pub mod VToken {
         DefaultConfig, ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait, ERC20Component,
         ERC20HooksEmptyImpl,
     };
+    use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::event::EventEmitter;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
@@ -136,11 +137,17 @@ pub mod VToken {
     /// * The amount of assets that can be withdrawn [asset scale]
     pub fn calculate_withdrawable_assets(asset_config: AssetConfig, total_debt: u256) -> u256 {
         let scale = asset_config.scale;
-        let utilization = total_debt * SCALE / (asset_config.reserve + total_debt);
+        let utilization = u256_mul_div(total_debt, SCALE, asset_config.reserve + total_debt, Rounding::Floor);
         if utilization > asset_config.max_utilization {
             return 0;
         }
-        (asset_config.reserve + total_debt) - (total_debt * ((SCALE * scale) / asset_config.max_utilization)) / scale
+        (asset_config.reserve + total_debt)
+            - u256_mul_div(
+                total_debt,
+                (u256_mul_div(SCALE, scale, asset_config.max_utilization, Rounding::Floor)),
+                scale,
+                Rounding::Floor,
+            )
     }
 
     #[abi(embed_v0)]

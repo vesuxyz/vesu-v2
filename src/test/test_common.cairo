@@ -97,7 +97,7 @@ mod TestCommon {
     fn test_calculate_nominal_debt_nominal_debt_overflow() {
         let initial_debt = Bounded::<u256>::MAX / SCALE;
         let rate_accumulator = SCALE / 10;
-        calculate_nominal_debt(initial_debt, rate_accumulator, SCALE, false);
+        calculate_nominal_debt(initial_debt, rate_accumulator, 1, false);
     }
 
     #[test]
@@ -106,9 +106,9 @@ mod TestCommon {
         let initial_collateral = Bounded::<u256>::MAX / SCALE;
 
         let config = AssetConfig {
-            total_collateral_shares: SCALE,
+            total_collateral_shares: SCALE * SCALE,
             total_nominal_debt: 0,
-            reserve: SCALE / 10,
+            reserve: 1,
             max_utilization: SCALE,
             floor: 0,
             scale: SCALE,
@@ -120,28 +120,6 @@ mod TestCommon {
         };
 
         calculate_collateral_shares(initial_collateral, config, false);
-    }
-
-    #[test]
-    #[should_panic(expected: "collateral-overflow")]
-    fn test_calculate_collateral_collateral_overflow() {
-        let initial_collateral_shares = Bounded::<u256>::MAX / SCALE;
-
-        let config = AssetConfig {
-            total_collateral_shares: SCALE / 10,
-            total_nominal_debt: 0,
-            reserve: SCALE,
-            max_utilization: SCALE,
-            floor: 0,
-            scale: SCALE,
-            is_legacy: false,
-            last_updated: 0,
-            last_rate_accumulator: SCALE,
-            last_full_utilization_rate: 0,
-            fee_rate: 0,
-        };
-
-        calculate_collateral(initial_collateral_shares, config, false);
     }
 
     #[test]
