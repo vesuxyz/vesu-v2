@@ -10,57 +10,59 @@
 /// See [the documentation](https://docs.openzeppelin.com/contracts-cairo/0.8.1/guides/erc20-supply)
 /// for examples.
 #[starknet::component]
-mod ERC20Component {
-    use integer::BoundedInt;
-    use starknet::ContractAddress;
-    use starknet::get_caller_address;
+pub mod ERC20Component {
+    use core::num::traits::{Bounded, Zero};
+    use starknet::storage::{
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
+    use starknet::{ContractAddress, get_caller_address};
     use vesu::vendor::erc20 as interface;
 
     #[storage]
-    struct Storage {
-        ERC20_name: felt252,
-        ERC20_symbol: felt252,
-        ERC20_decimals: u8,
-        ERC20_total_supply: u256,
-        ERC20_balances: LegacyMap<ContractAddress, u256>,
-        ERC20_allowances: LegacyMap<(ContractAddress, ContractAddress), u256>,
+    pub struct Storage {
+        pub ERC20_name: felt252,
+        pub ERC20_symbol: felt252,
+        pub ERC20_decimals: u8,
+        pub ERC20_total_supply: u256,
+        pub ERC20_balances: Map<ContractAddress, u256>,
+        pub ERC20_allowances: Map<(ContractAddress, ContractAddress), u256>,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         Transfer: Transfer,
         Approval: Approval,
     }
 
     /// Emitted when tokens are moved from address `from` to address `to`.
     #[derive(Drop, starknet::Event)]
-    struct Transfer {
+    pub struct Transfer {
         #[key]
         from: ContractAddress,
         #[key]
         to: ContractAddress,
-        value: u256
+        value: u256,
     }
 
     /// Emitted when the allowance of a `spender` for an `owner` is set by a call
     /// to `approve`. `value` is the new allowance.
     #[derive(Drop, starknet::Event)]
-    struct Approval {
+    pub struct Approval {
         #[key]
         owner: ContractAddress,
         #[key]
         spender: ContractAddress,
-        value: u256
+        value: u256,
     }
 
-    mod Errors {
-        const APPROVE_FROM_ZERO: felt252 = 'ERC20: approve from 0';
-        const APPROVE_TO_ZERO: felt252 = 'ERC20: approve to 0';
-        const TRANSFER_FROM_ZERO: felt252 = 'ERC20: transfer from 0';
-        const TRANSFER_TO_ZERO: felt252 = 'ERC20: transfer to 0';
-        const BURN_FROM_ZERO: felt252 = 'ERC20: burn from 0';
-        const MINT_TO_ZERO: felt252 = 'ERC20: mint to 0';
+    pub mod Errors {
+        pub const APPROVE_FROM_ZERO: felt252 = 'ERC20: approve from 0';
+        pub const APPROVE_TO_ZERO: felt252 = 'ERC20: approve to 0';
+        pub const TRANSFER_FROM_ZERO: felt252 = 'ERC20: transfer from 0';
+        pub const TRANSFER_TO_ZERO: felt252 = 'ERC20: transfer to 0';
+        pub const BURN_FROM_ZERO: felt252 = 'ERC20: burn from 0';
+        pub const MINT_TO_ZERO: felt252 = 'ERC20: mint to 0';
     }
 
     //
@@ -113,7 +115,7 @@ mod ERC20Component {
         ///
         /// Emits a `Transfer` event.
         fn transfer_from(
-            ref self: ComponentState<TContractState>, sender: ContractAddress, recipient: ContractAddress, amount: u256
+            ref self: ComponentState<TContractState>, sender: ContractAddress, recipient: ContractAddress, amount: u256,
         ) -> bool {
             let caller = get_caller_address();
             self._spend_allowance(sender, caller, amount);
@@ -137,7 +139,7 @@ mod ERC20Component {
 
     #[embeddable_as(ERC20MetadataImpl)]
     impl ERC20Metadata<
-        TContractState, +HasComponent<TContractState>
+        TContractState, +HasComponent<TContractState>,
     > of interface::IERC20Metadata<ComponentState<TContractState>> {
         /// Returns the name of the token.
         fn name(self: @ComponentState<TContractState>) -> felt252 {
@@ -157,7 +159,7 @@ mod ERC20Component {
 
     #[embeddable_as(SafeAllowanceImpl)]
     impl SafeAllowance<
-        TContractState, +HasComponent<TContractState>
+        TContractState, +HasComponent<TContractState>,
     > of interface::ISafeAllowance<ComponentState<TContractState>> {
         /// Increases the allowance granted from the caller to `spender` by `added_value`.
         ///
@@ -167,7 +169,7 @@ mod ERC20Component {
         ///
         /// Emits an `Approval` event indicating the updated allowance.
         fn increase_allowance(
-            ref self: ComponentState<TContractState>, spender: ContractAddress, added_value: u256
+            ref self: ComponentState<TContractState>, spender: ContractAddress, added_value: u256,
         ) -> bool {
             self._increase_allowance(spender, added_value)
         }
@@ -181,7 +183,7 @@ mod ERC20Component {
         ///
         /// Emits an `Approval` event indicating the updated allowance.
         fn decrease_allowance(
-            ref self: ComponentState<TContractState>, spender: ContractAddress, subtracted_value: u256
+            ref self: ComponentState<TContractState>, spender: ContractAddress, subtracted_value: u256,
         ) -> bool {
             self._decrease_allowance(spender, subtracted_value)
         }
@@ -190,7 +192,7 @@ mod ERC20Component {
     /// Adds camelCase support for `IERC20`.
     #[embeddable_as(ERC20CamelOnlyImpl)]
     impl ERC20CamelOnly<
-        TContractState, +HasComponent<TContractState>
+        TContractState, +HasComponent<TContractState>,
     > of interface::IERC20CamelOnly<ComponentState<TContractState>> {
         fn totalSupply(self: @ComponentState<TContractState>) -> u256 {
             self.total_supply()
@@ -201,7 +203,7 @@ mod ERC20Component {
         }
 
         fn transferFrom(
-            ref self: ComponentState<TContractState>, sender: ContractAddress, recipient: ContractAddress, amount: u256
+            ref self: ComponentState<TContractState>, sender: ContractAddress, recipient: ContractAddress, amount: u256,
         ) -> bool {
             self.transfer_from(sender, recipient, amount)
         }
@@ -210,16 +212,16 @@ mod ERC20Component {
     /// Adds camelCase support for `ISafeAllowance`.
     #[embeddable_as(SafeAllowanceCamelImpl)]
     impl SafeAllowanceCamel<
-        TContractState, +HasComponent<TContractState>
+        TContractState, +HasComponent<TContractState>,
     > of interface::ISafeAllowanceCamel<ComponentState<TContractState>> {
         fn increaseAllowance(
-            ref self: ComponentState<TContractState>, spender: ContractAddress, addedValue: u256
+            ref self: ComponentState<TContractState>, spender: ContractAddress, addedValue: u256,
         ) -> bool {
             self._increase_allowance(spender, addedValue)
         }
 
         fn decreaseAllowance(
-            ref self: ComponentState<TContractState>, spender: ContractAddress, subtractedValue: u256
+            ref self: ComponentState<TContractState>, spender: ContractAddress, subtractedValue: u256,
         ) -> bool {
             self._decrease_allowance(spender, subtractedValue)
         }
@@ -230,7 +232,7 @@ mod ERC20Component {
     //
 
     #[generate_trait]
-    impl InternalImpl<TContractState, +HasComponent<TContractState>> of InternalTrait<TContractState> {
+    pub impl InternalImpl<TContractState, +HasComponent<TContractState>> of InternalTrait<TContractState> {
         /// Initializes the contract by setting the token name and symbol.
         /// To prevent reinitialization, this should only be used inside of a contract's constructor.
         fn initializer(ref self: ComponentState<TContractState>, name: felt252, symbol: felt252, decimals: u8) {
@@ -249,7 +251,7 @@ mod ERC20Component {
         ///
         /// Emits a `Transfer` event.
         fn _transfer(
-            ref self: ComponentState<TContractState>, sender: ContractAddress, recipient: ContractAddress, amount: u256
+            ref self: ComponentState<TContractState>, sender: ContractAddress, recipient: ContractAddress, amount: u256,
         ) {
             assert(!sender.is_zero(), Errors::TRANSFER_FROM_ZERO);
             assert(!recipient.is_zero(), Errors::TRANSFER_TO_ZERO);
@@ -268,7 +270,7 @@ mod ERC20Component {
         ///
         /// Emits an `Approval` event.
         fn _approve(
-            ref self: ComponentState<TContractState>, owner: ContractAddress, spender: ContractAddress, amount: u256
+            ref self: ComponentState<TContractState>, owner: ContractAddress, spender: ContractAddress, amount: u256,
         ) {
             assert(!owner.is_zero(), Errors::APPROVE_FROM_ZERO);
             assert(!spender.is_zero(), Errors::APPROVE_TO_ZERO);
@@ -287,7 +289,7 @@ mod ERC20Component {
             assert(!recipient.is_zero(), Errors::MINT_TO_ZERO);
             self.ERC20_total_supply.write(self.ERC20_total_supply.read() + amount);
             self.ERC20_balances.write(recipient, self.ERC20_balances.read(recipient) + amount);
-            self.emit(Transfer { from: Zeroable::zero(), to: recipient, value: amount });
+            self.emit(Transfer { from: Zero::zero(), to: recipient, value: amount });
         }
 
         /// Destroys `amount` of tokens from `account`.
@@ -302,13 +304,13 @@ mod ERC20Component {
             assert(!account.is_zero(), Errors::BURN_FROM_ZERO);
             self.ERC20_total_supply.write(self.ERC20_total_supply.read() - amount);
             self.ERC20_balances.write(account, self.ERC20_balances.read(account) - amount);
-            self.emit(Transfer { from: account, to: Zeroable::zero(), value: amount });
+            self.emit(Transfer { from: account, to: Zero::zero(), value: amount });
         }
 
         /// Internal method for the external `increase_allowance`.
         /// Emits an `Approval` event indicating the updated allowance.
         fn _increase_allowance(
-            ref self: ComponentState<TContractState>, spender: ContractAddress, added_value: u256
+            ref self: ComponentState<TContractState>, spender: ContractAddress, added_value: u256,
         ) -> bool {
             let caller = get_caller_address();
             self._approve(caller, spender, self.ERC20_allowances.read((caller, spender)) + added_value);
@@ -323,7 +325,7 @@ mod ERC20Component {
         ///
         /// Emits an `Approval` event indicating the updated allowance.
         fn _decrease_allowance(
-            ref self: ComponentState<TContractState>, spender: ContractAddress, subtracted_value: u256
+            ref self: ComponentState<TContractState>, spender: ContractAddress, subtracted_value: u256,
         ) -> bool {
             let caller = get_caller_address();
             self._approve(caller, spender, self.ERC20_allowances.read((caller, spender)) - subtracted_value);
@@ -339,10 +341,10 @@ mod ERC20Component {
         ///
         /// Possibly emits an `Approval` event.
         fn _spend_allowance(
-            ref self: ComponentState<TContractState>, owner: ContractAddress, spender: ContractAddress, amount: u256
+            ref self: ComponentState<TContractState>, owner: ContractAddress, spender: ContractAddress, amount: u256,
         ) {
             let current_allowance = self.ERC20_allowances.read((owner, spender));
-            if current_allowance != BoundedInt::max() {
+            if current_allowance != Bounded::<u256>::MAX {
                 self._approve(owner, spender, current_allowance - amount);
             }
         }

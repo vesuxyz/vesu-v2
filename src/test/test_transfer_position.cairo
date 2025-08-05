@@ -1,17 +1,19 @@
 #[cfg(test)]
 mod TestTransferPosition {
-    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget, CheatSpan, prank};
-    use starknet::{contract_address_const, get_block_timestamp};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
-    use vesu::{
-        units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS, PERCENT},
-        data_model::{
-            UnsignedAmount, Amount, AmountDenomination, AmountType, ModifyPositionParams, TransferPositionParams
-        },
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        extension::default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
-        v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait}, test::setup_v2::{setup, TestConfig, LendingTerms},
+    use core::num::traits::Zero;
+    use snforge_std::{
+        CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, start_cheat_caller_address,
+        stop_cheat_caller_address,
     };
+    use starknet::get_block_timestamp;
+    use vesu::data_model::{
+        Amount, AmountDenomination, AmountType, ModifyPositionParams, TransferPositionParams, UnsignedAmount,
+    };
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
+    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
+    use vesu::units::{DAY_IN_SECONDS, PERCENT};
+    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 
     #[test]
     #[should_panic(expected: "same-position")]
@@ -20,7 +22,7 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -33,7 +35,7 @@ mod TestTransferPosition {
                 value: (collateral_to_deposit / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -58,7 +60,7 @@ mod TestTransferPosition {
 
         singleton.transfer_position(params);
 
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -68,7 +70,7 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -81,7 +83,7 @@ mod TestTransferPosition {
                 value: (collateral_to_deposit / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -106,7 +108,7 @@ mod TestTransferPosition {
 
         singleton.transfer_position(params);
 
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -115,7 +117,7 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -128,7 +130,7 @@ mod TestTransferPosition {
                 value: (collateral_to_deposit / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -153,7 +155,7 @@ mod TestTransferPosition {
 
         singleton.transfer_position(params);
 
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -163,7 +165,7 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -176,7 +178,7 @@ mod TestTransferPosition {
                 value: (collateral_to_deposit / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -201,7 +203,7 @@ mod TestTransferPosition {
 
         singleton.transfer_position(params);
 
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -209,8 +211,9 @@ mod TestTransferPosition {
     fn test_transfer_position_debt_target_increase_from() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -224,12 +227,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -242,12 +245,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -264,12 +267,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -293,13 +296,13 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -310,11 +313,11 @@ mod TestTransferPosition {
         let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, .. } = terms;
 
         // set floor to 0
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', 100_000_000_000); // (* price)
         extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', 0);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -328,12 +331,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -346,12 +349,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -363,13 +366,13 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (collateral_to_deposit / 2).into(),
             },
-            debt: Amount { amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: 1.into(), },
-            data: ArrayTrait::new().span()
+            debt: Amount { amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: 1.into() },
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -389,13 +392,13 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -406,11 +409,11 @@ mod TestTransferPosition {
         let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, .. } = terms;
 
         // set floor to 0
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', 100_000_000_000); // (* price)
         extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', 0);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -424,12 +427,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -442,12 +445,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -459,13 +462,13 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (collateral_to_deposit / 2).into(),
             },
-            debt: Amount { amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: 1.into(), },
-            data: ArrayTrait::new().span()
+            debt: Amount { amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: 1.into() },
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -485,13 +488,13 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -500,7 +503,7 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -513,7 +516,7 @@ mod TestTransferPosition {
                 value: (collateral_to_deposit / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -536,7 +539,7 @@ mod TestTransferPosition {
 
         singleton.transfer_position(params);
 
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -558,12 +561,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -580,12 +583,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -598,12 +601,12 @@ mod TestTransferPosition {
                 value: (collateral_to_deposit / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -623,9 +626,9 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -633,8 +636,9 @@ mod TestTransferPosition {
     fn test_transfer_position_debt_no_delegate() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -648,12 +652,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -666,12 +670,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -688,12 +692,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -717,17 +721,18 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
     fn test_transfer_position_debt() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -741,12 +746,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -759,12 +764,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -781,12 +786,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -810,21 +815,22 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
     fn test_transfer_position_debt_target() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -838,12 +844,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -856,12 +862,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -878,12 +884,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -901,9 +907,9 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -911,8 +917,9 @@ mod TestTransferPosition {
     fn test_transfer_position_debt_from_undercollateralized() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -926,12 +933,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -944,12 +951,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -966,12 +973,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -995,13 +1002,13 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -1009,8 +1016,9 @@ mod TestTransferPosition {
     fn test_transfer_position_debt_dusty_debt_balance_from() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -1024,12 +1032,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1042,12 +1050,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1064,12 +1072,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -1093,13 +1101,13 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     // transfer to position less than floor
@@ -1108,8 +1116,9 @@ mod TestTransferPosition {
     fn test_transfer_position_debt_dusty_debt_balance_to() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -1123,12 +1132,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1141,12 +1150,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1163,12 +1172,12 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = TransferPositionParams {
             pool_id,
@@ -1188,13 +1197,13 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -1203,9 +1212,9 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let collateral_shares_to_deposit = singleton
             .calculate_collateral_shares(pool_id, collateral_asset.contract_address, collateral_to_deposit.into());
@@ -1221,19 +1230,19 @@ mod TestTransferPosition {
                 value: collateral_shares_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let params = TransferPositionParams {
             pool_id,
             from_collateral_asset: collateral_asset.contract_address,
             from_debt_asset: debt_asset.contract_address,
             to_collateral_asset: collateral_asset.contract_address,
-            to_debt_asset: Zeroable::zero(),
+            to_debt_asset: Zero::zero(),
             from_user: users.lender,
             to_user: extension.contract_address,
             collateral: UnsignedAmount {
@@ -1249,17 +1258,17 @@ mod TestTransferPosition {
         singleton.transfer_position(params);
 
         let v_token = IERC20Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.balance_of(users.lender) == collateral_shares_to_deposit.into(), 'vToken not minted');
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         v_token.approve(extension.contract_address, collateral_shares_to_deposit);
 
         let params = TransferPositionParams {
             pool_id,
             from_collateral_asset: collateral_asset.contract_address,
-            from_debt_asset: Zeroable::zero(),
+            from_debt_asset: Zero::zero(),
             to_collateral_asset: collateral_asset.contract_address,
             to_debt_asset: debt_asset.contract_address,
             from_user: extension.contract_address,
@@ -1275,8 +1284,8 @@ mod TestTransferPosition {
         };
 
         // ensure that get_contract_caller is the extension when calling modify_delegation in before_transfer_position
-        stop_prank(CheatTarget::One(singleton.contract_address));
-        prank(CheatTarget::One(singleton.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        stop_cheat_caller_address(singleton.contract_address);
+        cheat_caller_address(singleton.contract_address, users.lender, CheatSpan::TargetCalls(1));
 
         singleton.transfer_position(params);
 
@@ -1289,7 +1298,7 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let collateral_shares_to_deposit = singleton
             .calculate_collateral_shares(pool_id, collateral_asset.contract_address, collateral_to_deposit.into());
@@ -1297,7 +1306,7 @@ mod TestTransferPosition {
         let params = ModifyPositionParams {
             pool_id,
             collateral_asset: collateral_asset.contract_address,
-            debt_asset: Zeroable::zero(),
+            debt_asset: Zero::zero(),
             user: users.lender,
             collateral: Amount {
                 amount_type: AmountType::Delta,
@@ -1305,7 +1314,7 @@ mod TestTransferPosition {
                 value: collateral_shares_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1314,8 +1323,8 @@ mod TestTransferPosition {
             pool_id,
             from_collateral_asset: collateral_asset.contract_address,
             to_collateral_asset: collateral_asset.contract_address,
-            from_debt_asset: Zeroable::zero(),
-            to_debt_asset: Zeroable::zero(),
+            from_debt_asset: Zero::zero(),
+            to_debt_asset: Zero::zero(),
             from_user: users.lender,
             to_user: extension.contract_address,
             collateral: UnsignedAmount {
@@ -1331,19 +1340,19 @@ mod TestTransferPosition {
         singleton.transfer_position(params);
 
         let v_token = IERC20Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.balance_of(users.lender) == collateral_shares_to_deposit.into(), 'vToken not minted');
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         v_token.approve(extension.contract_address, collateral_shares_to_deposit);
 
         let params = TransferPositionParams {
             pool_id,
             from_collateral_asset: collateral_asset.contract_address,
-            from_debt_asset: Zeroable::zero(),
+            from_debt_asset: Zero::zero(),
             to_collateral_asset: collateral_asset.contract_address,
-            to_debt_asset: Zeroable::zero(),
+            to_debt_asset: Zero::zero(),
             from_user: extension.contract_address,
             to_user: users.lender,
             collateral: UnsignedAmount {
@@ -1357,8 +1366,8 @@ mod TestTransferPosition {
         };
 
         // ensure that get_contract_caller is the extension when calling modify_delegation in before_transfer_position
-        stop_prank(CheatTarget::One(singleton.contract_address));
-        prank(CheatTarget::One(singleton.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        stop_cheat_caller_address(singleton.contract_address);
+        cheat_caller_address(singleton.contract_address, users.lender, CheatSpan::TargetCalls(1));
 
         singleton.transfer_position(params);
 
@@ -1371,7 +1380,7 @@ mod TestTransferPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
 
         let collateral_shares_to_deposit = singleton
             .calculate_collateral_shares(pool_id, collateral_asset.contract_address, collateral_to_deposit.into());
@@ -1387,7 +1396,7 @@ mod TestTransferPosition {
                 value: collateral_shares_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
         singleton.modify_position(params);
@@ -1397,7 +1406,7 @@ mod TestTransferPosition {
             from_collateral_asset: collateral_asset.contract_address,
             from_debt_asset: debt_asset.contract_address,
             to_collateral_asset: collateral_asset.contract_address,
-            to_debt_asset: Zeroable::zero(),
+            to_debt_asset: Zero::zero(),
             from_user: users.lender,
             to_user: users.lender,
             collateral: UnsignedAmount {
@@ -1413,14 +1422,14 @@ mod TestTransferPosition {
         singleton.transfer_position(params);
 
         let v_token = IERC20Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.balance_of(users.lender) == 0, 'vToken not minted');
 
         let params = TransferPositionParams {
             pool_id,
             from_collateral_asset: collateral_asset.contract_address,
-            from_debt_asset: Zeroable::zero(),
+            from_debt_asset: Zero::zero(),
             to_collateral_asset: collateral_asset.contract_address,
             to_debt_asset: debt_asset.contract_address,
             from_user: users.lender,
@@ -1442,12 +1451,13 @@ mod TestTransferPosition {
     fn test_transfer_position_fee_shares() {
         let (singleton, extension, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, .. } =
-            terms;
+        let LendingTerms {
+            liquidity_to_deposit, liquidity_to_deposit_third, collateral_to_deposit, debt_to_draw, ..,
+        } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // add liquidity
         let params = ModifyPositionParams {
@@ -1461,12 +1471,12 @@ mod TestTransferPosition {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1479,12 +1489,12 @@ mod TestTransferPosition {
                 value: (liquidity_to_deposit_third / 2).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1501,14 +1511,14 @@ mod TestTransferPosition {
                 denomination: AmountDenomination::Assets,
                 value: (debt_to_draw / 2).into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let params = TransferPositionParams {
             pool_id,
@@ -1532,16 +1542,16 @@ mod TestTransferPosition {
             to_data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_delegation(pool_id, users.borrower, true);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.transfer_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
+            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares > 0, "Fee shares should have been minted");
     }
 }

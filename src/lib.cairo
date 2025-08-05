@@ -1,62 +1,58 @@
-mod common;
-mod data_model;
+pub mod common;
+pub mod data_model;
 
-mod math;
-mod packing;
-mod singleton_v2;
-mod units;
+pub mod math;
+pub mod packing;
+pub mod singleton_v2;
+pub mod units;
 
-mod v_token;
-mod v_token_v2;
+pub mod v_token;
+pub mod v_token_v2;
 
-mod extension {
-    mod default_extension_po_v2;
-    mod interface;
-    mod components {
-        mod ekubo_oracle;
-        mod fee_model;
-        mod interest_rate_model;
-        mod position_hooks;
-        mod pragma_oracle;
-        mod tokenization;
+pub mod extension {
+    pub mod default_extension_po_v2;
+    pub mod interface;
+    pub mod components {
+        pub mod fee_model;
+        pub mod interest_rate_model;
+        pub mod position_hooks;
+        pub mod pragma_oracle;
+        pub mod tokenization;
     }
 }
 
-mod vendor {
-    mod ekubo;
-    mod erc20;
-    mod erc20_component;
-    mod ownable;
-    mod pragma;
+pub mod vendor {
+    pub mod erc20;
+    pub mod erc20_component;
+    pub mod ownable;
+    pub mod pragma;
 }
 
-mod test {
-    mod mock_asset;
-    mod mock_ekubo_core;
-    mod mock_ekubo_oracle;
-    mod mock_extension;
-    mod mock_oracle;
-    mod mock_singleton;
-    mod mock_singleton_upgrade;
-    mod setup_v2;
-    mod test_asset_retrieval;
-    mod test_common;
-    mod test_default_extension_po_v2;
-    mod test_fee_model;
-    mod test_flash_loan;
-    mod test_forking;
-    mod test_interest_rate_model;
-    mod test_liquidate_position;
-    mod test_math;
-    mod test_modify_position;
-    mod test_packing;
-    mod test_pool_donations;
-    mod test_pragma_oracle;
-    mod test_reentrancy;
-    mod test_shutdown;
-    mod test_singleton_v2;
-    mod test_transfer_position;
-    mod test_upgrade;
-    mod test_v_token;
-    mod test_v_token_v2;
+pub mod test {
+    pub mod mock_asset;
+    pub mod mock_extension;
+    pub mod mock_oracle;
+    pub mod mock_singleton;
+    pub mod mock_singleton_upgrade;
+    pub mod setup_v2;
+    pub mod test_asset_retrieval;
+    pub mod test_common;
+    pub mod test_default_extension_po_v2;
+    pub mod test_fee_model;
+    pub mod test_flash_loan;
+    pub mod test_forking;
+    pub mod test_interest_rate_model;
+    pub mod test_liquidate_position;
+    pub mod test_math;
+    pub mod test_modify_position;
+    pub mod test_packing;
+    pub mod test_pool_donations;
+    pub mod test_pragma_oracle;
+    pub mod test_reentrancy;
+    pub mod test_shutdown;
+    pub mod test_singleton_v2;
+    pub mod test_transfer_position;
+    pub mod test_upgrade;
+    pub mod test_v_token;
+    pub mod test_v_token_v2;
 }

@@ -1,35 +1,27 @@
 #[cfg(test)]
 mod TestFeeModel {
-    use snforge_std::{
-        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, prank, CheatSpan,
-        replace_bytecode, get_class_hash
+    use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare, replace_bytecode};
+    #[feature("deprecated-starknet-consts")]
+    use starknet::contract_address_const;
+    use vesu::extension::default_extension_po_v2::{
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
-    use starknet::{ContractAddress, contract_address_const, get_contract_address, get_block_timestamp};
-    use vesu::{
-        singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-        extension::{
-            components::interest_rate_model::InterestRateConfig,
-            default_extension_po_v2::{
-                IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, VTokenParams, PragmaOracleParams
-            },
-            interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-        },
-        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams, AssetParams}, units::SCALE,
-        test::test_forking::{IStarkgateERC20Dispatcher, IStarkgateERC20DispatcherTrait},
-        vendor::{
-            erc20::{ERC20ABIDispatcher as IERC20ABIDispatcher, ERC20ABIDispatcherTrait}, pragma::{AggregationMode}
-        },
-    };
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::units::SCALE;
+    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     fn setup(pool_id: felt252) -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher) {
         let singleton = ISingletonV2Dispatcher {
             contract_address: contract_address_const::<
-                0x000d8d6dfec4d33bfb6895de9f3852143a17c6f92fd2a21da3d6924d34870160
-            >()
+                0x000d8d6dfec4d33bfb6895de9f3852143a17c6f92fd2a21da3d6924d34870160,
+            >(),
         };
 
         let extension = IDefaultExtensionPOV2Dispatcher { contract_address: singleton.extension(pool_id) };
-        replace_bytecode(extension.contract_address, declare("DefaultExtensionPOV2").class_hash);
+        replace_bytecode(
+            extension.contract_address, *declare("DefaultExtensionPOV2").unwrap().contract_class().class_hash,
+        )
+            .unwrap();
 
         (singleton, extension)
     }
@@ -41,15 +33,15 @@ mod TestFeeModel {
         let (_, extension) = setup(pool_id);
         let asset = IERC20ABIDispatcher {
             contract_address: contract_address_const::<
-                0x075afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87
-            >()
+                0x075afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87,
+            >(),
         };
 
         let owner = extension.pool_owner(pool_id);
         let fee_recipient = extension.fee_config(pool_id).fee_recipient;
         let initial_balance = asset.balance_of(fee_recipient);
 
-        prank(CheatTarget::One(extension.contract_address), owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
         extension.claim_fees(pool_id, asset.contract_address);
 
         assert!(asset.balance_of(fee_recipient) > initial_balance);
