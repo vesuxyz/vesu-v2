@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestVToken {
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare};
     use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, get_contract_address};
@@ -11,7 +12,7 @@ mod TestVToken {
     use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_asset, deploy_contract, deploy_with_args, setup};
     use vesu::units::SCALE;
     use vesu::v_token::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenDispatcher, IVTokenDispatcherTrait, VToken};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use vesu::vendor::erc20::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait};
 
     fn deploy_v_token() -> ContractAddress {
         let pool_id = '1';
@@ -20,14 +21,16 @@ mod TestVToken {
         let singleton = deploy_contract("MockSingleton");
         let args = array![singleton.into()];
         let extension = deploy_with_args("MockExtension", args);
-        let asset = deploy_asset(get_contract_address());
+        let asset = IERC20MetadataDispatcher {
+            contract_address: deploy_asset(get_contract_address()).contract_address,
+        };
         let name = asset.name();
         let symbol = asset.symbol();
 
         let (v_token, _) = (deploy_syscall(
             v_token_class_hash.try_into().unwrap(),
             0,
-            array!['v' + name, 'v' + symbol, 18, pool_id, extension.into(), asset.contract_address.into()].span(),
+            array!['v' + name, 'v' + symbol, pool_id, extension.into(), asset.contract_address.into()].span(),
             true,
         ))
             .unwrap();

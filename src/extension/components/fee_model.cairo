@@ -9,6 +9,7 @@ pub struct FeeConfig {
 pub mod fee_model_component {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const, get_contract_address};
@@ -17,7 +18,7 @@ pub mod fee_model_component {
     use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::v_token_v2::{IVTokenV2SafeDispatcher, IVTokenV2SafeDispatcherTrait};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+
 
     #[storage]
     pub struct Storage {

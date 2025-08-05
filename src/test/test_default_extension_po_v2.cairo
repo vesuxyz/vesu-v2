@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestDefaultExtensionPOV2 {
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         CheatSpan, DeclareResultTrait, cheat_caller_address, declare, start_cheat_caller_address,
         stop_cheat_caller_address,
@@ -20,7 +21,6 @@ mod TestDefaultExtensionPOV2 {
         COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env, test_interest_rate_config,
     };
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
-    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
     use vesu::vendor::pragma::AggregationMode;
 
     #[test]

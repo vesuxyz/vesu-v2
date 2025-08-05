@@ -23,8 +23,6 @@ pub mod extension {
 
 pub mod vendor {
     pub mod erc20;
-    pub mod erc20_component;
-    pub mod ownable;
     pub mod pragma;
 }
 

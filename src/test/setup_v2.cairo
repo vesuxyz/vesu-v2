@@ -1,4 +1,5 @@
 use core::num::traits::{Bounded, Zero};
+use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
     start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
@@ -17,7 +18,6 @@ use vesu::test::mock_oracle::{
     IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
 };
 use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE, SCALE_128};
-use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 use vesu::vendor::pragma::AggregationMode;
 
 pub const COLL_PRAGMA_KEY: felt252 = 19514442401534788;

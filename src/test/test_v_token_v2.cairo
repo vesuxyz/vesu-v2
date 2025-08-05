@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestVTokenV2 {
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare};
     use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, get_contract_address};
@@ -13,14 +14,16 @@ mod TestVTokenV2 {
     use vesu::v_token_v2::{
         IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenV2Dispatcher, IVTokenV2DispatcherTrait, VTokenV2,
     };
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use vesu::vendor::erc20::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait};
 
     fn deploy_v_token() -> ContractAddress {
         let pool_id = '1';
         let singleton = deploy_contract("MockSingleton");
         let args = array![singleton.into()];
         let extension = deploy_with_args("MockExtension", args);
-        let asset = deploy_asset(get_contract_address());
+        let asset = IERC20MetadataDispatcher {
+            contract_address: deploy_asset(get_contract_address()).contract_address,
+        };
         let name = asset.name();
         let symbol = asset.symbol();
 
@@ -30,7 +33,7 @@ mod TestVTokenV2 {
         let (v_token_v1, _) = (deploy_syscall(
             v_token_v1_class_hash.try_into().unwrap(),
             0,
-            array!['v' + name, 'v' + symbol, 18, pool_id, extension.into(), asset.contract_address.into()].span(),
+            array!['v' + name, 'v' + symbol, pool_id, extension.into(), asset.contract_address.into()].span(),
             true,
         ))
             .unwrap();
@@ -39,13 +42,7 @@ mod TestVTokenV2 {
             v_token_v2_class_hash.try_into().unwrap(),
             0,
             array![
-                'v' + name,
-                'v' + symbol,
-                18,
-                pool_id,
-                extension.into(),
-                asset.contract_address.into(),
-                v_token_v1.into(),
+                'v' + name, 'v' + symbol, pool_id, extension.into(), asset.contract_address.into(), v_token_v1.into(),
             ]
                 .span(),
             true,

@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestModifyPosition {
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
     use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
@@ -13,7 +14,6 @@ mod TestModifyPosition {
     use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
     use vesu::units::{DAY_IN_SECONDS, SCALE, YEAR_IN_SECONDS};
-    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
 
     #[test]
     #[should_panic(expected: "caller-not-singleton")]
