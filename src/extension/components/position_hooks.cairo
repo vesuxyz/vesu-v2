@@ -1,19 +1,11 @@
 use starknet::storage_access::StorePacking;
 use vesu::packing::{SHIFT_128, into_u123, split_128};
-use vesu::units::{DAY_IN_SECONDS, SCALE};
+use vesu::units::SCALE;
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 pub struct ShutdownConfig {
     pub recovery_period: u64, // [seconds]
     pub subscription_period: u64 // [seconds]
-}
-
-pub fn assert_shutdown_config(shutdown_config: ShutdownConfig) {
-    assert!(
-        (shutdown_config.recovery_period == 0 && shutdown_config.subscription_period == 0)
-            || (shutdown_config.subscription_period >= DAY_IN_SECONDS),
-        "invalid-shutdown-config",
-    );
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
@@ -87,7 +79,7 @@ pub mod position_hooks_component {
     use vesu::data_model::{Context, LTVConfig, Position, UnsignedAmount, assert_ltv_config};
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, LiquidationData, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus,
-        assert_liquidation_config, assert_shutdown_config,
+        assert_liquidation_config,
     };
     use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -257,8 +249,6 @@ pub mod position_hooks_component {
         fn set_shutdown_config(
             ref self: ComponentState<TContractState>, pool_id: felt252, shutdown_config: ShutdownConfig,
         ) {
-            assert_shutdown_config(shutdown_config);
-
             self.shutdown_configs.write(pool_id, shutdown_config);
 
             self.emit(SetShutdownConfig { pool_id, shutdown_config });
