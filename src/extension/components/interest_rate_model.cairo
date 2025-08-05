@@ -291,7 +291,6 @@ pub mod interest_rate_model_component {
             // let slope = (((next_full_utilization_rate - target_rate) * UTILIZATION_SCALE) / (UTILIZATION_SCALE -
             // target_utilization));
             // target_rate + ((utilization - target_utilization) * slope) / UTILIZATION_SCALE
-
             target_rate
                 + ((utilization - target_utilization) * (next_full_utilization_rate - target_rate))
                     / (SCALE - target_utilization)

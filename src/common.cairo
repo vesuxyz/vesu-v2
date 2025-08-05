@@ -1,27 +1,11 @@
 use alexandria_math::i257::{I257Trait, i257};
 use core::integer;
 use core::num::traits::{WideMul, Zero};
-use core::traits::DivRem;
+use openzeppelin::utils::math::{Rounding, u256_mul_div};
 use starknet::get_block_timestamp;
 use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, Context, Position};
 use vesu::math::pow_scale;
 use vesu::units::SCALE;
-
-/// Safe division of two u256 numbers
-/// # Arguments
-/// * `numerator` - numerator
-/// * `denominator` - denominator
-/// * `round_up` - round up the result
-/// # Returns
-/// * `quotient` - quotient
-pub fn safe_div(numerator: u256, denominator: u256, round_up: bool) -> u256 {
-    let (quotient, remainder) = DivRem::div_rem(numerator, denominator.try_into().unwrap());
-    if remainder == 0 || !round_up {
-        return quotient;
-    } else {
-        quotient + 1
-    }
-}
 
 /// Calculates the nominal debt for a given amount of debt, the current rate accumulator and debt asset's scale
 /// # Arguments
@@ -34,17 +18,16 @@ pub fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u
     if rate_accumulator == 0 {
         return 0;
     }
-    let rate_accumulator: NonZero<u256> = rate_accumulator.try_into().unwrap();
-    let scaled_debt = WideMul::<u256>::wide_mul(debt * SCALE, SCALE);
-    let (nominal_debt, remainder) = integer::u512_safe_div_rem_by_u256(scaled_debt, rate_accumulator);
+    let (nominal_debt, remainder) = integer::u512_safe_div_rem_by_u256(
+        WideMul::<u256>::wide_mul(debt * SCALE, SCALE), (rate_accumulator * asset_scale).try_into().unwrap(),
+    );
     assert!(nominal_debt.limb2 == 0 && nominal_debt.limb3 == 0, "nominal-debt-overflow");
     let mut nominal_debt = u256 { low: nominal_debt.limb0, high: nominal_debt.limb1 };
-    nominal_debt = if (remainder != 0 && round_up) {
+    if (remainder != 0 && round_up) {
         nominal_debt + 1
     } else {
         nominal_debt
-    };
-    safe_div(nominal_debt, asset_scale, round_up)
+    }
 }
 
 /// Calculates the debt for a given amount of nominal debt, the current rate accumulator and debt asset's scale
@@ -58,16 +41,16 @@ pub fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u
     if rate_accumulator == 0 {
         return 0;
     }
-    let scaled_nominal_debt = WideMul::<u256>::wide_mul(nominal_debt * rate_accumulator, asset_scale);
-    let (debt, remainder) = integer::u512_safe_div_rem_by_u256(scaled_nominal_debt, SCALE.try_into().unwrap());
+    let (debt, remainder) = integer::u512_safe_div_rem_by_u256(
+        WideMul::<u256>::wide_mul(nominal_debt * rate_accumulator, asset_scale), (SCALE * SCALE).try_into().unwrap(),
+    );
     assert!(debt.limb2 == 0 && debt.limb3 == 0, "debt-overflow");
     let mut debt = u256 { low: debt.limb0, high: debt.limb1 };
-    debt = if (remainder != 0 && round_up) {
+    if (remainder != 0 && round_up) {
         debt + 1
     } else {
         debt
-    };
-    safe_div(debt, SCALE, round_up)
+    }
 }
 
 /// Calculates the number of collateral shares (that would be e.g. minted) for a given amount of collateral assets
@@ -80,28 +63,27 @@ pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, 
     let AssetConfig {
         reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, ..,
     } = asset_config;
-    let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, !round_up);
-    let total_assets = reserve + total_debt;
+    let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, !round_up);
     if total_assets == 0 || total_collateral_shares == 0 {
         if scale == 0 {
             return 0;
         }
-        return safe_div(collateral * SCALE, scale, round_up);
-    }
-    let scaled_collateral_mul = WideMul::<u256>::wide_mul(collateral * total_collateral_shares, SCALE);
-    let total_assets: NonZero<u256> = total_assets.try_into().unwrap();
-    let (scaled_collateral_shares, remainder) = integer::u512_safe_div_rem_by_u256(scaled_collateral_mul, total_assets);
-    assert!(scaled_collateral_shares.limb2 == 0 && scaled_collateral_shares.limb3 == 0, "collateral-shares-overflow");
-    let mut scaled_collateral_shares = u256 {
-        low: scaled_collateral_shares.limb0, high: scaled_collateral_shares.limb1,
-    };
-    scaled_collateral_shares =
-        if (remainder != 0 && round_up) {
-            scaled_collateral_shares + 1
+        return u256_mul_div(collateral, SCALE, scale, if round_up {
+            Rounding::Ceil
         } else {
-            scaled_collateral_shares
-        };
-    safe_div(scaled_collateral_shares, SCALE, round_up)
+            Rounding::Floor
+        });
+    }
+    let (collateral_shares, remainder) = integer::u512_safe_div_rem_by_u256(
+        WideMul::<u256>::wide_mul(collateral, total_collateral_shares), total_assets.try_into().unwrap(),
+    );
+    assert!(collateral_shares.limb2 == 0 && collateral_shares.limb3 == 0, "collateral-shares-overflow");
+    let mut collateral_shares = u256 { low: collateral_shares.limb0, high: collateral_shares.limb1 };
+    if (remainder != 0 && round_up) {
+        collateral_shares + 1
+    } else {
+        collateral_shares
+    }
 }
 
 /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral shares
@@ -114,25 +96,25 @@ pub fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, 
     let AssetConfig {
         reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, ..,
     } = asset_config;
-    let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, round_up);
     if total_collateral_shares == 0 {
-        return safe_div(collateral_shares * scale, SCALE, round_up);
+        return u256_mul_div(collateral_shares, scale, SCALE, if round_up {
+            Rounding::Ceil
+        } else {
+            Rounding::Floor
+        });
     }
-    let total_assets = reserve + total_debt;
-
-    let scaled_collateral_mul = WideMul::<u256>::wide_mul(collateral_shares * total_assets, SCALE);
-    let total_collateral_shares: NonZero<u256> = total_collateral_shares.try_into().unwrap();
-    let (scaled_collateral, remainder) = integer::u512_safe_div_rem_by_u256(
-        scaled_collateral_mul, total_collateral_shares,
+    let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, round_up);
+    let (collateral, remainder) = integer::u512_safe_div_rem_by_u256(
+        WideMul::<u256>::wide_mul(collateral_shares * total_assets, SCALE),
+        (total_collateral_shares * SCALE).try_into().unwrap(),
     );
-    assert!(scaled_collateral.limb2 == 0 && scaled_collateral.limb3 == 0, "collateral-overflow");
-    let mut scaled_collateral = u256 { low: scaled_collateral.limb0, high: scaled_collateral.limb1 };
-    scaled_collateral = if (remainder != 0 && round_up) {
-        scaled_collateral + 1
+    assert!(collateral.limb2 == 0 && collateral.limb3 == 0, "collateral-overflow");
+    let mut collateral = u256 { low: collateral.limb0, high: collateral.limb1 };
+    if (remainder != 0 && round_up) {
+        collateral + 1
     } else {
-        scaled_collateral
-    };
-    safe_div(scaled_collateral, SCALE, round_up)
+        collateral
+    }
 }
 
 /// Calculates the current utilization (for an asset) given its total reserve and the total debt outstanding
@@ -146,7 +128,7 @@ pub fn calculate_utilization(total_reserve: u256, total_debt: u256) -> u256 {
     if total_assets == 0 {
         0
     } else {
-        (total_debt * SCALE) / total_assets
+        u256_mul_div(total_debt, SCALE, total_assets, Rounding::Floor)
     }
 }
 
@@ -163,7 +145,9 @@ pub fn calculate_rate_accumulator(last_updated: u64, last_rate_accumulator: u256
     } else {
         get_block_timestamp() - last_updated
     };
-    last_rate_accumulator * pow_scale(SCALE + interest_rate, time_delta.into(), false) / SCALE
+    u256_mul_div(
+        last_rate_accumulator, pow_scale(SCALE + interest_rate, time_delta.into(), false), SCALE, Rounding::Floor,
+    )
 }
 
 /// Calculate fee (collateral) shares that are minted to the fee recipient of the pool
@@ -178,13 +162,16 @@ pub fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u25
     } else {
         0
     };
-    calculate_collateral_shares(
-        calculate_debt(asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, false),
-        asset_config,
-        false,
+    u256_mul_div(
+        calculate_collateral_shares(
+            calculate_debt(asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, false),
+            asset_config,
+            false,
+        ),
+        asset_config.fee_rate,
+        SCALE,
+        Rounding::Floor,
     )
-        * asset_config.fee_rate
-        / SCALE
 }
 
 /// Deconstructs the collateral amount into collateral delta, collateral shares delta and it's sign
@@ -364,12 +351,12 @@ pub fn calculate_collateral_and_debt_value(context: Context, position: Position)
     let collateral_value = if collateral_asset_config.scale == 0 {
         0
     } else {
-        collateral * context.collateral_asset_price.value / collateral_asset_config.scale
+        u256_mul_div(collateral, context.collateral_asset_price.value, collateral_asset_config.scale, Rounding::Floor)
     };
     let debt_value = if debt_asset_config.scale == 0 {
         0
     } else {
-        debt * context.debt_asset_price.value / debt_asset_config.scale
+        u256_mul_div(debt, context.debt_asset_price.value, debt_asset_config.scale, Rounding::Ceil)
     };
 
     (collateral, collateral_value, debt, debt_value)

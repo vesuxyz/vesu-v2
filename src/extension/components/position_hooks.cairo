@@ -73,6 +73,7 @@ impl PairPacking of StorePacking<Pair, felt252> {
 pub mod position_hooks_component {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
+    use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_block_timestamp, get_contract_address};
     use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
@@ -673,12 +674,15 @@ pub mod position_hooks_component {
             };
 
             // apply liquidation factor to debt value to get the collateral amount to release
-            let collateral_value_to_receive = debt_to_repay
-                * context.debt_asset_price.value
-                / context.debt_asset_config.scale;
-            let mut collateral_to_receive = (collateral_value_to_receive * SCALE / context.collateral_asset_price.value)
-                * context.collateral_asset_config.scale
-                / liquidation_factor;
+            let collateral_value_to_receive = u256_mul_div(
+                debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Floor,
+            );
+            let mut collateral_to_receive = u256_mul_div(
+                u256_mul_div(collateral_value_to_receive, SCALE, context.collateral_asset_price.value, Rounding::Floor),
+                context.collateral_asset_config.scale,
+                liquidation_factor,
+                Rounding::Floor,
+            );
 
             // limit collateral to receive by the position's remaining collateral balance
             collateral_to_receive = if collateral_to_receive > collateral {
@@ -688,7 +692,7 @@ pub mod position_hooks_component {
             };
 
             // apply liquidation factor to collateral value
-            collateral_value = collateral_value * liquidation_factor / SCALE;
+            collateral_value = u256_mul_div(collateral_value, liquidation_factor, SCALE, Rounding::Floor);
 
             // check that a min. amount of collateral is released
             assert!(collateral_to_receive >= min_collateral_to_receive, "less-than-min-collateral");
@@ -697,14 +701,21 @@ pub mod position_hooks_component {
             let mut bad_debt = 0;
             if collateral_value < debt_value {
                 // limit the bad debt by the outstanding collateral and debt values (in usd)
-                if collateral_value < debt_to_repay * context.debt_asset_price.value / context.debt_asset_config.scale {
-                    bad_debt = (debt_value - collateral_value)
-                        * context.debt_asset_config.scale
-                        / context.debt_asset_price.value;
+                if collateral_value < u256_mul_div(
+                    debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Floor,
+                ) {
+                    bad_debt =
+                        u256_mul_div(
+                            debt_value - collateral_value,
+                            context.debt_asset_config.scale,
+                            context.debt_asset_price.value,
+                            Rounding::Floor,
+                        );
                     debt_to_repay = debt;
                 } else {
                     // derive the bad debt proportionally to the debt repaid
-                    bad_debt = debt_to_repay * (debt_value - collateral_value) / collateral_value;
+                    bad_debt =
+                        u256_mul_div(debt_to_repay, debt_value - collateral_value, collateral_value, Rounding::Floor);
                     debt_to_repay = debt_to_repay + bad_debt;
                 }
             }
