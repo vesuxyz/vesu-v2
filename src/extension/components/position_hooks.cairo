@@ -553,7 +553,7 @@ pub mod position_hooks_component {
                 let from_shutdown_mode = self.update_shutdown_status(ref from_context);
                 (from_shutdown_mode, from_shutdown_mode)
             } else {
-                // either the collateral asset or the debt asset has to match (also enforced by the singleton)
+                // either the collateral asset or the debt asset has to match
                 assert!(
                     from_context.collateral_asset == to_context.collateral_asset
                         || from_context.debt_asset == to_context.debt_asset,
