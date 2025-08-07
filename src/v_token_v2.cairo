@@ -145,7 +145,7 @@ pub mod VTokenV2 {
     pub fn calculate_withdrawable_assets(asset_config: AssetConfig, total_debt: u256) -> u256 {
         let scale = asset_config.scale;
         let utilization = u256_mul_div(total_debt, SCALE, asset_config.reserve + total_debt, Rounding::Floor);
-        if utilization > asset_config.max_utilization {
+        if utilization >= asset_config.max_utilization {
             return 0;
         }
         (asset_config.reserve + total_debt)
