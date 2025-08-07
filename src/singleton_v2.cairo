@@ -14,8 +14,10 @@ pub trait IFlashLoanReceiver<TContractState> {
 
 #[starknet::interface]
 pub trait ISingletonV2<TContractState> {
+    fn singleton_v1(self: @TContractState) -> ContractAddress;
     fn creator_nonce(self: @TContractState, creator: ContractAddress) -> felt252;
     fn extension(self: @TContractState, pool_id: felt252) -> ContractAddress;
+    fn whitelisted_extension(self: @TContractState, extension: ContractAddress) -> bool;
     fn asset_config_unsafe(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256);
     fn asset_config(ref self: TContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256);
     fn ltv_config(
@@ -154,14 +156,6 @@ pub trait ISingletonV2<TContractState> {
     fn set_extension_whitelist(ref self: TContractState, extension: ContractAddress, approved: bool);
     fn claim_fee_shares(ref self: TContractState, pool_id: felt252, asset: ContractAddress);
 
-    fn migrate_pool(
-        ref self: TContractState,
-        pool_id: felt252,
-        extension: ContractAddress,
-        creator: ContractAddress,
-        asset_configs: Span<(ContractAddress, AssetConfig)>,
-        ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
-    );
     fn migrate_position(
         ref self: TContractState,
         pool_id: felt252,
@@ -431,6 +425,13 @@ mod SingletonV2 {
     }
 
     #[derive(Drop, starknet::Event)]
+    struct SetExtensionWhitelist {
+        #[key]
+        extension: ContractAddress,
+        whitelisted: bool,
+    }
+
+    #[derive(Drop, starknet::Event)]
     struct ContractUpgraded {
         new_implementation: ClassHash,
     }
@@ -455,6 +456,7 @@ mod SingletonV2 {
         SetAssetParameter: SetAssetParameter,
         SetExtension: SetExtension,
         MigratePosition: MigratePosition,
+        SetExtensionWhitelist: SetExtensionWhitelist,
         ContractUpgraded: ContractUpgraded,
     }
 
@@ -596,6 +598,7 @@ mod SingletonV2 {
         }
 
         /// Asserts that the deltas are either both zero or non-zero for collateral and debt
+        /// Note: Shutdown mode constraints on collateral and debt deltas are dependent on these invariants
         fn assert_delta_invariants(
             ref self: ContractState,
             collateral_delta: i257,
@@ -755,6 +758,10 @@ mod SingletonV2 {
                         (pool_id, collateral_asset, debt_asset, Zero::zero()),
                         Position { collateral_shares: INFLATION_FEE_SHARES, nominal_debt: 0 },
                     );
+                assert!(
+                    context.position.collateral_shares >= INFLATION_FEE_SHARES,
+                    "inflation-fee-gt-collateral-shares-delta",
+                );
                 context.position.collateral_shares -= INFLATION_FEE_SHARES;
                 INFLATION_FEE_SHARES
             } else {
@@ -791,7 +798,6 @@ mod SingletonV2 {
             self.assert_floor_invariant(context);
 
             // deduct inflation fee from the collateral shares delta
-            assert!(collateral_shares_delta.abs() >= inflation_fee, "inflation-fee-gt-collateral-shares-delta");
             collateral_shares_delta =
                 I257Trait::new(collateral_shares_delta.abs() - inflation_fee, collateral_shares_delta.is_negative());
 
@@ -803,6 +809,13 @@ mod SingletonV2 {
 
     #[abi(embed_v0)]
     impl SingletonV2Impl of ISingletonV2<ContractState> {
+        /// Returns the address of the singleton v1 contract
+        /// # Returns
+        /// * `singleton_v1` - address of the singleton v1 contract
+        fn singleton_v1(self: @ContractState) -> ContractAddress {
+            self.singleton_v1.read()
+        }
+
         /// Returns the nonce of the creator of the previously created pool
         /// # Arguments
         /// * `creator` - address of the pool creator
@@ -819,6 +832,15 @@ mod SingletonV2 {
         /// * `extension` - address of the extension contract
         fn extension(self: @ContractState, pool_id: felt252) -> ContractAddress {
             self.extensions.read(pool_id)
+        }
+
+        /// Returns whether an extension is whitelisted
+        /// # Arguments
+        /// * `extension` - address of the extension contract
+        /// # Returns
+        /// * `whitelisted` - whether the extension is whitelisted
+        fn whitelisted_extension(self: @ContractState, extension: ContractAddress) -> bool {
+            self.whitelisted_extensions.read(extension)
         }
 
         /// Returns the configuration / state of an asset for a given pool
@@ -1455,11 +1477,11 @@ mod SingletonV2 {
             let extension = IExtensionDispatcher { contract_address: self.extensions.read(pool_id) };
 
             let from_context = self.context(pool_id, from_collateral_asset, from_debt_asset, from_user);
-            let from_collateral_asset_fee_shares = from_context.collateral_asset_fee_shares;
-            let from_debt_asset_fee_shares = from_context.debt_asset_fee_shares;
+            let mut from_collateral_asset_fee_shares = from_context.collateral_asset_fee_shares;
+            let mut from_debt_asset_fee_shares = from_context.debt_asset_fee_shares;
             let to_context = self.context(pool_id, to_collateral_asset, to_debt_asset, to_user);
-            let to_collateral_asset_fee_shares = to_context.collateral_asset_fee_shares;
-            let to_debt_asset_fee_shares = to_context.debt_asset_fee_shares;
+            let mut to_collateral_asset_fee_shares = to_context.collateral_asset_fee_shares;
+            let mut to_debt_asset_fee_shares = to_context.debt_asset_fee_shares;
 
             // call before-hook of the extension
             let (collateral, debt) = extension
@@ -1515,6 +1537,9 @@ mod SingletonV2 {
                 self.positions.write((pool_id, to_collateral_asset, to_debt_asset, to_user), to_position);
                 self.asset_configs.write((pool_id, from_collateral_asset), collateral_asset_config);
 
+                from_collateral_asset_fee_shares = collateral_asset_fee_shares;
+                to_collateral_asset_fee_shares = collateral_asset_fee_shares;
+
                 (collateral_delta, collateral_shares_delta)
             } else {
                 assert!(collateral == Default::default(), "collateral-amount-not-zero");
@@ -1537,6 +1562,9 @@ mod SingletonV2 {
                 // store the updated asset configurations
                 self.asset_configs.write((pool_id, from_collateral_asset), from_collateral_asset_config);
                 self.asset_configs.write((pool_id, to_collateral_asset), to_collateral_asset_config);
+
+                from_collateral_asset_fee_shares = _from_collateral_asset_fee_shares;
+                to_collateral_asset_fee_shares = _to_collateral_asset_fee_shares;
 
                 (Zero::zero(), Zero::zero())
             };
@@ -1589,6 +1617,9 @@ mod SingletonV2 {
                 self.positions.write((pool_id, to_collateral_asset, to_debt_asset, to_user), to_position);
                 self.asset_configs.write((pool_id, from_debt_asset), debt_asset_config);
 
+                from_debt_asset_fee_shares = debt_asset_fee_shares;
+                to_debt_asset_fee_shares = debt_asset_fee_shares;
+
                 (debt_delta, nominal_debt_delta)
             } else {
                 assert!(debt == Default::default(), "debt-amount-not-zero");
@@ -1611,6 +1642,9 @@ mod SingletonV2 {
                 // store the updated asset configurations
                 self.asset_configs.write((pool_id, from_debt_asset), from_debt_asset_config);
                 self.asset_configs.write((pool_id, to_debt_asset), to_debt_asset_config);
+
+                from_debt_asset_fee_shares = _from_debt_asset_fee_shares;
+                to_debt_asset_fee_shares = _to_debt_asset_fee_shares;
 
                 (Zero::zero(), Zero::zero())
             };
@@ -1799,7 +1833,8 @@ mod SingletonV2 {
             self.emit(Donate { pool_id, asset, amount });
         }
 
-        /// Retrieves an amount of an asset from the pool's reserve. Can only be called by the pool's extension
+        /// Retrieves an amount of an asset from the pool's reserve. Can only be called by the pool's extension.
+        /// Note: Omits the max_utilization check
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
@@ -1919,6 +1954,7 @@ mod SingletonV2 {
         fn set_extension(ref self: ContractState, pool_id: felt252, extension: ContractAddress) {
             assert!(get_caller_address() == self.extensions.read(pool_id), "caller-not-extension");
             assert!(extension != Zero::zero(), "extension-not-set");
+            assert!(!self.lock.read(), "set-extension-reentrancy");
             self._set_extension(pool_id, extension);
         }
 
@@ -1929,6 +1965,7 @@ mod SingletonV2 {
         fn set_extension_whitelist(ref self: ContractState, extension: ContractAddress, approved: bool) {
             self.ownable.assert_only_owner();
             self.whitelisted_extensions.write(extension, approved);
+            self.emit(SetExtensionWhitelist { extension, whitelisted: approved });
         }
 
         /// Attributes the outstanding fee shares to the pool's extension
@@ -1939,45 +1976,6 @@ mod SingletonV2 {
             let (asset_config, fee_shares) = self.asset_config(pool_id, asset);
             self.attribute_fee_shares(pool_id, self.extensions.read(pool_id), asset, fee_shares);
             self.asset_configs.write((pool_id, asset), asset_config);
-        }
-
-        /// Migrates a pool from SingletonV1 to SingletonV2
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `extension` - address of the new extension contract
-        /// * `creator` - address of the creator
-        /// * `asset_configs` - asset configurations
-        fn migrate_pool(
-            ref self: ContractState,
-            pool_id: felt252,
-            extension: ContractAddress,
-            creator: ContractAddress,
-            asset_configs: Span<(ContractAddress, AssetConfig)>,
-            ltv_configs: Span<(ContractAddress, ContractAddress, LTVConfig)>,
-        ) {
-            assert!(self.migrator.read() == get_caller_address(), "caller-not-migrator");
-            assert!(_is_v1_pool(pool_id), "not-v1-pool");
-
-            self.extensions.write(pool_id, extension);
-            self.emit(SetExtension { pool_id, extension });
-
-            self.creator_nonce.write(creator, self.creator_nonce.read(creator) + 1);
-
-            let mut asset_configs = asset_configs;
-            while !asset_configs.is_empty() {
-                let (asset, asset_config) = *asset_configs.pop_front().unwrap();
-                self.asset_configs.write((pool_id, asset), asset_config);
-                self.emit(SetAssetConfig { pool_id, asset });
-            }
-
-            let mut ltv_configs = ltv_configs;
-            while !ltv_configs.is_empty() {
-                let (collateral_asset, debt_asset, ltv_config) = *ltv_configs.pop_front().unwrap();
-                self.ltv_configs.write((pool_id, collateral_asset, debt_asset), ltv_config);
-                self.emit(SetLTVConfig { pool_id, collateral_asset, debt_asset, ltv_config });
-            }
-
-            self.emit(CreatePool { pool_id, extension, creator });
         }
 
         /// Migrates a position from one address in SingletonV1 to a new address in SingletonV2
