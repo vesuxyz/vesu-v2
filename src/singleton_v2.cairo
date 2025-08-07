@@ -1494,6 +1494,9 @@ mod SingletonV2 {
                 let (collateral_asset_config, collateral_asset_fee_shares) = self
                     .asset_config_unsafe(pool_id, from_collateral_asset);
 
+                from_collateral_asset_fee_shares = collateral_asset_fee_shares;
+                to_collateral_asset_fee_shares = collateral_asset_fee_shares;
+
                 // attribute the fee shares to the extension
                 self
                     .attribute_fee_shares(
@@ -1549,14 +1552,17 @@ mod SingletonV2 {
                 let (to_collateral_asset_config, _to_collateral_asset_fee_shares) = self
                     .asset_config_unsafe(pool_id, to_collateral_asset);
 
+                from_collateral_asset_fee_shares = _from_collateral_asset_fee_shares;
+                to_collateral_asset_fee_shares = _to_collateral_asset_fee_shares;
+
                 // attribute the fee shares to the extension
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, from_collateral_asset, _from_collateral_asset_fee_shares,
+                        pool_id, extension.contract_address, from_collateral_asset, from_collateral_asset_fee_shares,
                     );
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, to_collateral_asset, _to_collateral_asset_fee_shares,
+                        pool_id, extension.contract_address, to_collateral_asset, to_collateral_asset_fee_shares,
                     );
 
                 // store the updated asset configurations
@@ -1571,6 +1577,9 @@ mod SingletonV2 {
 
             let (debt_delta, nominal_debt_delta) = if (from_debt_asset == to_debt_asset) {
                 let (debt_asset_config, debt_asset_fee_shares) = self.asset_config_unsafe(pool_id, from_debt_asset);
+
+                from_debt_asset_fee_shares = debt_asset_fee_shares;
+                to_debt_asset_fee_shares = debt_asset_fee_shares;
 
                 // attribute the fee shares to the extension
                 self.attribute_fee_shares(pool_id, extension.contract_address, from_debt_asset, debt_asset_fee_shares);
@@ -1629,15 +1638,15 @@ mod SingletonV2 {
                 let (to_debt_asset_config, _to_debt_asset_fee_shares) = self
                     .asset_config_unsafe(pool_id, to_debt_asset);
 
+                from_debt_asset_fee_shares = _from_debt_asset_fee_shares;
+                to_debt_asset_fee_shares = _to_debt_asset_fee_shares;
+
                 // attribute the fee shares to the extension
                 self
                     .attribute_fee_shares(
-                        pool_id, extension.contract_address, from_debt_asset, _from_debt_asset_fee_shares,
+                        pool_id, extension.contract_address, from_debt_asset, from_debt_asset_fee_shares,
                     );
-                self
-                    .attribute_fee_shares(
-                        pool_id, extension.contract_address, to_debt_asset, _to_debt_asset_fee_shares,
-                    );
+                self.attribute_fee_shares(pool_id, extension.contract_address, to_debt_asset, to_debt_asset_fee_shares);
 
                 // store the updated asset configurations
                 self.asset_configs.write((pool_id, from_debt_asset), from_debt_asset_config);
