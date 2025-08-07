@@ -33,8 +33,9 @@ mod TestUpgrade {
         let extension_v1_class_hash = get_class_hash(extension.contract_address);
         let extension_v2_class_hash = *declare("DefaultExtensionPOV2").unwrap().contract_class().class_hash;
 
-        let pool_ids = array![0x4dc4f0ca6ea4961e4c8373265bfd5317678f4fe374d76f3fd7135f57763bf28// 0x3de03fafe6120a3d21dc77e101de62e165b2cdfe84d12540853bd962b970f99,
-        // 0x52fb52363939c3aa848f8f4ac28f0a51379f8d1b971d8444de25fbd77d8f161,
+        let pool_ids = array![
+            0x4dc4f0ca6ea4961e4c8373265bfd5317678f4fe374d76f3fd7135f57763bf28 // 0x3de03fafe6120a3d21dc77e101de62e165b2cdfe84d12540853bd962b970f99,
+            // 0x52fb52363939c3aa848f8f4ac28f0a51379f8d1b971d8444de25fbd77d8f161,
         // 0x2e06b705191dbe90a3fbaad18bb005587548048b725116bff3104ca501673c1,
         // 0x6febb313566c48e30614ddab092856a9ab35b80f359868ca69b2649ca5d148d,
         // 0x59ae5a41c9ae05eae8d136ad3d7dc48e5a0947c10942b00091aeb7f42efabb7,
