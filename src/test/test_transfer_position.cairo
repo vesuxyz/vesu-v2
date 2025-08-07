@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestTransferPosition {
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{
         CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, start_cheat_caller_address,
         stop_cheat_caller_address,
@@ -13,7 +14,6 @@ mod TestTransferPosition {
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
     use vesu::units::{DAY_IN_SECONDS, PERCENT};
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 
     #[test]
     #[should_panic(expected: "same-position")]

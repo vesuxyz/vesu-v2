@@ -1,19 +1,11 @@
 use starknet::storage_access::StorePacking;
 use vesu::packing::{SHIFT_128, into_u123, split_128};
-use vesu::units::{DAY_IN_SECONDS, SCALE};
+use vesu::units::SCALE;
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 pub struct ShutdownConfig {
     pub recovery_period: u64, // [seconds]
     pub subscription_period: u64 // [seconds]
-}
-
-pub fn assert_shutdown_config(shutdown_config: ShutdownConfig) {
-    assert!(
-        (shutdown_config.recovery_period == 0 && shutdown_config.subscription_period == 0)
-            || (shutdown_config.subscription_period >= DAY_IN_SECONDS),
-        "invalid-shutdown-config",
-    );
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
@@ -81,13 +73,14 @@ impl PairPacking of StorePacking<Pair, felt252> {
 pub mod position_hooks_component {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
+    use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_block_timestamp, get_contract_address};
     use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
     use vesu::data_model::{Context, LTVConfig, Position, UnsignedAmount, assert_ltv_config};
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, LiquidationData, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus,
-        assert_liquidation_config, assert_shutdown_config,
+        assert_liquidation_config,
     };
     use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -257,8 +250,6 @@ pub mod position_hooks_component {
         fn set_shutdown_config(
             ref self: ComponentState<TContractState>, pool_id: felt252, shutdown_config: ShutdownConfig,
         ) {
-            assert_shutdown_config(shutdown_config);
-
             self.shutdown_configs.write(pool_id, shutdown_config);
 
             self.emit(SetShutdownConfig { pool_id, shutdown_config });
@@ -562,7 +553,7 @@ pub mod position_hooks_component {
                 let from_shutdown_mode = self.update_shutdown_status(ref from_context);
                 (from_shutdown_mode, from_shutdown_mode)
             } else {
-                // either the collateral asset or the debt asset has to match (also enforced by the singleton)
+                // either the collateral asset or the debt asset has to match
                 assert!(
                     from_context.collateral_asset == to_context.collateral_asset
                         || from_context.debt_asset == to_context.debt_asset,
@@ -683,12 +674,15 @@ pub mod position_hooks_component {
             };
 
             // apply liquidation factor to debt value to get the collateral amount to release
-            let collateral_value_to_receive = debt_to_repay
-                * context.debt_asset_price.value
-                / context.debt_asset_config.scale;
-            let mut collateral_to_receive = (collateral_value_to_receive * SCALE / context.collateral_asset_price.value)
-                * context.collateral_asset_config.scale
-                / liquidation_factor;
+            let collateral_value_to_receive = u256_mul_div(
+                debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Floor,
+            );
+            let mut collateral_to_receive = u256_mul_div(
+                u256_mul_div(collateral_value_to_receive, SCALE, context.collateral_asset_price.value, Rounding::Floor),
+                context.collateral_asset_config.scale,
+                liquidation_factor,
+                Rounding::Floor,
+            );
 
             // limit collateral to receive by the position's remaining collateral balance
             collateral_to_receive = if collateral_to_receive > collateral {
@@ -698,7 +692,7 @@ pub mod position_hooks_component {
             };
 
             // apply liquidation factor to collateral value
-            collateral_value = collateral_value * liquidation_factor / SCALE;
+            collateral_value = u256_mul_div(collateral_value, liquidation_factor, SCALE, Rounding::Floor);
 
             // check that a min. amount of collateral is released
             assert!(collateral_to_receive >= min_collateral_to_receive, "less-than-min-collateral");
@@ -707,14 +701,21 @@ pub mod position_hooks_component {
             let mut bad_debt = 0;
             if collateral_value < debt_value {
                 // limit the bad debt by the outstanding collateral and debt values (in usd)
-                if collateral_value < debt_to_repay * context.debt_asset_price.value / context.debt_asset_config.scale {
-                    bad_debt = (debt_value - collateral_value)
-                        * context.debt_asset_config.scale
-                        / context.debt_asset_price.value;
+                if collateral_value < u256_mul_div(
+                    debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Floor,
+                ) {
+                    bad_debt =
+                        u256_mul_div(
+                            debt_value - collateral_value,
+                            context.debt_asset_config.scale,
+                            context.debt_asset_price.value,
+                            Rounding::Floor,
+                        );
                     debt_to_repay = debt;
                 } else {
                     // derive the bad debt proportionally to the debt repaid
-                    bad_debt = debt_to_repay * (debt_value - collateral_value) / collateral_value;
+                    bad_debt =
+                        u256_mul_div(debt_to_repay, debt_value - collateral_value, collateral_value, Rounding::Floor);
                     debt_to_repay = debt_to_repay + bad_debt;
                 }
             }

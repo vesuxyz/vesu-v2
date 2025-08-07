@@ -96,14 +96,7 @@ pub mod tokenization_component {
             let (v_token, _) = (deploy_syscall(
                 self.v_token_class_hash.read().try_into().unwrap(),
                 0,
-                array![
-                    v_token_name.into(),
-                    v_token_symbol.into(),
-                    18,
-                    pool_id,
-                    get_contract_address().into(),
-                    collateral_asset.into(),
-                ]
+                array![v_token_name, v_token_symbol, pool_id, get_contract_address().into(), collateral_asset.into()]
                     .span(),
                 false,
             ))

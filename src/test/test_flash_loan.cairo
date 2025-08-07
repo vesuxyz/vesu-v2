@@ -35,10 +35,10 @@ mod FlashLoanReceiver {
 
 #[starknet::contract]
 mod MaliciousFlashLoanReceiver {
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const};
     use vesu::singleton_v2::IFlashLoanReceiver;
-    use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     #[storage]
     struct Storage {}
@@ -48,19 +48,19 @@ mod MaliciousFlashLoanReceiver {
         fn on_flash_loan(
             ref self: ContractState, sender: ContractAddress, asset: ContractAddress, amount: u256, data: Span<felt252>,
         ) {
-            ERC20ABIDispatcher { contract_address: asset }.transfer(contract_address_const::<'BadUser'>(), amount);
+            IERC20Dispatcher { contract_address: asset }.transfer(contract_address_const::<'BadUser'>(), amount);
         }
     }
 }
 
 #[cfg(test)]
 mod FlashLoan {
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
     use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
     use vesu::singleton_v2::{IFlashLoanReceiverDispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_contract, setup};
     use vesu::test::test_flash_loan::{IFlashLoanGenericDispatcher, IFlashLoanGenericDispatcherTrait};
-    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
 
     #[test]
     fn test_flash_loan_fractional_pool_amount() {
@@ -206,7 +206,7 @@ mod FlashLoan {
     }
 
     #[test]
-    #[should_panic(expected: ('u256_sub Overflow',))]
+    #[should_panic(expected: ('ERC20: insufficient balance',))]
     fn test_flash_loan_malicious_user() {
         let (singleton, _, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;

@@ -20,6 +20,7 @@ pub fn assert_oracle_config(oracle_config: OracleConfig) {
 #[starknet::component]
 pub mod pragma_oracle_component {
     use core::num::traits::Zero;
+    use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
@@ -110,7 +111,7 @@ pub mod pragma_oracle_component {
 
             // calculate the twap if start_time_offset and time_window are set
             let price = if start_time_offset == 0 || time_window == 0 {
-                response.price.into() * SCALE / pow_10(response.decimals.into())
+                u256_mul_div(response.price.into(), SCALE, pow_10(response.decimals.into()), Rounding::Floor)
             } else {
                 let summary = ISummaryStatsABIDispatcher { contract_address: self.summary_address.read() };
                 let (value, decimals) = summary
@@ -120,7 +121,7 @@ pub mod pragma_oracle_component {
                         time_window,
                         get_block_timestamp() - start_time_offset,
                     );
-                value.into() * SCALE / pow_10(decimals.into())
+                u256_mul_div(value.into(), SCALE, pow_10(decimals.into()), Rounding::Floor)
             };
 
             // ensure that price is not stale and that the number of sources is sufficient

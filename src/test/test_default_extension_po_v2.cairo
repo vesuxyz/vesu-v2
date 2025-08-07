@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestDefaultExtensionPOV2 {
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         CheatSpan, DeclareResultTrait, cheat_caller_address, declare, start_cheat_caller_address,
         stop_cheat_caller_address,
@@ -20,7 +21,6 @@ mod TestDefaultExtensionPOV2 {
         COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env, test_interest_rate_config,
     };
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
-    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
     use vesu::vendor::pragma::AggregationMode;
 
     #[test]
@@ -614,21 +614,6 @@ mod TestDefaultExtensionPOV2 {
         let subscription_period = 12 * DAY_IN_SECONDS;
 
         extension.set_shutdown_config(config.pool_id, ShutdownConfig { recovery_period, subscription_period });
-    }
-
-    #[test]
-    #[should_panic(expected: "invalid-shutdown-config")]
-    fn test_extension_set_shutdown_config_invalid_shutdown_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(extension, config, users.creator, Option::None);
-
-        let recovery_period = 11 * DAY_IN_SECONDS;
-        let subscription_period = DAY_IN_SECONDS / 2;
-
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_config(config.pool_id, ShutdownConfig { recovery_period, subscription_period });
-        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]

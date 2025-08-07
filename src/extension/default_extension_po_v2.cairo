@@ -173,6 +173,8 @@ pub trait IDefaultExtensionPOV2<TContractState> {
 mod DefaultExtensionPOV2 {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
+    use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::event::EventEmitter;
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
@@ -204,8 +206,6 @@ mod DefaultExtensionPOV2 {
     use vesu::extension::interface::IExtension;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::INFLATION_FEE;
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
-    use vesu::vendor::ownable::{IOwnableDispatcher, IOwnableDispatcherTrait};
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);

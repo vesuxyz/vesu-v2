@@ -2,6 +2,7 @@
 mod TestPoolDonation {
     use alexandria_math::i257::I257Trait;
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{
         ContractClass, ContractClassTrait, get_class_hash, start_cheat_block_timestamp_global,
         start_cheat_caller_address, stop_cheat_caller_address,
@@ -12,7 +13,6 @@ mod TestPoolDonation {
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
     use vesu::units::{DAY_IN_SECONDS, PERCENT};
-    use vesu::vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait};
 
     #[test]
     fn test_donate_to_reserve_pool() {

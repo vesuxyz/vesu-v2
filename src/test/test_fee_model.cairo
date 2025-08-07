@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod TestFeeModel {
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare, replace_bytecode};
     #[feature("deprecated-starknet-consts")]
     use starknet::contract_address_const;
@@ -8,7 +9,6 @@ mod TestFeeModel {
     };
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
-    use vesu::vendor::erc20::{ERC20ABIDispatcher as IERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     fn setup(pool_id: felt252) -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher) {
         let singleton = ISingletonV2Dispatcher {
@@ -31,7 +31,7 @@ mod TestFeeModel {
     fn test_claim_fees() {
         let pool_id = 0x6febb313566c48e30614ddab092856a9ab35b80f359868ca69b2649ca5d148d;
         let (_, extension) = setup(pool_id);
-        let asset = IERC20ABIDispatcher {
+        let asset = IERC20Dispatcher {
             contract_address: contract_address_const::<
                 0x075afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87,
             >(),

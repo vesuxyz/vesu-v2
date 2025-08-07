@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestSingletonV2 {
     use core::num::traits::Zero;
+    use openzeppelin::access::ownable::interface::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
     use snforge_std::{
         DeclareResultTrait, declare, start_cheat_block_timestamp_global, start_cheat_caller_address,
         stop_cheat_caller_address,
@@ -16,7 +17,7 @@ mod TestSingletonV2 {
         Env, LendingTerms, TestConfig, create_pool, deploy_asset, deploy_asset_with_decimals, setup, setup_env,
     };
     use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE};
-    use vesu::vendor::ownable::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
+
 
     #[test]
     fn test_pool_id() {

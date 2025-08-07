@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestShutdown {
     use core::num::traits::{Bounded, Zero};
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_block_timestamp_global,
         stop_cheat_caller_address,
@@ -17,7 +18,6 @@ mod TestShutdown {
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_pool};
     use vesu::units::{DAY_IN_SECONDS, SCALE, SCALE_128};
     use vesu::v_token_v2::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenV2Dispatcher, IVTokenV2DispatcherTrait};
-    use vesu::vendor::erc20::ERC20ABIDispatcherTrait;
 
     #[test]
     fn test_set_shutdown_mode_recovery() {
