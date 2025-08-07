@@ -162,16 +162,26 @@ pub fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u25
     } else {
         0
     };
-    u256_mul_div(
-        calculate_collateral_shares(
-            calculate_debt(asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, false),
-            asset_config,
-            false,
-        ),
-        asset_config.fee_rate,
-        SCALE,
-        Rounding::Floor,
-    )
+
+    let AssetConfig {
+        reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, fee_rate, ..,
+    } = asset_config;
+
+    if fee_rate == 0 {
+        return 0;
+    }
+
+    let accrued_interest = calculate_debt(
+        asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, false,
+    );
+    let fee = u256_mul_div(accrued_interest, fee_rate, SCALE, Rounding::Floor);
+    let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, false);
+
+    if total_assets == 0 {
+        return 0;
+    }
+
+    u256_mul_div(fee, total_collateral_shares, total_assets + (accrued_interest - fee), Rounding::Floor)
 }
 
 /// Deconstructs the collateral amount into collateral delta, collateral shares delta and it's sign

@@ -191,7 +191,7 @@ mod TestCommon {
     #[test]
     fn test_calculate_fee_shares() {
         let asset_scale = 100_000_000;
-        let asset_config = AssetConfig {
+        let mut asset_config = AssetConfig {
             total_collateral_shares: SCALE,
             total_nominal_debt: SCALE,
             reserve: asset_scale,
@@ -206,8 +206,10 @@ mod TestCommon {
         };
         assert!(calculate_fee_shares(asset_config, SCALE) == 0, "Fee shares should be 0");
         let fee_shares = calculate_fee_shares(asset_config, SCALE + SCALE);
+        asset_config.total_collateral_shares += fee_shares;
+        asset_config.last_rate_accumulator = SCALE + SCALE;
         assert!(
-            calculate_collateral(fee_shares, asset_config, false) == asset_scale / 10,
+            calculate_collateral(fee_shares, asset_config, false) == asset_scale / 10 - 1,
             "Fee shares should be 10% of the reserve",
         );
     }
