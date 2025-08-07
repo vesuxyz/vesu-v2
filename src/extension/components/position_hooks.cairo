@@ -702,7 +702,7 @@ pub mod position_hooks_component {
             if collateral_value < debt_value {
                 // limit the bad debt by the outstanding collateral and debt values (in usd)
                 if collateral_value < u256_mul_div(
-                    debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Floor,
+                    debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Ceil,
                 ) {
                     bad_debt =
                         u256_mul_div(
@@ -715,7 +715,7 @@ pub mod position_hooks_component {
                 } else {
                     // derive the bad debt proportionally to the debt repaid
                     bad_debt =
-                        u256_mul_div(debt_to_repay, debt_value - collateral_value, collateral_value, Rounding::Floor);
+                        u256_mul_div(debt_to_repay, debt_value - collateral_value, collateral_value, Rounding::Ceil);
                     debt_to_repay = debt_to_repay + bad_debt;
                 }
             }
