@@ -651,6 +651,8 @@ mod SingletonV2 {
                 return;
             }
 
+            self.migrated_positions.write((pool_id, collateral_asset, debt_asset, from), true);
+
             let (positionV1, _, _) = ISingletonV2Dispatcher { contract_address: self.singleton_v1.read() }
                 .position(pool_id, collateral_asset, debt_asset, from);
             let positionV2 = self.positions.read((pool_id, collateral_asset, debt_asset, to));
@@ -663,7 +665,6 @@ mod SingletonV2 {
                         nominal_debt: positionV1.nominal_debt + positionV2.nominal_debt,
                     },
                 );
-            self.migrated_positions.write((pool_id, collateral_asset, debt_asset, from), true);
 
             self
                 .emit(
