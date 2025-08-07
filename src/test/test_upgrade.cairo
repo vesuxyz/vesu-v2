@@ -28,10 +28,10 @@ mod TestUpgrade {
         let (singleton, extension) = setup(pool_id);
 
         let owner = IOwnableDispatcher { contract_address: singleton.contract_address }.owner();
+        let singleton_v1_class_hash = get_class_hash(singleton.contract_address);
+        let singleton_v2_class_hash = *declare("SingletonV2").unwrap().contract_class().class_hash;
         let extension_v1_class_hash = get_class_hash(extension.contract_address);
         let extension_v2_class_hash = *declare("DefaultExtensionPOV2").unwrap().contract_class().class_hash;
-
-        start_cheat_caller_address(extension.contract_address, owner);
 
         let pool_ids = array![
             0x4dc4f0ca6ea4961e4c8373265bfd5317678f4fe374d76f3fd7135f57763bf28 // 0x3de03fafe6120a3d21dc77e101de62e165b2cdfe84d12540853bd962b970f99,
@@ -61,6 +61,115 @@ mod TestUpgrade {
             contract_address_const::<0x2019e47a0bc54ea6b4853c6123ffc8158ea3ae2af4166928b0de6e89f06de6c>(),
             contract_address_const::<0x498edfaf50ca5855666a700c25dd629d577eb9afccdf3b5977aec79aee55ada>(),
         ];
+
+        let users = array![
+            [
+                contract_address_const::<0x0000ca90c16bae26ef5bccf692401618c18b47ad3250ef10c804111da5eaebbc>(),
+                contract_address_const::<0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7>(),
+                contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+            ],
+            [
+                contract_address_const::<0x0007e17ab90d2abf29b1a2b418567067d7f1ce49602feb29ac11901e35fb965e>(),
+                contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>(),
+                contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+            ],
+            [
+                contract_address_const::<0x0011d341c6e841426448ff39aa443a6dbb428914e05ba2259463c18308b86233>(),
+                contract_address_const::<0x0057912720381af14b0e5c87aa4718ed5e527eab60b3801ebf702ab09139e38b>(),
+                contract_address_const::<0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7>(),
+            ],
+            [
+                contract_address_const::<0x0013c4989c2e1317a8380c9bb8e2f6c978a325fd9cad3346eebcf7d9fcd032bb>(),
+                contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>(),
+                contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+            ],
+            [
+                contract_address_const::<0x0040859b1e46605a971537d20687e04c01b782f5878709ab308a0edef84bf551>(),
+                contract_address_const::<0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7>(),
+                contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>(),
+            ],
+            [
+                contract_address_const::<0x00474be27117d9f436591266e7ad2ed84e04c086824a322b46364e7b7305f66a>(),
+                contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>(),
+                contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+            ],
+            [
+                contract_address_const::<0x004b39b8c5038b7740fcd63341d89df4d1880b5e4ee7479858ea85ded39af76f>(),
+                contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>(),
+                contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+            ],
+            [
+                contract_address_const::<0x0051e7e265f8973c867997df832f4e12a1eb1ef0e4cf6b22c5c3ecb412113718>(),
+                contract_address_const::<0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7>(),
+                contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+            ],
+            [
+                contract_address_const::<0x0055741fd3ec832f7b9500e24a885b8729f213357be4a8e209c4bca1f3b909ae>(),
+                contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+                contract_address_const::<0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7>(),
+            ],
+            [
+                contract_address_const::<0x006068a9adb468aca6f9d52971e2f0d96f25383afe37441f6b72a8d5f3631689>(),
+                contract_address_const::<0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac>(),
+                contract_address_const::<0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d>(),
+            ],
+        ];
+
+        start_cheat_caller_address(singleton.contract_address, owner);
+
+        let mut i = 0;
+        while i < pool_ids.len() {
+            let pool_id = *pool_ids.at(i);
+
+            singleton.upgrade(singleton_v1_class_hash);
+            let extension = singleton.extension(pool_id);
+            let creator_nonce = singleton.creator_nonce(extension);
+            singleton.upgrade(singleton_v2_class_hash);
+            assert!(extension == singleton.extension(pool_id));
+            assert!(creator_nonce == singleton.creator_nonce(extension));
+
+            let assets_copy = assets.clone();
+            let mut j = 0;
+            while j < assets_copy.len() {
+                let collateral_asset = *assets_copy.at(j);
+
+                singleton.upgrade(singleton_v1_class_hash);
+                let asset_config = singleton.asset_config(pool_id, collateral_asset);
+                singleton.upgrade(singleton_v2_class_hash);
+                assert!(asset_config == singleton.asset_config(pool_id, collateral_asset));
+
+                let assets_copy = assets_copy.clone();
+                let mut k = 0;
+                while k < assets_copy.len() {
+                    let debt_asset = *assets_copy.at(k);
+
+                    singleton.upgrade(singleton_v1_class_hash);
+                    let ltv_config = singleton.ltv_config(pool_id, collateral_asset, debt_asset);
+                    singleton.upgrade(singleton_v2_class_hash);
+                    assert!(ltv_config == singleton.ltv_config(pool_id, collateral_asset, debt_asset));
+
+                    k += 1;
+                }
+
+                j += 1;
+            }
+
+            i += 1;
+        }
+
+        let mut i = 0;
+        while i < users.len() {
+            let [user, collateral_asset, debt_asset] = *users.at(i);
+
+            singleton.upgrade(singleton_v1_class_hash);
+            let position = singleton.position(pool_id, collateral_asset, debt_asset, user);
+            singleton.upgrade(singleton_v2_class_hash);
+            assert!(position == singleton.position(pool_id, collateral_asset, debt_asset, user));
+
+            i += 1;
+        }
+
+        start_cheat_caller_address(extension.contract_address, owner);
 
         let mut i = 0;
         while i < pool_ids.len() {
