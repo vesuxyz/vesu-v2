@@ -31,7 +31,6 @@ pub struct Users {
     pub lender: ContractAddress,
     pub borrower: ContractAddress,
     pub seeder: ContractAddress,
-    pub migrator: ContractAddress,
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -120,14 +119,10 @@ pub fn setup_env(
         lender: contract_address_const::<'lender'>(),
         borrower: contract_address_const::<'borrower'>(),
         seeder: contract_address_const::<'seeder'>(),
-        migrator: contract_address_const::<'migrator'>(),
     };
 
-    let singleton_v1 = deploy_contract("MockSingleton");
     let singleton = ISingletonV2Dispatcher {
-        contract_address: deploy_with_args(
-            "SingletonV2", array![singleton_v1.into(), users.migrator.into(), users.owner.into()],
-        ),
+        contract_address: deploy_with_args("SingletonV2", array![users.owner.into()]),
     };
 
     start_cheat_block_timestamp_global(get_block_timestamp() + 1);

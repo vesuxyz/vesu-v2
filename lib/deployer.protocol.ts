@@ -88,8 +88,6 @@ export class Deployer extends BaseDeployer {
     const [singleton, singletonCalls] = await this.deferContract(
       "SingletonV2",
       CallData.compile({
-        singleton_v1: "0x0",
-        migrator: "0x0",
         owner: this.creator.address,
       }),
     );
@@ -142,7 +140,6 @@ export class Deployer extends BaseDeployer {
       summary_stats_address: pragma.summary_stats!,
       v_token_class_hash: await this.declareCached("VToken"),
       v_token_v2_class_hash: await this.declareCached("VTokenV2"),
-      migrator: "0x0",
       extension_utils_class_hash: await this.declareCached("DefaultExtensionPOV2Utils"),
     });
     const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPOV2", calldataPO);

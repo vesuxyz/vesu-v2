@@ -14,7 +14,6 @@ pub trait IFlashLoanReceiver<TContractState> {
 
 #[starknet::interface]
 pub trait ISingletonV2<TContractState> {
-    fn singleton_v1(self: @TContractState) -> ContractAddress;
     fn creator_nonce(self: @TContractState, creator: ContractAddress) -> felt252;
     fn extension(self: @TContractState, pool_id: felt252) -> ContractAddress;
     fn whitelisted_extension(self: @TContractState, extension: ContractAddress) -> bool;
@@ -155,16 +154,6 @@ pub trait ISingletonV2<TContractState> {
     fn set_extension_whitelist(ref self: TContractState, extension: ContractAddress, approved: bool);
     fn claim_fee_shares(ref self: TContractState, pool_id: felt252, asset: ContractAddress);
 
-    fn migrate_position(
-        ref self: TContractState,
-        pool_id: felt252,
-        collateral_asset: ContractAddress,
-        debt_asset: ContractAddress,
-        from: ContractAddress,
-        to: ContractAddress,
-    );
-    fn set_migrator(ref self: TContractState, migrator: ContractAddress);
-
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
 }
@@ -223,13 +212,6 @@ mod SingletonV2 {
         delegations: Map<(felt252, ContractAddress, ContractAddress), bool>,
         // tracks the reentrancy lock status to prohibit reentrancy when loading the context or the asset config
         lock: bool,
-        // tracks the singleton v1 address
-        singleton_v1: ContractAddress,
-        // tracks the migrator address
-        migrator: ContractAddress,
-        // tracks the migrated positions
-        // (pool_id, collateral_asset, debt_asset, user) -> migrated
-        migrated_positions: Map<(felt252, ContractAddress, ContractAddress, ContractAddress), bool>,
         // tracks the whitelisted extensions
         whitelisted_extensions: Map<ContractAddress, bool>,
         #[substorage(v0)]
@@ -386,22 +368,6 @@ mod SingletonV2 {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct MigratePosition {
-        #[key]
-        pool_id: felt252,
-        #[key]
-        collateral_asset: ContractAddress,
-        #[key]
-        debt_asset: ContractAddress,
-        #[key]
-        from: ContractAddress,
-        #[key]
-        to: ContractAddress,
-        collateral_shares: u256,
-        nominal_debt: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SetExtensionWhitelist {
         #[key]
         extension: ContractAddress,
@@ -431,7 +397,6 @@ mod SingletonV2 {
         SetAssetConfig: SetAssetConfig,
         SetAssetParameter: SetAssetParameter,
         SetExtension: SetExtension,
-        MigratePosition: MigratePosition,
         SetExtensionWhitelist: SetExtensionWhitelist,
         ContractUpgraded: ContractUpgraded,
     }
@@ -442,11 +407,7 @@ mod SingletonV2 {
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState, singleton_v1: ContractAddress, migrator: ContractAddress, owner: ContractAddress,
-    ) {
-        self.singleton_v1.write(singleton_v1);
-        self.migrator.write(migrator);
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
     }
 
@@ -508,21 +469,6 @@ mod SingletonV2 {
         } else {
             assert!(erc20.transfer_from(sender, to, amount), "transfer-from-failed");
         }
-    }
-
-    fn _is_v1_pool(pool_id: felt252) -> bool {
-        pool_id == 0x4dc4f0ca6ea4961e4c8373265bfd5317678f4fe374d76f3fd7135f57763bf28
-            || pool_id == 0x3de03fafe6120a3d21dc77e101de62e165b2cdfe84d12540853bd962b970f99
-            || pool_id == 0x52fb52363939c3aa848f8f4ac28f0a51379f8d1b971d8444de25fbd77d8f161
-            || pool_id == 0x2e06b705191dbe90a3fbaad18bb005587548048b725116bff3104ca501673c1
-            || pool_id == 0x6febb313566c48e30614ddab092856a9ab35b80f359868ca69b2649ca5d148d
-            || pool_id == 0x59ae5a41c9ae05eae8d136ad3d7dc48e5a0947c10942b00091aeb7f42efabb7
-            || pool_id == 0x43f475012ed51ff6967041fcb9bf28672c96541ab161253fc26105f4c3b2afe
-            || pool_id == 0x7bafdbd2939cc3f3526c587cb0092c0d9a93b07b9ced517873f7f6bf6c65563
-            || pool_id == 0x7f135b4df21183991e9ff88380c2686dd8634fd4b09bb2b5b14415ac006fe1d
-            || pool_id == 0x27f2bb7fb0e232befc5aa865ee27ef82839d5fad3e6ec1de598d0fab438cb56
-            || pool_id == 0x5c678347b60b99b72f245399ba27900b5fc126af11f6637c04a193d508dda26
-            || pool_id == 0x2906e07881acceff9e4ae4d9dacbcd4239217e5114001844529176e1f0982ec
     }
 
     #[generate_trait]
@@ -612,48 +558,6 @@ mod SingletonV2 {
 
             // value of the outstanding debt is either zero or above the floor
             assert!(debt_value == 0 || debt_value > context.debt_asset_config.floor, "dusty-debt-balance");
-        }
-
-        /// Migrates a position from SingletonV1 to SingletonV2
-        fn _migrate_position(
-            ref self: ContractState,
-            pool_id: felt252,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            from: ContractAddress,
-            to: ContractAddress,
-        ) {
-            if !_is_v1_pool(pool_id) || self.migrated_positions.read((pool_id, collateral_asset, debt_asset, from)) {
-                return;
-            }
-
-            self.migrated_positions.write((pool_id, collateral_asset, debt_asset, from), true);
-
-            let (positionV1, _, _) = ISingletonV2Dispatcher { contract_address: self.singleton_v1.read() }
-                .position(pool_id, collateral_asset, debt_asset, from);
-            let positionV2 = self.positions.read((pool_id, collateral_asset, debt_asset, to));
-            self
-                .positions
-                .write(
-                    (pool_id, collateral_asset, debt_asset, to),
-                    Position {
-                        collateral_shares: positionV1.collateral_shares + positionV2.collateral_shares,
-                        nominal_debt: positionV1.nominal_debt + positionV2.nominal_debt,
-                    },
-                );
-
-            self
-                .emit(
-                    MigratePosition {
-                        pool_id,
-                        collateral_asset,
-                        debt_asset,
-                        from,
-                        to,
-                        collateral_shares: positionV1.collateral_shares,
-                        nominal_debt: positionV1.nominal_debt,
-                    },
-                );
         }
 
         /// Sets the pool's extension address.
@@ -786,13 +690,6 @@ mod SingletonV2 {
 
     #[abi(embed_v0)]
     impl SingletonV2Impl of ISingletonV2<ContractState> {
-        /// Returns the address of the singleton v1 contract
-        /// # Returns
-        /// * `singleton_v1` - address of the singleton v1 contract
-        fn singleton_v1(self: @ContractState) -> ContractAddress {
-            self.singleton_v1.read()
-        }
-
         /// Returns the nonce of the creator of the previously created pool
         /// # Arguments
         /// * `creator` - address of the pool creator
@@ -1276,14 +1173,7 @@ mod SingletonV2 {
                 debt_asset_fee_shares: debt_asset_fee_shares,
                 max_ltv: self.ltv_configs.read((pool_id, collateral_asset, debt_asset)).max_ltv,
                 user,
-                position: if !_is_v1_pool(pool_id)
-                    || self.migrated_positions.read((pool_id, collateral_asset, debt_asset, user)) {
-                    self.positions.read((pool_id, collateral_asset, debt_asset, user))
-                } else {
-                    let (position, _, _) = ISingletonV2Dispatcher { contract_address: self.singleton_v1.read() }
-                        .position(pool_id, collateral_asset, debt_asset, user);
-                    position
-                },
+                position: self.positions.read((pool_id, collateral_asset, debt_asset, user)),
             };
 
             context
@@ -1306,7 +1196,6 @@ mod SingletonV2 {
         ) -> Context {
             assert!(!self.lock.read(), "context-reentrancy");
             self.lock.write(true);
-            self._migrate_position(pool_id, collateral_asset, debt_asset, user, user);
             let context = self.context_unsafe(pool_id, collateral_asset, debt_asset, user);
             self.lock.write(false);
             context
@@ -1692,33 +1581,6 @@ mod SingletonV2 {
             let (asset_config, fee_shares) = self.asset_config(pool_id, asset);
             self.attribute_fee_shares(pool_id, self.extensions.read(pool_id), asset, fee_shares);
             self.asset_configs.write((pool_id, asset), asset_config);
-        }
-
-        /// Migrates a position from one address in SingletonV1 to a new address in SingletonV2
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `from` - address of the position to migrate
-        /// * `to` - address of the new position
-        fn migrate_position(
-            ref self: ContractState,
-            pool_id: felt252,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            from: ContractAddress,
-            to: ContractAddress,
-        ) {
-            assert!(self.migrator.read() == get_caller_address(), "caller-not-migrator");
-            self._migrate_position(pool_id, collateral_asset, debt_asset, from, to);
-        }
-
-        /// Sets the migrator address
-        /// # Arguments
-        /// * `migrator` - the new migrator address
-        fn set_migrator(ref self: ContractState, migrator: ContractAddress) {
-            assert!(self.migrator.read() == get_caller_address(), "caller-not-migrator");
-            self.migrator.write(migrator);
         }
 
         /// Returns the name of the contract

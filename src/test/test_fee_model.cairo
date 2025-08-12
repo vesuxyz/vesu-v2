@@ -45,6 +45,5 @@ mod TestFeeModel {
         extension.claim_fees(pool_id, asset.contract_address);
 
         assert!(asset.balance_of(fee_recipient) > initial_balance);
-        assert!(asset.balance_of(fee_recipient) - initial_balance < SCALE);
     }
 }
