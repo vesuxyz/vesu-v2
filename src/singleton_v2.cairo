@@ -131,7 +131,7 @@ mod SingletonV2 {
         calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
     };
     use vesu::data_model::{
-        Amount, AmountDenomination, AmountType, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LTVParams,
+        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LTVParams,
         LiquidatePositionParams, ModifyPositionParams, Position, UpdatePositionResponse, assert_asset_config,
         assert_asset_config_exists, assert_ltv_config,
     };
@@ -870,7 +870,7 @@ mod SingletonV2 {
             collateral: Amount,
         ) -> (i257, i257) {
             let context = self.context(pool_id, collateral_asset, debt_asset, user);
-            deconstruct_collateral_amount(collateral, context.position, context.collateral_asset_config)
+            deconstruct_collateral_amount(collateral, context.collateral_asset_config)
         }
 
         /// Deconstructs the debt amount into debt delta, nominal debt delta and it's sign
@@ -893,10 +893,7 @@ mod SingletonV2 {
         ) -> (i257, i257) {
             let context = self.context(pool_id, collateral_asset, debt_asset, user);
             deconstruct_debt_amount(
-                debt,
-                context.position,
-                context.debt_asset_config.last_rate_accumulator,
-                context.debt_asset_config.scale,
+                debt, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale,
             )
         }
 
@@ -1077,15 +1074,9 @@ mod SingletonV2 {
 
             // convert unsigned amounts to signed amounts
             let collateral = Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: I257Trait::new(collateral, true),
+                denomination: AmountDenomination::Assets, value: I257Trait::new(collateral, true),
             };
-            let debt = Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: I257Trait::new(debt, true),
-            };
+            let debt = Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(debt, true) };
 
             // reload context since it might have changed by a reentered call
             let mut context = self.context(pool_id, collateral_asset, debt_asset, user);
