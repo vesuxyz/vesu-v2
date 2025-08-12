@@ -30,8 +30,6 @@ export class EnvAssetParams {
     public price: bigint,
     public isLegacy: boolean,
     public feeRate: bigint,
-    public v_token_name: string,
-    public v_token_symbol: string,
     public address: string | undefined = undefined,
   ) {}
 

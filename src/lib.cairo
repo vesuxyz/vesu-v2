@@ -6,9 +6,6 @@ pub mod packing;
 pub mod singleton_v2;
 pub mod units;
 
-pub mod v_token;
-pub mod v_token_v2;
-
 pub mod extension {
     pub mod default_extension_po_v2;
     pub mod interface;
@@ -17,7 +14,6 @@ pub mod extension {
         pub mod interest_rate_model;
         pub mod position_hooks;
         pub mod pragma_oracle;
-        pub mod tokenization;
     }
 }
 
@@ -38,7 +34,6 @@ pub mod test {
     pub mod test_default_extension_po_v2;
     pub mod test_fee_model;
     pub mod test_flash_loan;
-    pub mod test_forking;
     pub mod test_interest_rate_model;
     pub mod test_liquidate_position;
     pub mod test_math;
@@ -50,6 +45,4 @@ pub mod test {
     pub mod test_shutdown;
     pub mod test_singleton_v2;
     pub mod test_upgrade;
-    pub mod test_v_token;
-    pub mod test_v_token_v2;
 }

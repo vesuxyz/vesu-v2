@@ -7,7 +7,7 @@ mod TestShutdown {
         stop_cheat_caller_address,
     };
     use starknet::get_block_timestamp;
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, UnsignedAmount};
+    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::ShutdownMode;
     use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
@@ -15,7 +15,6 @@ mod TestShutdown {
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_pool};
     use vesu::units::{DAY_IN_SECONDS, SCALE, SCALE_128};
-    use vesu::v_token_v2::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenV2Dispatcher, IVTokenV2DispatcherTrait};
 
     #[test]
     fn test_set_shutdown_mode_recovery() {
@@ -450,18 +449,6 @@ mod TestShutdown {
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
-        };
-        assert(v_token.max_deposit(Zero::zero()) > 0, 'max_deposit neq');
-        assert(v_token.preview_deposit(10000000) > 0, 'preview_deposit neq');
-        assert(v_token.max_mint(Zero::zero()) > 0, 'max_mint neq');
-        assert(v_token.preview_mint(100000000) > 0, 'preview_mint neq');
-        assert(v_token.max_withdraw(users.lender) == 0, 'max_withdraw neq');
-        assert(v_token.preview_withdraw(10000000) == 0, 'preview_withdraw neq');
-        assert(v_token.max_redeem(users.lender) == 0, 'max_redeem neq');
-        assert(v_token.preview_redeem(10000000) == 0, 'preview_redeem neq');
-
         let shutdown_config = extension.shutdown_config(pool_id);
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
@@ -568,18 +555,6 @@ mod TestShutdown {
 
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
-
-        let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
-        };
-        assert(v_token.max_deposit(Zero::zero()) == 0, 'max_deposit neq');
-        assert(v_token.preview_deposit(10000000) == 0, 'preview_deposit neq');
-        assert(v_token.max_mint(Zero::zero()) == 0, 'max_mint neq');
-        assert(v_token.preview_mint(100000000) == 0, 'preview_mint neq');
-        assert(v_token.max_withdraw(users.lender) == 0, 'max_withdraw neq');
-        assert(v_token.preview_withdraw(10000000) == 0, 'preview_withdraw neq');
-        assert(v_token.max_redeem(users.lender) == 0, 'max_redeem neq');
-        assert(v_token.preview_redeem(10000000) == 0, 'preview_redeem neq');
 
         // User 2
 
@@ -1036,24 +1011,6 @@ mod TestShutdown {
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
-
-        let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
-        };
-
-        start_cheat_caller_address(v_token.contract_address, extension.contract_address);
-        IVTokenV2Dispatcher { contract_address: v_token.contract_address }
-            .mint_v_token(users.borrower, 1000_0000000000);
-        stop_cheat_caller_address(v_token.contract_address);
-
-        assert(v_token.max_deposit(Zero::zero()) == 0, 'max_deposit neq');
-        assert(v_token.preview_deposit(1000_0000000000) == 0, 'preview_deposit neq');
-        assert(v_token.max_mint(Zero::zero()) == 0, 'max_mint neq');
-        assert(v_token.preview_mint(1000_0000000000) == 0, 'preview_mint neq');
-        assert(v_token.max_withdraw(users.borrower) > 0, 'max_withdraw neq');
-        assert(v_token.preview_withdraw(1000_0000000000) > 0, 'preview_withdraw neq');
-        assert(v_token.max_redeem(users.borrower) > 0, 'max_redeem neq');
-        assert(v_token.preview_redeem(1000_0000000000) > 0, 'preview_redeem neq');
 
         let params = ModifyPositionParams {
             pool_id,

@@ -5,12 +5,12 @@ use snforge_std::{
     start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
 };
 #[feature("deprecated-starknet-consts")]
-use starknet::{ClassHash, ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
+use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
 use vesu::data_model::{AssetParams, DebtCapParams, LTVParams};
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::default_extension_po_v2::{
     FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
-    PragmaOracleParams, ShutdownParams, VTokenParams,
+    PragmaOracleParams, ShutdownParams,
 };
 use vesu::math::pow_10;
 use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -50,7 +50,6 @@ pub struct Env {
     pub extension: IDefaultExtensionPOV2Dispatcher,
     pub config: TestConfig,
     pub users: Users,
-    pub v_token_class_hash: ClassHash,
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -142,13 +141,10 @@ pub fn setup_env(
 
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
-    let v_token_class_hash = *declare("VToken").unwrap().contract_class().class_hash;
-
     let args = array![
         singleton.contract_address.into(),
         mock_pragma_oracle.contract_address.into(),
         mock_pragma_summary.contract_address.into(),
-        v_token_class_hash.into(),
     ];
     let extension = IDefaultExtensionPOV2Dispatcher {
         contract_address: deploy_with_args("DefaultExtensionPOV2", args),
@@ -228,7 +224,7 @@ pub fn setup_env(
         pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale,
     };
 
-    Env { singleton, extension, config, users, v_token_class_hash }
+    Env { singleton, extension, config, users }
 }
 
 pub fn test_interest_rate_config() -> InterestRateConfig {
@@ -305,10 +301,6 @@ pub fn create_pool(
         aggregation_mode: AggregationMode::Median(()),
     };
 
-    let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
-    let debt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT' };
-    let third_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Third', v_token_symbol: 'vTHIRD' };
-
     // create ltv config for collateral and borrow assets
     let max_position_ltv_params_0 = LTVParams {
         collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
@@ -359,8 +351,6 @@ pub fn create_pool(
         .span();
 
     let asset_params = array![collateral_asset_params, debt_asset_params, third_asset_params].span();
-    let v_token_params = array![collateral_asset_v_token_params, debt_asset_v_token_params, third_asset_v_token_params]
-        .span();
     let max_position_ltv_params = array![
         max_position_ltv_params_0, max_position_ltv_params_1, max_position_ltv_params_2, max_position_ltv_params_3,
     ]
@@ -382,7 +372,6 @@ pub fn create_pool(
         .create_pool(
             'DefaultExtensionPOV2',
             asset_params,
-            v_token_params,
             max_position_ltv_params,
             interest_rate_configs,
             oracle_params,
@@ -393,18 +382,6 @@ pub fn create_pool(
             creator,
         );
     stop_cheat_caller_address(extension.contract_address);
-
-    let coll_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.collateral_asset.contract_address);
-    let debt_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.debt_asset.contract_address);
-    let third_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.third_asset.contract_address);
-
-    assert!(coll_v_token != Zero::zero(), "vToken not set");
-    assert!(debt_v_token != Zero::zero(), "vToken not set");
-    assert!(third_v_token != Zero::zero(), "vToken not set");
-
-    assert!(extension.collateral_asset_for_v_token(config.pool_id, coll_v_token) != Zero::zero(), "vToken not set");
-    assert!(extension.collateral_asset_for_v_token(config.pool_id, debt_v_token) != Zero::zero(), "vToken not set");
-    assert!(extension.collateral_asset_for_v_token(config.pool_id, third_v_token) != Zero::zero(), "vToken not set");
 
     assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPOV2', "pool name not set");
 }

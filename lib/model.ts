@@ -30,11 +30,6 @@ export interface AssetParams {
   fee_rate: bigint;
 }
 
-export interface VTokenParams {
-  v_token_name: string;
-  v_token_symbol: string;
-}
-
 export interface PragmaOracleParams {
   pragma_key: BigNumberish;
   timeout: bigint;
@@ -99,7 +94,6 @@ export interface FeeParams {
 export interface CreatePoolParams {
   pool_name: string;
   asset_params: AssetParams[];
-  v_token_params: VTokenParams[];
   ltv_params: LTVParams[];
   interest_rate_configs: InterestRateConfig[];
   pragma_oracle_params: PragmaOracleParams[];

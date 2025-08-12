@@ -196,19 +196,9 @@ mod TestUpgrade {
                 extension.upgrade(extension_v1_class_hash);
                 let oracle_config = extension.oracle_config(pool_id, collateral_asset);
                 let interest_rate_config = extension.interest_rate_config(pool_id, collateral_asset);
-                let v_token_for_collateral_asset = extension.v_token_for_collateral_asset(pool_id, collateral_asset);
-                let collateral_asset_for_v_token = extension
-                    .collateral_asset_for_v_token(pool_id, v_token_for_collateral_asset);
                 extension.upgrade(extension_v2_class_hash);
                 assert!(oracle_config == extension.oracle_config(pool_id, collateral_asset));
                 assert!(interest_rate_config == extension.interest_rate_config(pool_id, collateral_asset));
-                assert!(
-                    v_token_for_collateral_asset == extension.v_token_for_collateral_asset(pool_id, collateral_asset),
-                );
-                assert!(
-                    collateral_asset_for_v_token == extension
-                        .collateral_asset_for_v_token(pool_id, v_token_for_collateral_asset),
-                );
 
                 let assets_copy = assets_copy.clone();
                 let mut k = 0;

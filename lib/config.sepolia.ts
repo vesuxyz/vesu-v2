@@ -34,8 +34,6 @@ const env = CONFIG.asset_parameters.map(
       price(asset.token.symbol),
       asset.token.is_legacy,
       BigInt(asset.fee_rate),
-      asset.v_token.v_token_name,
-      asset.v_token.v_token_symbol,
       undefined,
     ),
 );
@@ -69,10 +67,6 @@ export const config: Config = {
           max_utilization: toScale(asset.max_utilization),
           is_legacy: asset.token.is_legacy,
           fee_rate: toScale(asset.fee_rate),
-        })),
-        v_token_params: CONFIG.asset_parameters.map((asset: any) => ({
-          v_token_name: asset.v_token.v_token_name,
-          v_token_symbol: asset.v_token.v_token_symbol,
         })),
         ltv_params: CONFIG.pair_parameters.map((pair: any) => {
           const collateral_asset_index = CONFIG.asset_parameters.findIndex(

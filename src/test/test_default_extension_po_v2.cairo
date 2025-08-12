@@ -13,7 +13,7 @@ mod TestDefaultExtensionPOV2 {
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig, ShutdownMode};
     use vesu::extension::default_extension_po_v2::{
-        FeeParams, IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams, ShutdownParams, VTokenParams,
+        FeeParams, IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams, ShutdownParams,
     };
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait};
@@ -60,7 +60,6 @@ mod TestDefaultExtensionPOV2 {
         let Env { extension, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let asset_params = array![].span();
-        let v_token_params = array![].span();
         let max_position_ltv_params = array![].span();
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
@@ -76,7 +75,6 @@ mod TestDefaultExtensionPOV2 {
             .create_pool(
                 'DefaultExtensionPOV2',
                 asset_params,
-                v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
@@ -104,10 +102,7 @@ mod TestDefaultExtensionPOV2 {
             fee_rate: 0,
         };
 
-        let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
-
         let asset_params = array![collateral_asset_params].span();
-        let v_token_params = array![collateral_asset_v_token_params].span();
         let max_position_ltv_params = array![].span();
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
@@ -127,7 +122,6 @@ mod TestDefaultExtensionPOV2 {
             .create_pool(
                 'DefaultExtensionPOV2',
                 asset_params,
-                v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
@@ -155,10 +149,7 @@ mod TestDefaultExtensionPOV2 {
             fee_rate: 0,
         };
 
-        let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
-
         let asset_params = array![collateral_asset_params].span();
-        let v_token_params = array![collateral_asset_v_token_params].span();
         let max_position_ltv_params = array![].span();
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![].span();
@@ -178,65 +169,6 @@ mod TestDefaultExtensionPOV2 {
             .create_pool(
                 'DefaultExtensionPOV2',
                 asset_params,
-                v_token_params,
-                max_position_ltv_params,
-                interest_rate_configs,
-                oracle_params,
-                liquidation_params,
-                debt_caps_params,
-                shutdown_params,
-                FeeParams { fee_recipient: users.creator },
-                users.creator,
-            );
-        stop_cheat_caller_address(extension.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: "v-token-params-mismatch")]
-    fn test_create_pool_v_token_params_mismatch() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        let collateral_asset_params = AssetParams {
-            asset: config.collateral_asset.contract_address,
-            floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
-            initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
-            max_utilization: SCALE,
-            is_legacy: true,
-            fee_rate: 0,
-        };
-
-        let collateral_asset_oracle_params = PragmaOracleParams {
-            pragma_key: COLL_PRAGMA_KEY,
-            timeout: 0,
-            number_of_sources: 2,
-            start_time_offset: 0,
-            time_window: 0,
-            aggregation_mode: AggregationMode::Median(()),
-        };
-
-        let asset_params = array![collateral_asset_params].span();
-        let v_token_params = array![].span();
-        let max_position_ltv_params = array![].span();
-        let interest_rate_configs = array![test_interest_rate_config()].span();
-        let oracle_params = array![collateral_asset_oracle_params].span();
-        let liquidation_params = array![].span();
-        let debt_caps_params = array![].span();
-        let shutdown_ltv_params = array![].span();
-        let shutdown_params = ShutdownParams {
-            recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
-        };
-
-        start_cheat_caller_address(config.collateral_asset.contract_address, users.creator);
-        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_cheat_caller_address(config.collateral_asset.contract_address);
-
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension
-            .create_pool(
-                'DefaultExtensionPOV2',
-                asset_params,
-                v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
@@ -268,8 +200,6 @@ mod TestDefaultExtensionPOV2 {
             fee_rate: 0,
         };
 
-        let v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
-
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
             max_target_utilization: 85_000,
@@ -290,7 +220,7 @@ mod TestDefaultExtensionPOV2 {
             aggregation_mode: AggregationMode::Median(()),
         };
 
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, interest_rate_config, pragma_oracle_params);
     }
 
     #[test]
@@ -309,8 +239,6 @@ mod TestDefaultExtensionPOV2 {
             is_legacy: false,
             fee_rate: 0,
         };
-
-        let v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
@@ -337,7 +265,7 @@ mod TestDefaultExtensionPOV2 {
         stop_cheat_caller_address(config.collateral_asset.contract_address);
 
         start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, interest_rate_config, pragma_oracle_params);
         stop_cheat_caller_address(extension.contract_address);
     }
 
@@ -359,8 +287,6 @@ mod TestDefaultExtensionPOV2 {
             is_legacy: false,
             fee_rate: 0,
         };
-
-        let v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
@@ -387,7 +313,7 @@ mod TestDefaultExtensionPOV2 {
         stop_cheat_caller_address(asset.contract_address);
 
         start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, interest_rate_config, pragma_oracle_params);
         stop_cheat_caller_address(extension.contract_address);
     }
 
@@ -410,8 +336,6 @@ mod TestDefaultExtensionPOV2 {
             is_legacy: false,
             fee_rate: 0,
         };
-
-        let v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
@@ -438,7 +362,7 @@ mod TestDefaultExtensionPOV2 {
         stop_cheat_caller_address(asset.contract_address);
 
         cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, interest_rate_config, pragma_oracle_params);
         stop_cheat_caller_address(extension.contract_address);
 
         let (asset_config, _) = singleton.asset_config(config.pool_id, config.collateral_asset.contract_address);

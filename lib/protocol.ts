@@ -38,7 +38,6 @@ export class Protocol implements ProtocolContracts {
     const response = await extensionPO.create_pool(
       params.pool_name,
       params.asset_params,
-      params.v_token_params,
       params.ltv_params,
       params.interest_rate_configs,
       params.pragma_oracle_params,

@@ -12,12 +12,11 @@ pub mod fee_model_component {
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     #[feature("deprecated-starknet-consts")]
-    use starknet::{ContractAddress, contract_address_const, get_contract_address};
+    use starknet::{ContractAddress, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, UpdatePositionResponse};
     use vesu::extension::components::fee_model::FeeConfig;
-    use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
-    use vesu::v_token_v2::{IVTokenV2SafeDispatcher, IVTokenV2SafeDispatcherTrait};
 
 
     #[storage]
@@ -68,10 +67,7 @@ pub mod fee_model_component {
 
     #[generate_trait]
     pub impl FeeModelTrait<
-        TContractState,
-        +HasComponent<TContractState>,
-        +IDefaultExtensionCallback<TContractState>,
-        +ITokenizationCallback<TContractState>,
+        TContractState, +HasComponent<TContractState>, +IDefaultExtensionCallback<TContractState>,
     > of Trait<TContractState> {
         /// Sets the fee configuration for a pool
         /// # Arguments
@@ -92,25 +88,8 @@ pub mod fee_model_component {
             let (position, _, _) = ISingletonV2Dispatcher { contract_address: singleton }
                 .position(pool_id, collateral_asset, Zero::zero(), get_contract_address());
 
-            let v_token = IERC20Dispatcher {
-                contract_address: self.get_contract().v_token_for_collateral_asset(pool_id, collateral_asset),
-            };
-
-            let unmigrated = if _is_v1_pool(pool_id) {
-                #[feature("safe_dispatcher")]
-                let response = IVTokenV2SafeDispatcher { contract_address: v_token.contract_address }.v_token_v1();
-                match response {
-                    Result::Ok(v_token_v1) => {
-                        let v_token_v1 = IERC20Dispatcher { contract_address: v_token_v1 };
-                        v_token_v1.total_supply() - v_token_v1.balance_of(contract_address_const::<'0x0'>())
-                    },
-                    Result::Err(_) => 0,
-                }
-            } else {
-                0
-            };
-
-            let amount = position.collateral_shares - (v_token.total_supply() + unmigrated);
+            // TODO: what should i do here?
+            let amount = position.collateral_shares;
 
             let UpdatePositionResponse {
                 collateral_delta, ..,
