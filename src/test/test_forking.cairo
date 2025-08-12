@@ -21,7 +21,7 @@ mod TestForking {
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
     use vesu::data_model::{
-        Amount, AmountDenomination, AmountType, AssetParams, DebtCapParams, LTVParams, LiquidatePositionParams,
+        Amount, AmountDenomination, AssetParams, DebtCapParams, LTVParams, LiquidatePositionParams,
         ModifyPositionParams,
     };
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
@@ -704,11 +704,7 @@ mod TestForking {
             collateral_asset: eth.contract_address,
             debt_asset: usdc.contract_address,
             user: supplier,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: supply_amount_eth.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: supply_amount_eth.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -728,11 +724,7 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: supplier,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: supply_amount_usdc.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: supply_amount_usdc.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -754,16 +746,8 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: borrow_amount_usdc.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: borrow_amount_eth.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: borrow_amount_usdc.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: borrow_amount_eth.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -788,16 +772,8 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: -(borrow_amount_usdc / 10).into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: -(borrow_amount_eth / 10).into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: -(borrow_amount_usdc / 10).into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: -(borrow_amount_eth / 10).into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -814,9 +790,7 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: supplier,
-            collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: -1.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: -1.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -855,11 +829,7 @@ mod TestForking {
             collateral_asset: eth.contract_address,
             debt_asset: usdc.contract_address,
             user: supplier,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: supply_amount_eth.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: supply_amount_eth.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -879,11 +849,7 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: supplier,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: supply_amount_usdc.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: supply_amount_usdc.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -905,16 +871,8 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: borrow_amount_usdc.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: borrow_amount_eth.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: borrow_amount_usdc.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: borrow_amount_eth.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1001,11 +959,7 @@ mod TestForking {
             collateral_asset: eth.contract_address,
             debt_asset: usdc.contract_address,
             user: supplier,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: supply_amount_eth.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: supply_amount_eth.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1025,11 +979,7 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: supplier,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: supply_amount_usdc.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: supply_amount_usdc.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1051,16 +1001,8 @@ mod TestForking {
             collateral_asset: usdc.contract_address,
             debt_asset: eth.contract_address,
             user: borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: borrow_amount_usdc.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: borrow_amount_eth.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: borrow_amount_usdc.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: borrow_amount_eth.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1113,7 +1055,7 @@ mod TestForking {
             debt_asset: eth.contract_address,
             user: borrower,
             collateral: Default::default(),
-            debt: Amount { amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: -(position.nominal_debt).into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1142,7 +1084,7 @@ mod TestForking {
             debt_asset: eth.contract_address,
             user: borrower,
             collateral: Amount {
-                amount_type: AmountType::Target, denomination: AmountDenomination::Native, value: 0.into(),
+                denomination: AmountDenomination::Native, value: -(position.collateral_shares).into(),
             },
             debt: Default::default(),
             data: ArrayTrait::new().span(),

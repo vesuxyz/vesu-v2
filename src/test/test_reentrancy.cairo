@@ -3,7 +3,7 @@ mod TestReentrancy {
     use core::num::traits::Zero;
     use snforge_std::{start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address};
     use starknet::get_block_timestamp;
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetParams, LTVParams, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, AssetParams, LTVParams, ModifyPositionParams};
     use vesu::extension::interface::IExtensionDispatcher;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::setup_v2::{Env, TestConfig, deploy_with_args, setup_env};
@@ -59,9 +59,7 @@ mod TestReentrancy {
             collateral_asset: debt_asset.contract_address,
             debt_asset: Zero::zero(),
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt_scale.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: debt_scale.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
