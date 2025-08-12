@@ -106,7 +106,9 @@ pub trait ISingletonV2<TContractState> {
     );
     fn set_extension(ref self: TContractState, pool_id: felt252, extension: ContractAddress);
     fn set_extension_whitelist(ref self: TContractState, extension: ContractAddress, approved: bool);
-    fn claim_fee_shares(ref self: TContractState, pool_id: felt252, asset: ContractAddress);
+    fn update_fee_shares(ref self: TContractState, pool_id: felt252, asset: ContractAddress);
+    fn claim_fees(ref self: TContractState, pool_id: felt252, asset: ContractAddress);
+    fn get_fees(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> (u256, u256);
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -134,6 +136,9 @@ mod SingletonV2 {
         Amount, AmountDenomination, AmountType, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LTVParams,
         LiquidatePositionParams, ModifyPositionParams, Position, UpdatePositionResponse, assert_asset_config,
         assert_asset_config_exists, assert_ltv_config,
+    };
+    use vesu::extension::default_extension_po_v2::{
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::math::pow_10;
@@ -166,6 +171,10 @@ mod SingletonV2 {
         delegations: Map<(felt252, ContractAddress, ContractAddress), bool>,
         // tracks the whitelisted extensions
         whitelisted_extensions: Map<ContractAddress, bool>,
+        // tracks the number of unclaimed allocated shares (from each asset) that can be claimed by
+        // `fee_recipient`.
+        // asset -> fee shares
+        pub fee_shares: Map<ContractAddress, u256>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
@@ -331,6 +340,15 @@ mod SingletonV2 {
         new_implementation: ClassHash,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct ClaimFees {
+        #[key]
+        pool_id: felt252,
+        asset: ContractAddress,
+        recipient: ContractAddress,
+        amount: u256,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -351,6 +369,7 @@ mod SingletonV2 {
         SetExtension: SetExtension,
         SetExtensionWhitelist: SetExtensionWhitelist,
         ContractUpgraded: ContractUpgraded,
+        ClaimFees: ClaimFees,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -559,12 +578,8 @@ mod SingletonV2 {
             asset: ContractAddress,
             fee_shares: u256,
         ) {
-            if fee_shares == 0 {
-                return;
-            }
-            let mut position = self.positions.read((pool_id, asset, Zero::zero(), extension));
-            position.collateral_shares += fee_shares;
-            self.positions.write((pool_id, asset, Zero::zero(), extension), position);
+            let current_fee_shares = self.fee_shares.read(asset);
+            self.fee_shares.write(asset, current_fee_shares + fee_shares);
             self.emit(AccrueFees { pool_id, asset, recipient: extension, fee_shares });
         }
 
@@ -1322,10 +1337,41 @@ mod SingletonV2 {
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
-        fn claim_fee_shares(ref self: ContractState, pool_id: felt252, asset: ContractAddress) {
+        fn update_fee_shares(ref self: ContractState, pool_id: felt252, asset: ContractAddress) {
             let (asset_config, fee_shares) = self.asset_config(pool_id, asset);
             self.attribute_fee_shares(pool_id, self.extensions.read(pool_id), asset, fee_shares);
             self.asset_configs.write((pool_id, asset), asset_config);
+        }
+
+        /// Claims the fees accrued in the extension for a given asset in a pool and sends them to the fee recipient
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// * `asset` - address of the asset
+        fn claim_fees(ref self: ContractState, pool_id: felt252, asset: ContractAddress) {
+            self.update_fee_shares(pool_id, asset);
+            let (_fee_shares, amount) = self.get_fees(pool_id, asset);
+
+            // Zero out the stored fee shares for the asset.
+            self.fee_shares.write(asset, 0);
+
+            let fee_config = IDefaultExtensionPOV2Dispatcher { contract_address: self.extensions.read(pool_id) }
+                .fee_config(pool_id);
+
+            IERC20Dispatcher { contract_address: asset }.transfer(fee_config.fee_recipient, amount);
+
+            self.emit(ClaimFees { pool_id, asset, recipient: fee_config.fee_recipient, amount });
+        }
+
+        /// Returns the number of stored unclaimed fee shares and the corresponding amount.
+        fn get_fees(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> (u256, u256) {
+            // Read the unclaimed fee shares for the asset, ignoring the the new fee shares.
+            let (asset_config, _new_fee_shares) = self.asset_config(pool_id, asset);
+            let total_fee_shares = self.fee_shares.read(asset);
+
+            // Convert shares to amount (round down).
+            let amount = calculate_collateral(total_fee_shares, asset_config, false);
+
+            (total_fee_shares, amount)
         }
 
         /// Returns the name of the contract
