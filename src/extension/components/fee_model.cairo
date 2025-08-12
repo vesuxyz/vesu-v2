@@ -88,7 +88,6 @@ pub mod fee_model_component {
             let (position, _, _) = ISingletonV2Dispatcher { contract_address: singleton }
                 .position(pool_id, collateral_asset, Zero::zero(), get_contract_address());
 
-            // TODO: what should i do here?
             let amount = position.collateral_shares;
 
             let UpdatePositionResponse {
