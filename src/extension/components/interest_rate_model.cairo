@@ -176,7 +176,7 @@ pub mod interest_rate_model_component {
             assert!(interest_rate_config.max_target_utilization != 0, "interest-rate-config-not-set");
 
             ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
-                .claim_fee_shares(pool_id, asset);
+                .update_fee_shares(pool_id, asset);
 
             if parameter == 'min_target_utilization' {
                 interest_rate_config.min_target_utilization = value;
