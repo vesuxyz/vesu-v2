@@ -90,9 +90,6 @@ pub trait ISingletonV2<TContractState> {
     );
     fn modify_delegation(ref self: TContractState, pool_id: felt252, delegatee: ContractAddress, delegation: bool);
     fn donate_to_reserve(ref self: TContractState, pool_id: felt252, asset: ContractAddress, amount: u256);
-    fn retrieve_from_reserve(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, receiver: ContractAddress, amount: u256,
-    );
     fn set_asset_config(ref self: TContractState, pool_id: felt252, params: AssetParams);
     fn set_ltv_config(
         ref self: TContractState,
@@ -1189,30 +1186,6 @@ mod SingletonV2 {
             transfer_asset(asset, get_caller_address(), get_contract_address(), amount, asset_config.is_legacy);
 
             self.emit(Donate { pool_id, asset, amount });
-        }
-
-        /// Retrieves an amount of an asset from the pool's reserve. Can only be called by the pool's extension.
-        /// Note: Omits the max_utilization check
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `asset` - address of the asset
-        /// * `receiver` - address of the receiver
-        /// * `amount` - amount to retrieve [asset scale]
-        fn retrieve_from_reserve(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, receiver: ContractAddress, amount: u256,
-        ) {
-            let extension = self.extensions.read(pool_id);
-            assert!(extension == get_caller_address(), "caller-not-extension");
-            let (mut asset_config, fee_shares) = self.asset_config(pool_id, asset);
-            assert_asset_config_exists(asset_config);
-            // attribute the accrued fee shares to the pool's extension
-            self.attribute_fee_shares(pool_id, extension, asset, fee_shares);
-            // retrieve amount from the reserve
-            asset_config.reserve -= amount;
-            self.asset_configs.write((pool_id, asset), asset_config);
-            transfer_asset(asset, get_contract_address(), receiver, amount, asset_config.is_legacy);
-
-            self.emit(RetrieveReserve { pool_id, asset, receiver });
         }
 
         /// Sets the loan-to-value configuration between two assets (pair) in the pool
