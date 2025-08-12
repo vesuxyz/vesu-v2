@@ -34,6 +34,7 @@ mod TestModifyPosition {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
 
         let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
@@ -47,8 +48,6 @@ mod TestModifyPosition {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: 0,
-            debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zero::zero(),
             position: position,
@@ -83,6 +82,7 @@ mod TestModifyPosition {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
 
         let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
@@ -96,8 +96,6 @@ mod TestModifyPosition {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: 0,
-            debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zero::zero(),
             position: position,
@@ -867,7 +865,7 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
@@ -877,7 +875,7 @@ mod TestModifyPosition {
 
         singleton.donate_to_reserve(pool_id, collateral_asset.contract_address, collateral_to_deposit / 2);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert(
@@ -900,7 +898,7 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert(
@@ -998,7 +996,7 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert(
@@ -1169,7 +1167,7 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert(asset_config.total_nominal_debt == position.nominal_debt, 'Shares not matching');
@@ -1279,14 +1277,14 @@ mod TestModifyPosition {
         );
 
         // collateral asset reserve has been updated
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(
             asset_config.reserve == initial_singleton_collateral_asset_balance + collateral_to_deposit,
             "Collateral not in reserve",
         );
 
         // debt asset reserve has been updated
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(
             asset_config.reserve == initial_singleton_debt_asset_balance + liquidity_to_deposit - debt_to_draw,
             "Debt not taken from reserve",
@@ -1346,7 +1344,7 @@ mod TestModifyPosition {
         let balance = debt_asset.balance_of(singleton.contract_address);
         assert!(balance >= liquidity_to_deposit - debt_to_draw + debt_to_draw / 2, "Debt asset not transferred");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(
             asset_config.reserve >= liquidity_to_deposit - debt_to_draw + debt_to_draw / 2,
             "Repayed assets not in reserve",
@@ -1367,7 +1365,7 @@ mod TestModifyPosition {
         let balance = collateral_asset.balance_of(singleton.contract_address);
         assert!(balance >= collateral_to_deposit / 2, "Collateral not transferred");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(asset_config.reserve >= collateral_to_deposit / 2, "Withdrawn assets not in reserve");
 
         // fund borrower with debt assets to repay interest
@@ -1398,7 +1396,7 @@ mod TestModifyPosition {
             debt_asset.balance_of(singleton.contract_address) >= liquidity_to_deposit, "Debt asset not transferred",
         );
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(asset_config.reserve >= liquidity_to_deposit, "Repayed assets not in reserve");
 
         let balance = collateral_asset.balance_of(users.borrower);
@@ -1460,7 +1458,7 @@ mod TestModifyPosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, third_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, third_asset.contract_address);
         let total_collateral_shares = asset_config.total_collateral_shares;
 
         let pair = extension.pairs(pool_id, collateral_asset.contract_address, third_asset.contract_address);
@@ -1489,26 +1487,24 @@ mod TestModifyPosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (p, _, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert(p.collateral_shares > 0, 'Fee shares not minted');
+        let (shares, fee_amount) = singleton.get_fees(pool_id, third_asset.contract_address);
+        assert(shares > 0, 'Fee shares not minted');
 
         // fees increase total_collateral_shares
-        let (asset_config, _) = singleton.asset_config(pool_id, third_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, third_asset.contract_address);
         assert(asset_config.total_collateral_shares > total_collateral_shares, 'Shares not increased');
 
         // withdraw fees
-        let (_, collateral, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
         let balance_before = third_asset.balance_of(users.creator);
-        extension.claim_fees(pool_id, third_asset.contract_address);
+        singleton.claim_fees(pool_id, third_asset.contract_address);
         let balance_after = third_asset.balance_of(users.creator);
-        assert(balance_before + collateral == balance_after && balance_before < balance_after, 'Fees not claimed');
+        assert(balance_before < balance_after, 'Fees not claimed');
+        assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
     }
 
     #[test]
     fn test_modify_position_accrue_interest() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _extension, config, users, terms) = setup();
         let TestConfig { pool_id, collateral_asset, third_asset, third_scale, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -1532,9 +1528,7 @@ mod TestModifyPosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (p, _, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
-        let mut collateral_fee_shares_before = p.collateral_shares;
+        let (mut collateral_fee_shares_before, _) = singleton.get_fees(pool_id, third_asset.contract_address);
 
         // Borrow
 
@@ -1558,11 +1552,10 @@ mod TestModifyPosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (p, _, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert(collateral_fee_shares_before == p.collateral_shares, 'no fees shouldve accrued');
+        let (fee_shares, _) = singleton.get_fees(pool_id, third_asset.contract_address);
+        assert(collateral_fee_shares_before == fee_shares, 'no fees shouldve accrued');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, third_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, third_asset.contract_address);
         let total_collateral_shares = asset_config.total_collateral_shares;
 
         start_cheat_block_timestamp_global(get_block_timestamp() + YEAR_IN_SECONDS.try_into().unwrap());
@@ -1583,10 +1576,9 @@ mod TestModifyPosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (p, _, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert(collateral_fee_shares_before < p.collateral_shares, 'fees shouldve accrued');
-        collateral_fee_shares_before = p.collateral_shares;
+        let (fee_shares, _) = singleton.get_fees(pool_id, third_asset.contract_address);
+        assert(collateral_fee_shares_before < fee_shares, 'fees shouldve accrued');
+        collateral_fee_shares_before = fee_shares;
 
         let rate_accumulator = singleton.rate_accumulator(pool_id, third_asset.contract_address);
 
@@ -1620,26 +1612,22 @@ mod TestModifyPosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (p, _, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert(collateral_fee_shares_before == p.collateral_shares, 'fees shouldve accrued');
-
-        let (p, _, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert(p.collateral_shares > 0, 'Fee shares not minted');
+        let (fee_shares, _) = singleton.get_fees(pool_id, third_asset.contract_address);
+        assert(collateral_fee_shares_before == fee_shares, 'fees shouldve accrued');
+        assert(fee_shares > 0, 'Fee shares not minted');
 
         // fees increase total_collateral_shares
-        let (asset_config, _) = singleton.asset_config(pool_id, third_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, third_asset.contract_address);
         assert(asset_config.total_collateral_shares > total_collateral_shares, 'Shares not increased');
 
         // withdraw fees
-        let (_, collateral, _) = singleton
-            .position(pool_id, third_asset.contract_address, Zero::zero(), extension.contract_address);
+        let (_, fee_amount) = singleton.get_fees(pool_id, third_asset.contract_address);
         let balance_before = third_asset.balance_of(users.creator);
-        extension.claim_fees(pool_id, third_asset.contract_address);
+        singleton.claim_fees(pool_id, third_asset.contract_address);
 
         let balance_after = third_asset.balance_of(users.creator);
-        assert(balance_before + collateral == balance_after && balance_before < balance_after, 'Fees not claimed');
+        assert(balance_before < balance_after, 'Fees not claimed');
+        assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
     }
 
     #[test]

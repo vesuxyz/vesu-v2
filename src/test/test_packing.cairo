@@ -18,6 +18,7 @@ mod TestPacking {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: PERCENT,
+            fee_shares: 500,
         };
 
         let packed = AssetConfigPacking::pack(config);
@@ -36,6 +37,7 @@ mod TestPacking {
             config.last_full_utilization_rate == unpacked.last_full_utilization_rate, "last_full_utilization_rate err",
         );
         assert!(config.fee_rate == unpacked.fee_rate, "fee_rate err");
+        assert!(config.fee_shares == unpacked.fee_shares, "fee_shares err");
 
         let mut config = config;
         config.max_utilization = 85_1230004560000789;
