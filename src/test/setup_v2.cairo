@@ -404,7 +404,7 @@ pub fn setup_pool(
     let liquidity_to_deposit_third = third_scale;
     let collateral_to_deposit = collateral_scale;
     let debt_to_draw = debt_scale / 2; // 50% LTV
-    let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+    let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
     let rate_accumulator = asset_config.last_rate_accumulator;
     let nominal_debt_to_draw = singleton.calculate_nominal_debt(debt_to_draw.into(), rate_accumulator, debt_scale);
 

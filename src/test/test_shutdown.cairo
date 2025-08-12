@@ -1559,7 +1559,7 @@ mod TestShutdown {
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1795,9 +1795,9 @@ mod TestShutdown {
         let current_time = current_time + (360 * DAY_IN_SECONDS);
         start_cheat_block_timestamp_global(current_time);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
 
         let context = singleton
@@ -1813,9 +1813,9 @@ mod TestShutdown {
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
 
         stop_cheat_block_timestamp_global();
