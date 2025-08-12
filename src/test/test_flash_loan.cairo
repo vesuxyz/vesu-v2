@@ -57,7 +57,7 @@ mod MaliciousFlashLoanReceiver {
 mod FlashLoan {
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
     use vesu::singleton_v2::{IFlashLoanReceiverDispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_contract, setup};
     use vesu::test::test_flash_loan::{IFlashLoanGenericDispatcher, IFlashLoanGenericDispatcherTrait};
@@ -80,11 +80,7 @@ mod FlashLoan {
             debt_asset: collateral_asset.contract_address,
             collateral_asset: debt_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -155,11 +151,7 @@ mod FlashLoan {
             debt_asset: collateral_asset.contract_address,
             collateral_asset: debt_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -225,11 +217,7 @@ mod FlashLoan {
             debt_asset: collateral_asset.contract_address,
             collateral_asset: debt_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
