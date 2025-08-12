@@ -343,10 +343,10 @@ mod TestPragmaOracle {
 
         let max: u128 = Bounded::<u128>::MAX;
         // set collateral asset price
-        pragma_oracle.set_price(COLL_PRAGMA_KEY, 0);
+        pragma_oracle.set_price(COLL_PRAGMA_KEY, 1);
         pragma_summary.set_twap(COLL_PRAGMA_KEY, max, 18);
         // set debt asset price
-        pragma_oracle.set_price(DEBT_PRAGMA_KEY, 0);
+        pragma_oracle.set_price(DEBT_PRAGMA_KEY, 1);
         pragma_summary.set_twap(DEBT_PRAGMA_KEY, max, 18);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
