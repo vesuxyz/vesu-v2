@@ -85,32 +85,6 @@ mod MockExtension {
             true
         }
 
-        fn before_transfer_position(
-            ref self: ContractState,
-            from_context: Context,
-            to_context: Context,
-            collateral: UnsignedAmount,
-            debt: UnsignedAmount,
-            data: Span<felt252>,
-            caller: ContractAddress,
-        ) -> (UnsignedAmount, UnsignedAmount) {
-            (Default::default(), Default::default())
-        }
-
-        fn after_transfer_position(
-            ref self: ContractState,
-            from_context: Context,
-            to_context: Context,
-            collateral_delta: u256,
-            collateral_shares_delta: u256,
-            debt_delta: u256,
-            nominal_debt_delta: u256,
-            data: Span<felt252>,
-            caller: ContractAddress,
-        ) -> bool {
-            true
-        }
-
         fn before_liquidate_position(
             ref self: ContractState, context: Context, data: Span<felt252>, caller: ContractAddress,
         ) -> (u256, u256, u256) {

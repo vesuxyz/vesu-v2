@@ -1,6 +1,6 @@
 import { assert } from "console";
 import { CallData, shortString, uint256 } from "starknet";
-import { Amount, SCALE, UnsignedAmount, formatRate, newProfiler, setup, toAddress, toI257 } from "../lib";
+import { Amount, SCALE, formatRate, newProfiler, setup, toAddress, toI257 } from "../lib";
 
 const deployer = await setup("devnet");
 const protocol = await deployer.deployEnvAndProtocol();
@@ -128,62 +128,9 @@ const nominalDebtToDraw = await singleton.calculate_nominal_debt(toI257(debtToDr
   await profiler.profile("Lend", response);
 }
 
-// Transfer
-
-{
-  const response = await pool.transfer({
-    from_collateral_asset: debtAsset.address,
-    to_collateral_asset: debtAsset.address,
-    from_debt_asset: collateralAsset.address,
-    to_debt_asset: "0x0",
-    from_user: deployer.lender.address,
-    to_user: extensionPO.address,
-    collateral: UnsignedAmount({ amountType: "Delta", denomination: "Assets", value: liquidityToDeposit }),
-    debt: UnsignedAmount(),
-    from_data: CallData.compile([]),
-    to_data: CallData.compile([]),
-  });
-  await deployer.provider.waitForTransaction(response.transaction_hash);
-  await profiler.profile("Transfer", response);
-}
-
-{
-  const v_token_address = await extensionPO.v_token_for_collateral_asset(pool.id, debtAsset.address);
-  const v_token = await protocol.deployer.loadContract(toAddress(v_token_address));
-  const balance = await v_token.balance_of(deployer.lender.address);
-  assert(balance > 0n, "balance-neq");
-
-  {
-    v_token.connect(deployer.lender);
-    const response = await v_token.approve(extensionPO.address, balance);
-    await deployer.provider.waitForTransaction(response.transaction_hash);
-  }
-
-  const response = await pool.transfer({
-    from_collateral_asset: debtAsset.address,
-    to_collateral_asset: debtAsset.address,
-    from_debt_asset: "0x0",
-    to_debt_asset: collateralAsset.address,
-    from_user: extensionPO.address,
-    to_user: deployer.lender.address,
-    collateral: UnsignedAmount({ amountType: "Delta", denomination: "Native", value: balance }),
-    debt: UnsignedAmount(),
-    from_data: CallData.compile([]),
-    to_data: CallData.compile([]),
-  });
-  await deployer.provider.waitForTransaction(response.transaction_hash);
-  assert((await v_token.balance_of(deployer.lender.address)) === 0n, "balance-neq");
-}
-
 // BORROW
 
 // fund borrower with collateral
-{
-  collateralAsset.connect(lender);
-  const response = await collateralAsset.transfer(borrower.address, collateralToDeposit);
-  await deployer.provider.waitForTransaction(response.transaction_hash);
-}
-
 {
   const response = await pool.borrow({
     collateral_asset: collateralAsset.address,
