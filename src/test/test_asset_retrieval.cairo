@@ -181,17 +181,15 @@ mod TestAssetRetrieval {
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
         let amount_to_retrieve = pre_retrieval_balance / 2;
 
-        let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
+        let (fee_shares, _) = singleton.get_fees(pool_id, debt_asset.contract_address);
+        assert!(fee_shares == 0, "No fee shares should not have accrued");
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.retrieve_from_reserve(pool_id, debt_asset.contract_address, users.lender, amount_to_retrieve);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
+        let (fee_shares, _) = singleton.get_fees(pool_id, debt_asset.contract_address);
+        assert!(fee_shares != 0, "Fee shares should have been accrued");
     }
 
 

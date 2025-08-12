@@ -328,16 +328,14 @@ mod TestInterestRateModel {
         // interest accrued should be reflected since time has passed
         start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
-        let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
+        let (fee_shares, _) = singleton.get_fees(pool_id, debt_asset.contract_address);
+        assert!(fee_shares == 0, "No fee shares should not have accrued");
 
         start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_interest_rate_parameter(pool_id, debt_asset.contract_address, 'max_target_utilization', 86_000);
         stop_cheat_caller_address(extension.contract_address);
 
-        let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
+        let (fee_shares, _) = singleton.get_fees(pool_id, debt_asset.contract_address);
+        assert!(fee_shares != 0, "Fee shares should have been accrued");
     }
 }

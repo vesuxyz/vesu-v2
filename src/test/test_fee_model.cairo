@@ -15,6 +15,8 @@ mod TestFeeModel {
                 0x000d8d6dfec4d33bfb6895de9f3852143a17c6f92fd2a21da3d6924d34870160,
             >(),
         };
+        replace_bytecode(singleton.contract_address, *declare("SingletonV2").unwrap().contract_class().class_hash)
+            .unwrap();
 
         let extension = IDefaultExtensionPOV2Dispatcher { contract_address: singleton.extension(pool_id) };
         replace_bytecode(
@@ -29,20 +31,23 @@ mod TestFeeModel {
     #[fork("Mainnet")]
     fn test_claim_fees() {
         let pool_id = 0x6febb313566c48e30614ddab092856a9ab35b80f359868ca69b2649ca5d148d;
-        let (_, extension) = setup(pool_id);
+        let (singleton, extension) = setup(pool_id);
         let asset = IERC20Dispatcher {
             contract_address: contract_address_const::<
-                0x075afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87,
+                0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8 // USDC token.
             >(),
         };
 
-        let owner = extension.pool_owner(pool_id);
         let fee_recipient = extension.fee_config(pool_id).fee_recipient;
         let initial_balance = asset.balance_of(fee_recipient);
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.claim_fees(pool_id, asset.contract_address);
+        let (shares, fee_amount) = singleton.get_fees(pool_id, asset.contract_address);
+        assert(shares > 0, 'Fee shares not minted');
 
-        assert!(asset.balance_of(fee_recipient) > initial_balance);
+        singleton.claim_fees(pool_id, asset.contract_address);
+
+        let new_balance = asset.balance_of(fee_recipient);
+        assert!(new_balance > initial_balance);
+        assert!(new_balance == initial_balance + fee_amount);
     }
 }
