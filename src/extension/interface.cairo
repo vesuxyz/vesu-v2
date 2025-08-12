@@ -41,26 +41,6 @@ pub trait IExtension<TContractState> {
         data: Span<felt252>,
         caller: ContractAddress,
     ) -> bool;
-    fn before_transfer_position(
-        ref self: TContractState,
-        from_context: Context,
-        to_context: Context,
-        collateral: UnsignedAmount,
-        debt: UnsignedAmount,
-        data: Span<felt252>,
-        caller: ContractAddress,
-    ) -> (UnsignedAmount, UnsignedAmount);
-    fn after_transfer_position(
-        ref self: TContractState,
-        from_context: Context,
-        to_context: Context,
-        collateral_delta: u256,
-        collateral_shares_delta: u256,
-        debt_delta: u256,
-        nominal_debt_delta: u256,
-        data: Span<felt252>,
-        caller: ContractAddress,
-    ) -> bool;
     fn before_liquidate_position(
         ref self: TContractState, context: Context, data: Span<felt252>, caller: ContractAddress,
     ) -> (u256, u256, u256);
