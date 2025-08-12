@@ -8,7 +8,7 @@ mod TestPragmaOracle {
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::default_extension_po_v2::{
         FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
-        PragmaOracleParams, ShutdownParams, VTokenParams,
+        PragmaOracleParams, ShutdownParams,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -78,10 +78,6 @@ mod TestPragmaOracle {
             time_window: 0,
             aggregation_mode: AggregationMode::Median(()),
         };
-
-        let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
-        let debt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT' };
-
         // create ltv config for collateral and borrow assets
         let max_position_ltv_params_0 = LTVParams {
             collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
@@ -112,7 +108,6 @@ mod TestPragmaOracle {
         let shutdown_ltv_params = array![shutdown_ltv_params_0, shutdown_ltv_params_1].span();
 
         let asset_params = array![collateral_asset_params, debt_asset_params].span();
-        let v_token_params = array![collateral_asset_v_token_params, debt_asset_v_token_params].span();
         let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
         let models = array![interest_rate_config, interest_rate_config].span();
         let oracle_params = array![collateral_asset_oracle_params, debt_asset_oracle_params].span();
@@ -128,7 +123,6 @@ mod TestPragmaOracle {
             .create_pool(
                 'DefaultExtensionPO',
                 asset_params,
-                v_token_params,
                 max_position_ltv_params,
                 models,
                 oracle_params,

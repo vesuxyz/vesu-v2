@@ -75,14 +75,14 @@ pub mod position_hooks_component {
     use core::num::traits::Zero;
     use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
-    use starknet::{ContractAddress, get_block_timestamp, get_contract_address};
+    use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
-    use vesu::data_model::{Context, LTVConfig, Position, UnsignedAmount, assert_ltv_config};
+    use vesu::data_model::{Context, LTVConfig, Position, assert_ltv_config};
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, LiquidationData, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus,
         assert_liquidation_config,
     };
-    use vesu::extension::default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback};
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
 
@@ -170,7 +170,6 @@ pub mod position_hooks_component {
         TContractState,
         +HasComponent<TContractState>,
         +IDefaultExtensionCallback<TContractState>,
-        +ITokenizationCallback<TContractState>,
         +Drop<TContractState>,
     > of Trait<TContractState> {
         /// Checks if a pair is collateralized based on the current oracle prices and the shutdown ltv configuration.

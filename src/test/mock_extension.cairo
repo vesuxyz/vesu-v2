@@ -4,7 +4,7 @@ mod MockExtension {
     use core::num::traits::Zero;
     use starknet::ContractAddress;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
-    use vesu::data_model::{Amount, AssetPrice, Context, UnsignedAmount};
+    use vesu::data_model::{Amount, AssetPrice, Context};
     use vesu::extension::interface::IExtension;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;

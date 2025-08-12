@@ -1,4 +1,3 @@
-use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
 use vesu::extension::components::fee_model::FeeConfig;
@@ -8,12 +7,6 @@ use vesu::extension::components::position_hooks::{
 };
 use vesu::extension::components::pragma_oracle::OracleConfig;
 use vesu::vendor::pragma::AggregationMode;
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct VTokenParams {
-    pub v_token_name: felt252,
-    pub v_token_symbol: felt252,
-}
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct PragmaOracleParams {
@@ -50,20 +43,6 @@ pub trait IDefaultExtensionCallback<TContractState> {
 }
 
 #[starknet::interface]
-pub trait ITokenizationCallback<TContractState> {
-    fn v_token_for_collateral_asset(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress,
-    ) -> ContractAddress;
-    fn mint_or_burn_v_token(
-        ref self: TContractState,
-        pool_id: felt252,
-        collateral_asset: ContractAddress,
-        user: ContractAddress,
-        amount: i257,
-    );
-}
-
-#[starknet::interface]
 pub trait IDefaultExtensionPOV2<TContractState> {
     fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
@@ -89,17 +68,10 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     fn pairs(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> Pair;
-    fn v_token_for_collateral_asset(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress,
-    ) -> ContractAddress;
-    fn collateral_asset_for_v_token(
-        self: @TContractState, pool_id: felt252, v_token: ContractAddress,
-    ) -> ContractAddress;
     fn create_pool(
         ref self: TContractState,
         name: felt252,
         asset_params: Span<AssetParams>,
-        v_token_params: Span<VTokenParams>,
         ltv_params: Span<LTVParams>,
         interest_rate_configs: Span<InterestRateConfig>,
         pragma_oracle_params: Span<PragmaOracleParams>,
@@ -113,7 +85,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         ref self: TContractState,
         pool_id: felt252,
         asset_params: AssetParams,
-        v_token_params: VTokenParams,
         interest_rate_config: InterestRateConfig,
         pragma_oracle_params: PragmaOracleParams,
     );
@@ -184,7 +155,7 @@ mod DefaultExtensionPOV2 {
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
     use vesu::data_model::{
         Amount, AmountDenomination, AmountType, AssetParams, AssetPrice, Context, DebtCapParams, LTVConfig, LTVParams,
-        ModifyPositionParams, UnsignedAmount,
+        ModifyPositionParams,
     };
     use vesu::extension::components::fee_model::fee_model_component::FeeModelTrait;
     use vesu::extension::components::fee_model::{FeeConfig, fee_model_component};
@@ -196,12 +167,9 @@ mod DefaultExtensionPOV2 {
     };
     use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
-    use vesu::extension::components::tokenization::tokenization_component;
-    use vesu::extension::components::tokenization::tokenization_component::TokenizationTrait;
     use vesu::extension::default_extension_po_v2::{
         FeeParams, IDefaultExtensionCallback, IDefaultExtensionPOV2, IDefaultExtensionPOV2Dispatcher,
-        IDefaultExtensionPOV2DispatcherTrait, ITokenizationCallback, LiquidationParams, PragmaOracleParams,
-        ShutdownParams, VTokenParams,
+        IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, PragmaOracleParams, ShutdownParams,
     };
     use vesu::extension::interface::IExtension;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -211,7 +179,6 @@ mod DefaultExtensionPOV2 {
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
     component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
     component!(path: fee_model_component, storage: fee_model, event: FeeModelEvents);
-    component!(path: tokenization_component, storage: tokenization, event: TokenizationEvents);
 
 
     #[storage]
@@ -234,9 +201,6 @@ mod DefaultExtensionPOV2 {
         // storage for the fee model component
         #[substorage(v0)]
         fee_model: fee_model_component::Storage,
-        // storage for the tokenization component
-        #[substorage(v0)]
-        tokenization: tokenization_component::Storage,
         // tracks the address that can transition the shutdown mode of a pool
         shutdown_mode_agent: Map<felt252, ContractAddress>,
     }
@@ -269,7 +233,6 @@ mod DefaultExtensionPOV2 {
         InterestRateModelEvents: interest_rate_model_component::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
         FeeModelEvents: fee_model_component::Event,
-        TokenizationEvents: tokenization_component::Event,
         SetPoolOwner: SetPoolOwner,
         SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
@@ -281,12 +244,10 @@ mod DefaultExtensionPOV2 {
         singleton: ContractAddress,
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
-        v_token_class_hash: felt252,
     ) {
         self.singleton.write(singleton);
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
-        self.tokenization.set_v_token_class_hash(v_token_class_hash);
     }
 
     /// Helper method for transferring an amount of an asset from one address to another. Reverts if the transfer fails.
@@ -347,25 +308,6 @@ mod DefaultExtensionPOV2 {
     impl DefaultExtensionCallbackImpl of IDefaultExtensionCallback<ContractState> {
         fn singleton(self: @ContractState) -> ContractAddress {
             self.singleton.read()
-        }
-    }
-
-    impl TokenizationCallbackImpl of ITokenizationCallback<ContractState> {
-        /// See tokenization.v_token_for_collateral_asset()
-        fn v_token_for_collateral_asset(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress,
-        ) -> ContractAddress {
-            self.tokenization.v_token_for_collateral_asset(pool_id, collateral_asset)
-        }
-        /// See tokenization.mint_or_burn_v_token()
-        fn mint_or_burn_v_token(
-            ref self: ContractState,
-            pool_id: felt252,
-            collateral_asset: ContractAddress,
-            user: ContractAddress,
-            amount: i257,
-        ) {
-            self.tokenization.mint_or_burn_v_token(pool_id, collateral_asset, user, amount)
         }
     }
 
@@ -504,36 +446,10 @@ mod DefaultExtensionPOV2 {
             self.position_hooks.pairs.read((pool_id, collateral_asset, debt_asset))
         }
 
-        /// Returns the address of the vToken deployed for the collateral asset for a given pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `collateral_asset` - address of the collateral asset
-        /// # Returns
-        /// * `v_token` - address of the vToken
-        fn v_token_for_collateral_asset(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress,
-        ) -> ContractAddress {
-            self.tokenization.v_token_for_collateral_asset(pool_id, collateral_asset)
-        }
-
-        /// Returns the default pairing (collateral asset, debt asset) used for
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `v_token` - address of the vToken
-        /// # Returns
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        fn collateral_asset_for_v_token(
-            self: @ContractState, pool_id: felt252, v_token: ContractAddress,
-        ) -> ContractAddress {
-            self.tokenization.collateral_asset_for_v_token(pool_id, v_token)
-        }
-
         /// Creates a new pool
         /// # Arguments
         /// * `name` - name of the pool
         /// * `asset_params` - asset parameters
-        /// * `v_token_params` - vToken parameters
         /// * `ltv_params` - loan-to-value parameters
         /// * `interest_rate_params` - interest rate model parameters
         /// * `pragma_oracle_params` - pragma oracle parameters
@@ -547,7 +463,6 @@ mod DefaultExtensionPOV2 {
             ref self: ContractState,
             name: felt252,
             mut asset_params: Span<AssetParams>,
-            mut v_token_params: Span<VTokenParams>,
             mut ltv_params: Span<LTVParams>,
             mut interest_rate_configs: Span<InterestRateConfig>,
             mut pragma_oracle_params: Span<PragmaOracleParams>,
@@ -561,7 +476,6 @@ mod DefaultExtensionPOV2 {
             // assert that all arrays have equal length
             assert!(asset_params.len() == interest_rate_configs.len(), "interest-rate-params-mismatch");
             assert!(asset_params.len() == pragma_oracle_params.len(), "pragma-oracle-params-mismatch");
-            assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
 
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
@@ -597,12 +511,6 @@ mod DefaultExtensionPOV2 {
                 // set the interest rate model configuration
                 let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
                 self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
-
-                let v_token_config = *v_token_params.at(i);
-                let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
-
-                // deploy the vToken for the the collateral asset
-                self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
                 // burn inflation fee
                 self.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
@@ -662,14 +570,12 @@ mod DefaultExtensionPOV2 {
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset_params` - asset parameters
-        /// * `v_token_params` - vToken parameters
         /// * `interest_rate_model` - interest rate model
         /// * `pragma_oracle_params` - pragma oracle parameters
         fn add_asset(
             ref self: ContractState,
             pool_id: felt252,
             asset_params: AssetParams,
-            v_token_params: VTokenParams,
             interest_rate_config: InterestRateConfig,
             pragma_oracle_params: PragmaOracleParams,
         ) {
@@ -694,10 +600,6 @@ mod DefaultExtensionPOV2 {
 
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
-
-            // deploy the vToken for the the collateral asset
-            let VTokenParams { v_token_name, v_token_symbol } = v_token_params;
-            self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
             singleton.set_asset_config(pool_id, asset_params);

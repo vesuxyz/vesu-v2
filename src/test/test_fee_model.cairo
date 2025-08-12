@@ -8,7 +8,6 @@ mod TestFeeModel {
         IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
-    use vesu::units::SCALE;
 
     fn setup(pool_id: felt252) -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher) {
         let singleton = ISingletonV2Dispatcher {

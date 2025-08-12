@@ -1,6 +1,6 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
-use vesu::data_model::{Amount, AssetPrice, Context, UnsignedAmount};
+use vesu::data_model::{Amount, AssetPrice, Context};
 
 #[starknet::interface]
 pub trait IExtension<TContractState> {
