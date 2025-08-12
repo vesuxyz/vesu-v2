@@ -335,7 +335,7 @@ mod TestSingletonV2 {
         singleton.set_asset_parameter(config.pool_id, config.collateral_asset.contract_address, 'fee_rate', SCALE);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config_unsafe(config.pool_id, config.collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(config.pool_id, config.collateral_asset.contract_address);
         assert!(asset_config.max_utilization == 0, "Max utilization not set");
         assert!(asset_config.floor == SCALE, "Floor not set");
         assert!(asset_config.fee_rate == SCALE, "Fee rate not set");
@@ -414,7 +414,7 @@ mod TestSingletonV2 {
             .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
 
-        let (asset_config, _) = singleton.asset_config_unsafe(config.pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(config.pool_id, debt_asset.contract_address);
         assert!(asset_config.fee_rate == SCALE, "Fee rate not set");
     }
 
