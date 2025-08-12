@@ -58,7 +58,7 @@ mod TestPoolDonation {
 
         assert!(collateral == liquidity_to_deposit, "Collateral not set");
 
-        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
+        let asset_config = singleton.asset_config(debt_asset.contract_address);
         let old_pool_reserve = asset_config.reserve;
 
         let amount_to_donate_to_reserve = 25 * debt_scale;
@@ -79,20 +79,21 @@ mod TestPoolDonation {
         let response = singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
+        let (fee_shares, _) = singleton.get_fees(debt_asset.contract_address);
+        assert!(fee_shares == 0, "No fee shares should not have accrued");
+
         // interest accrued should be reflected since time has passed
         start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
-        let (position, _, _) = singleton
-            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
+        let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
+        assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.donate_to_reserve(debt_asset.contract_address, amount_to_donate_to_reserve);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (position, _, _) = singleton
-            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
+        let (fee_shares_after, _) = singleton.get_fees(debt_asset.contract_address);
+        assert!(fee_shares_after == fee_shares_before, "Fee shares mismatch");
 
         let balance = debt_asset.balance_of(users.lender);
         assert!(
@@ -105,7 +106,7 @@ mod TestPoolDonation {
 
         assert!(new_position.collateral_shares == old_position.collateral_shares, "Collateral shares should unchanged");
 
-        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
+        let asset_config = singleton.asset_config(debt_asset.contract_address);
         let new_pool_reserve = asset_config.reserve;
         assert!(
             new_pool_reserve == old_pool_reserve + amount_to_donate_to_reserve - response.debt_delta.abs(),

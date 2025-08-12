@@ -26,6 +26,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         }
     }
 
@@ -117,6 +118,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 0,
             fee_rate: 0,
+            fee_shares: 0,
         };
 
         calculate_collateral_shares(initial_collateral, config, false);
@@ -203,6 +205,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: SCALE,
             fee_rate: 10 * PERCENT,
+            fee_shares: 0,
         };
         assert!(calculate_fee_shares(asset_config, SCALE) == 0, "Fee shares should be 0");
         let fee_shares = calculate_fee_shares(asset_config, SCALE + SCALE);
@@ -230,6 +233,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
 
         let collateral_amount = 5 * asset_scale;
@@ -260,6 +264,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -274,8 +279,6 @@ mod TestCommon {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: 0,
-            debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zero::zero(),
             position: position,
@@ -311,6 +314,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -325,8 +329,6 @@ mod TestCommon {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: 0,
-            debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zero::zero(),
             position: position,
@@ -456,6 +458,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -470,8 +473,6 @@ mod TestCommon {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: Zero::zero(),
-            debt_asset_fee_shares: Zero::zero(),
             max_ltv: 2,
             user: Zero::zero(),
             position: position,
@@ -568,6 +569,7 @@ mod TestCommon {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
         let position = Position {
             collateral_shares: calculate_collateral_shares(collateral_amount, config, false),
@@ -582,8 +584,6 @@ mod TestCommon {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: Zero::zero(),
-            debt_asset_fee_shares: Zero::zero(),
             max_ltv: 2,
             user: Zero::zero(),
             position: position,

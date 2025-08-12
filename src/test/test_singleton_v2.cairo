@@ -280,7 +280,7 @@ mod TestSingletonV2 {
         singleton.set_asset_config(asset_params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(config.collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(config.collateral_asset.contract_address);
         assert!(asset_config.floor != 0, "Asset config not set");
         assert!(asset_config.scale == config.collateral_scale, "Invalid scale");
         assert!(asset_config.last_rate_accumulator >= SCALE, "Last rate accumulator too low");
@@ -319,7 +319,7 @@ mod TestSingletonV2 {
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'fee_rate', SCALE);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(config.collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(config.collateral_asset.contract_address);
         assert!(asset_config.max_utilization == 0, "Max utilization not set");
         assert!(asset_config.floor == SCALE, "Floor not set");
         assert!(asset_config.fee_rate == SCALE, "Fee rate not set");
@@ -369,22 +369,22 @@ mod TestSingletonV2 {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
+        let (fee_shares, _) = singleton.get_fees(debt_asset.contract_address);
+        assert!(fee_shares == 0, "No fee shares should not have accrued");
+
         // interest accrued should be reflected since time has passed
         start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
-        let (position, _, _) = singleton
-            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
+        let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', SCALE);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (position, _, _) = singleton
-            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
-        assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
+        let (fee_shares_after, _) = singleton.get_fees(debt_asset.contract_address);
+        assert!(fee_shares_after == fee_shares_before, "Fee shares mismatch");
 
-        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
+        let asset_config = singleton.asset_config(debt_asset.contract_address);
         assert!(asset_config.fee_rate == SCALE, "Fee rate not set");
     }
 
