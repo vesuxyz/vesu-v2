@@ -280,7 +280,7 @@ pub mod VToken {
         fn total_assets(self: @ContractState) -> u256 {
             self
                 .singleton()
-                .calculate_collateral_unsafe(
+                .calculate_collateral(
                     self.pool_id.read(), self.asset.read(), I257Trait::new(self.erc20.total_supply(), true),
                 )
         }
@@ -293,9 +293,7 @@ pub mod VToken {
         fn convert_to_shares(self: @ContractState, assets: u256) -> u256 {
             self
                 .singleton()
-                .calculate_collateral_shares_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(assets, false),
-                )
+                .calculate_collateral_shares(self.pool_id.read(), self.asset.read(), I257Trait::new(assets, false))
         }
 
         /// Converts an amount of vToken shares to the equivalent amount of assets
@@ -304,9 +302,7 @@ pub mod VToken {
         /// # Returns
         /// * amount of assets [asset scale]
         fn convert_to_assets(self: @ContractState, shares: u256) -> u256 {
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, true))
+            self.singleton().calculate_collateral(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, true))
         }
 
         /// Returns the maximum amount of assets that can be deposited via the vToken
@@ -318,11 +314,9 @@ pub mod VToken {
             if !self.can_deposit() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let (asset_config, _) = self.singleton().asset_config(self.pool_id.read(), self.asset.read());
             let room = Bounded::<u128>::MAX.into() - asset_config.total_collateral_shares;
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(room, false))
+            self.singleton().calculate_collateral(self.pool_id.read(), self.asset.read(), I257Trait::new(room, false))
         }
 
         /// Returns the amount of vToken shares that will be minted for the given amount of deposited assets
@@ -336,9 +330,7 @@ pub mod VToken {
             }
             self
                 .singleton()
-                .calculate_collateral_shares_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(assets, false),
-                )
+                .calculate_collateral_shares(self.pool_id.read(), self.asset.read(), I257Trait::new(assets, false))
         }
 
         /// Deposits assets into the pool and mints vTokens (shares) to the receiver
@@ -382,7 +374,7 @@ pub mod VToken {
             if !self.can_deposit() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let (asset_config, _) = self.singleton().asset_config(self.pool_id.read(), self.asset.read());
             Bounded::<u128>::MAX.into() - asset_config.total_collateral_shares
         }
 
@@ -395,9 +387,7 @@ pub mod VToken {
             if !self.can_deposit() {
                 return 0;
             }
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, false))
+            self.singleton().calculate_collateral(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, false))
         }
 
         /// Mints vToken shares to the receiver by depositing assets into the pool
@@ -453,12 +443,12 @@ pub mod VToken {
             if !self.can_withdraw() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let (asset_config, _) = self.singleton().asset_config(self.pool_id.read(), self.asset.read());
 
             let room = self.calculate_withdrawable_assets(asset_config);
             let assets = self
                 .singleton()
-                .calculate_collateral_unsafe(
+                .calculate_collateral(
                     self.pool_id.read(), self.asset.read(), I257Trait::new(self.erc20.balance_of(owner), true),
                 );
 
@@ -480,9 +470,7 @@ pub mod VToken {
             }
             self
                 .singleton()
-                .calculate_collateral_shares_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(assets, true),
-                )
+                .calculate_collateral_shares(self.pool_id.read(), self.asset.read(), I257Trait::new(assets, true))
         }
 
         /// Withdraws assets from the pool and burns vTokens (shares) from the owner of the vTokens
@@ -530,10 +518,10 @@ pub mod VToken {
             if !self.can_withdraw() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let (asset_config, _) = self.singleton().asset_config(self.pool_id.read(), self.asset.read());
             let room = self
                 .singleton()
-                .calculate_collateral_shares_unsafe(
+                .calculate_collateral_shares(
                     self.pool_id.read(),
                     self.asset.read(),
                     I257Trait::new(self.calculate_withdrawable_assets(asset_config), true),
@@ -556,9 +544,7 @@ pub mod VToken {
             if !self.can_withdraw() {
                 return 0;
             }
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, true))
+            self.singleton().calculate_collateral(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, true))
         }
 
         /// Redeems / burns vTokens (shares) from the owner and withdraws assets from the pool

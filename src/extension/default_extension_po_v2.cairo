@@ -879,7 +879,7 @@ mod DefaultExtensionPOV2 {
             self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownStatus {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            let mut context = singleton.context_unsafe(pool_id, collateral_asset, debt_asset, Zero::zero());
+            let mut context = singleton.context(pool_id, collateral_asset, debt_asset, Zero::zero());
             self.position_hooks.shutdown_status(ref context)
         }
 
