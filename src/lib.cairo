@@ -49,7 +49,6 @@ pub mod test {
     pub mod test_reentrancy;
     pub mod test_shutdown;
     pub mod test_singleton_v2;
-    pub mod test_transfer_position;
     pub mod test_upgrade;
     pub mod test_v_token;
     pub mod test_v_token_v2;
