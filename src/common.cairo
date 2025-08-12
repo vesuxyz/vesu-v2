@@ -3,7 +3,7 @@ use core::integer;
 use core::num::traits::{WideMul, Zero};
 use openzeppelin::utils::math::{Rounding, u256_mul_div};
 use starknet::get_block_timestamp;
-use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, Context, Position};
+use vesu::data_model::{Amount, AmountDenomination, AssetConfig, Context, Position};
 use vesu::math::pow_scale;
 use vesu::units::SCALE;
 
@@ -195,65 +195,20 @@ pub fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u25
 pub fn deconstruct_collateral_amount(
     collateral: Amount, position: Position, asset_config: AssetConfig,
 ) -> (i257, i257) {
-    if collateral.amount_type == AmountType::Delta {
-        if collateral.denomination == AmountDenomination::Native {
-            let collateral_shares_delta = collateral.value;
-            // positive -> round up, negative -> round down
-            let delta = calculate_collateral(
-                collateral_shares_delta.abs(), asset_config, !collateral_shares_delta.is_negative(),
-            );
-            (I257Trait::new(delta, collateral_shares_delta.is_negative()), collateral_shares_delta)
-        } else {
-            let collateral_delta = collateral.value;
-            // positive -> round down, negative -> round up
-            let collateral_shares_delta = calculate_collateral_shares(
-                collateral_delta.abs(), asset_config, collateral_delta.is_negative(),
-            );
-            (collateral_delta, I257Trait::new(collateral_shares_delta, collateral_delta.is_negative()))
-        }
+    if collateral.denomination == AmountDenomination::Native {
+        let collateral_shares_delta = collateral.value;
+        // positive -> round up, negative -> round down
+        let delta = calculate_collateral(
+            collateral_shares_delta.abs(), asset_config, !collateral_shares_delta.is_negative(),
+        );
+        (I257Trait::new(delta, collateral_shares_delta.is_negative()), collateral_shares_delta)
     } else {
-        assert!(!collateral.value.is_negative(), "collateral-target-negative");
-        if collateral.denomination == AmountDenomination::Native || collateral.value.abs() == 0 {
-            let collateral_shares_target = collateral.value.abs();
-            if position.collateral_shares >= collateral_shares_target {
-                // negative -> round down
-                let delta = calculate_collateral(
-                    position.collateral_shares - collateral_shares_target, asset_config, false,
-                );
-                (
-                    I257Trait::new(delta, true),
-                    I257Trait::new((position.collateral_shares - collateral_shares_target), true),
-                )
-            } else {
-                // positive -> round up
-                let delta = calculate_collateral(
-                    collateral_shares_target - position.collateral_shares, asset_config, true,
-                );
-                (
-                    I257Trait::new(delta, false),
-                    I257Trait::new((collateral_shares_target - position.collateral_shares), false),
-                )
-            }
-        } else {
-            let collateral_target = collateral.value.abs();
-            // round down
-            let position_collateral = calculate_collateral(position.collateral_shares, asset_config, false);
-            if position_collateral >= collateral_target {
-                // derive collateral shares from collateral amount, since user provided collateral amount should not be
-                // adjusted negative -> round up
-                let shares_delta = calculate_collateral_shares(
-                    position_collateral - collateral_target, asset_config, true,
-                );
-                (I257Trait::new((position_collateral - collateral_target), true), I257Trait::new(shares_delta, true))
-            } else {
-                // derive collateral shares from collateral amount, since user provided collateral amount should not be
-                // adjusted positive -> round down
-                let shares_delta = calculate_collateral_shares(
-                    collateral_target - position_collateral, asset_config, false,
-                );
-                (I257Trait::new((collateral_target - position_collateral), false), I257Trait::new(shares_delta, false))
-            }
-        }
+        let collateral_delta = collateral.value;
+        // positive -> round down, negative -> round up
+        let collateral_shares_delta = calculate_collateral_shares(
+            collateral_delta.abs(), asset_config, collateral_delta.is_negative(),
+        );
+        (collateral_delta, I257Trait::new(collateral_shares_delta, collateral_delta.is_negative()))
     }
 }
 
@@ -269,63 +224,20 @@ pub fn deconstruct_collateral_amount(
 pub fn deconstruct_debt_amount(
     debt: Amount, position: Position, rate_accumulator: u256, asset_scale: u256,
 ) -> (i257, i257) {
-    if debt.amount_type == AmountType::Delta {
-        return if debt.denomination == AmountDenomination::Native {
-            let nominal_debt_delta = debt.value;
-            // positive -> round down, negative -> round up
-            let debt_delta = calculate_debt(
-                nominal_debt_delta.abs(), rate_accumulator, asset_scale, nominal_debt_delta.is_negative(),
-            );
-            (I257Trait::new(debt_delta, nominal_debt_delta.is_negative()), nominal_debt_delta)
-        } else {
-            let debt_delta = debt.value;
-            // positive -> round up, negative -> round down
-            let nominal_debt_delta = calculate_nominal_debt(
-                debt_delta.abs(), rate_accumulator, asset_scale, !debt_delta.is_negative(),
-            );
-            (debt_delta, I257Trait::new(nominal_debt_delta, debt_delta.is_negative()))
-        };
+    if debt.denomination == AmountDenomination::Native {
+        let nominal_debt_delta = debt.value;
+        // positive -> round down, negative -> round up
+        let debt_delta = calculate_debt(
+            nominal_debt_delta.abs(), rate_accumulator, asset_scale, nominal_debt_delta.is_negative(),
+        );
+        (I257Trait::new(debt_delta, nominal_debt_delta.is_negative()), nominal_debt_delta)
     } else {
-        assert!(!debt.value.is_negative(), "debt-target-negative");
-        if debt.denomination == AmountDenomination::Native || debt.value.abs() == 0 {
-            let nominal_debt_target = debt.value;
-            if position.nominal_debt >= nominal_debt_target.abs() {
-                // negative -> round up
-                let debt_delta = calculate_debt(
-                    position.nominal_debt - nominal_debt_target.abs(), rate_accumulator, asset_scale, true,
-                );
-                let nominal_debt_delta = position.nominal_debt - nominal_debt_target.abs();
-                (I257Trait::new(debt_delta, true), I257Trait::new(nominal_debt_delta, true))
-            } else {
-                // positive -> round down
-                let debt_delta = calculate_debt(
-                    nominal_debt_target.abs() - position.nominal_debt, rate_accumulator, asset_scale, false,
-                );
-                let nominal_debt_delta = nominal_debt_target.abs() - position.nominal_debt;
-                (I257Trait::new(debt_delta, false), I257Trait::new(nominal_debt_delta, false))
-            }
-        } else {
-            let debt_target = debt.value;
-            // round down
-            let position_debt = calculate_debt(position.nominal_debt, rate_accumulator, asset_scale, false);
-            if position_debt >= debt_target.abs() {
-                // derive nominal debt from debt amount, since user provided debt amount should not be adjusted
-                // negative -> round down
-                let nominal_delta = calculate_nominal_debt(
-                    position_debt - debt_target.abs(), rate_accumulator, asset_scale, false,
-                );
-                let debt_delta = position_debt - debt_target.abs();
-                (I257Trait::new(debt_delta, true), I257Trait::new(nominal_delta, true))
-            } else {
-                // derive nominal debt from debt amount, since user provided debt amount should not be adjusted
-                // positive -> round up
-                let nominal_delta = calculate_nominal_debt(
-                    debt_target.abs() - position_debt, rate_accumulator, asset_scale, true,
-                );
-                let debt_delta = debt_target.abs() - position_debt;
-                (I257Trait::new(debt_delta, false), I257Trait::new(nominal_delta, false))
-            }
-        }
+        let debt_delta = debt.value;
+        // positive -> round up, negative -> round down
+        let nominal_debt_delta = calculate_nominal_debt(
+            debt_delta.abs(), rate_accumulator, asset_scale, !debt_delta.is_negative(),
+        );
+        (debt_delta, I257Trait::new(nominal_debt_delta, debt_delta.is_negative()))
     }
 }
 

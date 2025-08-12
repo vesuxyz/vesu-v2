@@ -43,7 +43,7 @@ pub mod VTokenV2 {
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const, get_caller_address, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, AssetConfig, ModifyPositionParams};
     use vesu::extension::components::position_hooks::ShutdownMode;
     use vesu::extension::default_extension_po_v2::{
         IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
@@ -377,11 +377,7 @@ pub mod VTokenV2 {
                 collateral_asset: self.asset.read(),
                 debt_asset: Zero::zero(),
                 user: self.extension.read(),
-                collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Assets,
-                    value: I257Trait::new(assets, false),
-                },
+                collateral: Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(assets, false) },
                 debt: Default::default(),
                 data: ArrayTrait::new().span(),
             };
@@ -442,11 +438,7 @@ pub mod VTokenV2 {
                 collateral_asset: self.asset.read(),
                 debt_asset: Zero::zero(),
                 user: self.extension.read(),
-                collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Native,
-                    value: I257Trait::new(shares, false),
-                },
+                collateral: Amount { denomination: AmountDenomination::Native, value: I257Trait::new(shares, false) },
                 debt: Default::default(),
                 data: ArrayTrait::new().span(),
             };
@@ -520,11 +512,7 @@ pub mod VTokenV2 {
                 collateral_asset: self.asset.read(),
                 debt_asset: Zero::zero(),
                 user: self.extension.read(),
-                collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Assets,
-                    value: I257Trait::new(assets, true),
-                },
+                collateral: Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(assets, true) },
                 debt: Default::default(),
                 data: ArrayTrait::new().span(),
             };
@@ -601,11 +589,7 @@ pub mod VTokenV2 {
                 collateral_asset: self.asset.read(),
                 debt_asset: Zero::zero(),
                 user: self.extension.read(),
-                collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Native,
-                    value: I257Trait::new(shares, true),
-                },
+                collateral: Amount { denomination: AmountDenomination::Native, value: I257Trait::new(shares, true) },
                 debt: Default::default(),
                 data: ArrayTrait::new().span(),
             };
