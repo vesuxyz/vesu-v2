@@ -96,21 +96,7 @@ pub mod fee_model_component {
                 contract_address: self.get_contract().v_token_for_collateral_asset(pool_id, collateral_asset),
             };
 
-            let unmigrated = if _is_v1_pool(pool_id) {
-                #[feature("safe_dispatcher")]
-                let response = IVTokenV2SafeDispatcher { contract_address: v_token.contract_address }.v_token_v1();
-                match response {
-                    Result::Ok(v_token_v1) => {
-                        let v_token_v1 = IERC20Dispatcher { contract_address: v_token_v1 };
-                        v_token_v1.total_supply() - v_token_v1.balance_of(contract_address_const::<'0x0'>())
-                    },
-                    Result::Err(_) => 0,
-                }
-            } else {
-                0
-            };
-
-            let amount = position.collateral_shares - (v_token.total_supply() + unmigrated);
+            let amount = position.collateral_shares - v_token.total_supply();
 
             let UpdatePositionResponse {
                 collateral_delta, ..,
