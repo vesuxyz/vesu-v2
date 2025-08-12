@@ -116,21 +116,6 @@ pub struct ModifyPositionParams {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-pub struct TransferPositionParams {
-    pub pool_id: felt252,
-    pub from_collateral_asset: ContractAddress,
-    pub from_debt_asset: ContractAddress,
-    pub to_collateral_asset: ContractAddress,
-    pub to_debt_asset: ContractAddress,
-    pub from_user: ContractAddress,
-    pub to_user: ContractAddress,
-    pub collateral: UnsignedAmount,
-    pub debt: UnsignedAmount,
-    pub from_data: Span<felt252>,
-    pub to_data: Span<felt252>,
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
 pub struct LiquidatePositionParams {
     pub pool_id: felt252,
     pub collateral_asset: ContractAddress,

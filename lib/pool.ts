@@ -1,11 +1,4 @@
-import {
-  CreatePoolParams,
-  LiquidatePositionParams,
-  ModifyPositionParams,
-  Protocol,
-  TransferPositionParams,
-  calculateRates,
-} from ".";
+import { CreatePoolParams, LiquidatePositionParams, ModifyPositionParams, Protocol, calculateRates } from ".";
 
 type OmitPool<T> = Omit<T, "pool_id" | "user" | "receive_as_shares">;
 
@@ -45,37 +38,6 @@ export class Pool {
     };
     singleton.connect(deployer.borrower);
     const response = await singleton.modify_position(params);
-    return response;
-  }
-
-  async transfer({
-    from_collateral_asset,
-    to_collateral_asset,
-    from_debt_asset,
-    to_debt_asset,
-    from_user,
-    to_user,
-    collateral,
-    debt,
-    from_data,
-    to_data,
-  }: OmitPool<TransferPositionParams>) {
-    const { deployer, singleton } = this.protocol;
-    const params: TransferPositionParams = {
-      pool_id: this.id,
-      from_collateral_asset,
-      to_collateral_asset,
-      from_debt_asset,
-      to_debt_asset,
-      from_user,
-      to_user,
-      collateral,
-      debt,
-      from_data,
-      to_data,
-    };
-    singleton.connect(deployer.lender);
-    const response = await singleton.transfer_position(params);
     return response;
   }
 
