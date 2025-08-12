@@ -22,7 +22,10 @@ pub struct AssetConfig { //                                     | slot | packed 
     pub last_updated: u64, //                   [seconds]       | 3    | u32    |
     pub last_rate_accumulator: u256, //         [SCALE]         | 3    | u64    |
     pub last_full_utilization_rate: u256, //    [SCALE]         | 3    | u64    |
-    pub fee_rate: u256 //                      [SCALE]         | 3    | u8     | percentage
+    pub fee_rate: u256, //                      [SCALE]         | 3    | u8     | percentage
+    // tracks the number of unclaimed allocated shares (from each asset) that can be claimed by
+    // `fee_recipient`.
+    pub fee_shares: u256 //                     [SCALE]         | 4    | u128   |
 }
 
 pub fn assert_asset_config(asset_config: AssetConfig) {
@@ -135,8 +138,6 @@ pub struct Context {
     pub debt_asset_config: AssetConfig,
     pub collateral_asset_price: AssetPrice,
     pub debt_asset_price: AssetPrice,
-    pub collateral_asset_fee_shares: u256,
-    pub debt_asset_fee_shares: u256,
     pub max_ltv: u64,
     pub user: ContractAddress,
     pub position: Position,

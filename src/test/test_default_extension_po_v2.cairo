@@ -45,12 +45,12 @@ mod TestDefaultExtensionPOV2 {
         let ltv = singleton.ltv_config(pool_id, collateral_asset.contract_address, debt_asset.contract_address).max_ltv;
         assert!(ltv > 0, "Not set");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(asset_config.floor != 0, "Asset config not set");
         assert!(asset_config.scale == config.collateral_scale, "Invalid scale");
         assert!(asset_config.last_rate_accumulator >= SCALE, "Last rate accumulator too low");
         assert!(asset_config.last_rate_accumulator < 10 * SCALE, "Last rate accumulator too high");
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(asset_config.floor != 0, "Debt asset config not set");
     }
 
@@ -365,7 +365,7 @@ mod TestDefaultExtensionPOV2 {
         extension.add_asset(config.pool_id, asset_params, interest_rate_config, pragma_oracle_params);
         stop_cheat_caller_address(extension.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(config.pool_id, config.collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(config.pool_id, config.collateral_asset.contract_address);
         assert!(asset_config.floor != 0, "Asset config not set");
         assert!(asset_config.scale == config.collateral_scale, "Invalid scale");
         assert!(asset_config.last_rate_accumulator >= SCALE, "Last rate accumulator too low");

@@ -36,6 +36,7 @@ mod TestLiquidatePosition {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
 
         let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
@@ -49,8 +50,6 @@ mod TestLiquidatePosition {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: 0,
-            debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zero::zero(),
             position: position,
@@ -81,6 +80,7 @@ mod TestLiquidatePosition {
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
             fee_rate: 0,
+            fee_shares: 0,
         };
 
         let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
@@ -94,8 +94,6 @@ mod TestLiquidatePosition {
             debt_asset_config: config,
             collateral_asset_price: Default::default(),
             debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: 0,
-            debt_asset_fee_shares: 0,
             max_ltv: 2,
             user: Zero::zero(),
             position: position,
@@ -797,7 +795,7 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -845,7 +843,7 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares < position_before.collateral_shares / 2, 'not lt half collateral shares');
         assert(position.nominal_debt < position_before.nominal_debt / 2, 'not lt half of nominal debt');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
 
         assert(reserve_before + debt / 2 == asset_config.reserve, 'reserve should eq');
         assert(reserve_before + balance_delta == asset_config.reserve, 'covered debt added to reserve');
@@ -952,7 +950,7 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // BORROWER
@@ -1007,7 +1005,7 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert(reserve_before == asset_config.reserve, 'reserve should be the same');
     }
 
@@ -1034,7 +1032,7 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // BORROWER
@@ -1089,7 +1087,7 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert(reserve_before > asset_config.reserve, 'reserve should be the same');
     }
 
@@ -1116,7 +1114,7 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // BORROWER
@@ -1171,7 +1169,7 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert(reserve_before == asset_config.reserve, 'reserve should be the same');
     }
 
@@ -1244,10 +1242,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1287,10 +1285,10 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
@@ -1360,10 +1358,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1403,10 +1401,10 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
@@ -1476,10 +1474,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1519,10 +1517,10 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
@@ -1592,10 +1590,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1635,10 +1633,10 @@ mod TestLiquidatePosition {
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
@@ -1711,10 +1709,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1755,12 +1753,12 @@ mod TestLiquidatePosition {
         assert!(p_collateral == (collateral / 2), "collateral should be half");
         assert!(position.nominal_debt == (debt * SCALE) / (2 * debt_scale), "debt shares should be half");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, collateral_asset.contract_address);
         assert!(
             collateral_reserve_before - (collateral / 2) == asset_config.reserve, "collateral reserve should decrease",
         );
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let asset_config = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(
             debt_reserve_before + (debt / 2) - response.bad_debt == asset_config.reserve,
             "debt reserve should increase",

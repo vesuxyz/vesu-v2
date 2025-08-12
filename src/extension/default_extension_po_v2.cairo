@@ -133,7 +133,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         ref self: TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownMode;
     fn set_fee_config(ref self: TContractState, pool_id: felt252, fee_config: FeeConfig);
-    fn claim_fees(ref self: TContractState, pool_id: felt252, collateral_asset: ContractAddress);
 
     // Upgrade
     fn upgrade_name(self: @TContractState) -> felt252;
@@ -806,15 +805,6 @@ mod DefaultExtensionPOV2 {
         fn set_fee_config(ref self: ContractState, pool_id: felt252, fee_config: FeeConfig) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.fee_model.set_fee_config(pool_id, fee_config);
-        }
-
-        /// Claims the fees for a specific pair in a pool.
-        /// See `claim_fees` in `fee_model.cairo`.
-        /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `collateral_asset` - address of the collateral asset
-        fn claim_fees(ref self: ContractState, pool_id: felt252, collateral_asset: ContractAddress) {
-            self.fee_model.claim_fees(pool_id, collateral_asset);
         }
 
         /// Returns the name of the contract

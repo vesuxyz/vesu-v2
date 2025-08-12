@@ -18,8 +18,8 @@ pub impl PositionPacking of StorePacking<Position, felt252> {
     }
 }
 
-pub impl AssetConfigPacking of StorePacking<AssetConfig, (felt252, felt252, felt252)> {
-    fn pack(value: AssetConfig) -> (felt252, felt252, felt252) {
+pub impl AssetConfigPacking of StorePacking<AssetConfig, (felt252, felt252, felt252, felt252)> {
+    fn pack(value: AssetConfig) -> (felt252, felt252, felt252, felt252) {
         // slot 1
         let total_collateral_shares: u128 = value
             .total_collateral_shares
@@ -53,11 +53,15 @@ pub impl AssetConfigPacking of StorePacking<AssetConfig, (felt252, felt252, felt
             + last_full_utilization_rate.into() * SHIFT_32 * SHIFT_64
             + fee_rate.into() * SHIFT_32 * SHIFT_64 * SHIFT_64;
 
-        (slot1, slot2, slot3)
+        // slot 4
+        let fee_shares: u128 = value.fee_shares.try_into().expect('pack-fee-shares');
+        let slot4 = fee_shares.into();
+
+        (slot1, slot2, slot3, slot4)
     }
 
-    fn unpack(value: (felt252, felt252, felt252)) -> AssetConfig {
-        let (slot1, slot2, slot3) = value;
+    fn unpack(value: (felt252, felt252, felt252, felt252)) -> AssetConfig {
+        let (slot1, slot2, slot3, slot4) = value;
 
         // slot 1
         let (total_nominal_debt, total_collateral_shares) = split_128(slot1.into());
@@ -77,6 +81,10 @@ pub impl AssetConfigPacking of StorePacking<AssetConfig, (felt252, felt252, felt
         let (rest, fee_rate) = split_8(rest);
         assert!(rest == 0, "asset-config-slot3-excess-data");
 
+        // slot 4
+        let (rest, fee_shares) = split_128(slot4.into());
+        assert!(rest == 0, "asset-config-slot4-excess-data");
+
         AssetConfig {
             total_collateral_shares: total_collateral_shares.into(),
             total_nominal_debt: total_nominal_debt.into(),
@@ -89,6 +97,7 @@ pub impl AssetConfigPacking of StorePacking<AssetConfig, (felt252, felt252, felt
             last_rate_accumulator: last_rate_accumulator.into(),
             last_full_utilization_rate: last_full_utilization_rate.into(),
             fee_rate: fee_rate.into() * PERCENT,
+            fee_shares: fee_shares.into(),
         }
     }
 }
