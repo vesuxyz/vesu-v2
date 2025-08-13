@@ -4,8 +4,9 @@ mod TestPragmaOracle {
     use snforge_std::{CheatSpan, cheat_caller_address, map_entry_address, start_cheat_block_timestamp_global, store};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::is_collateralized;
-    use vesu::data_model::{AssetParams, DebtCapParams, LTVParams};
+    use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use vesu::extension::components::position_hooks::LiquidationConfig;
     use vesu::extension::default_extension_po_v2::{
         FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
         PragmaOracleParams, ShutdownParams,
@@ -105,32 +106,128 @@ mod TestPragmaOracle {
             collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (75 * PERCENT).try_into().unwrap(),
         };
 
-        let shutdown_ltv_params = array![shutdown_ltv_params_0, shutdown_ltv_params_1].span();
-
         let asset_params = array![collateral_asset_params, debt_asset_params].span();
-        let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
         let models = array![interest_rate_config, interest_rate_config].span();
         let oracle_params = array![collateral_asset_oracle_params, debt_asset_oracle_params].span();
-        let liquidation_params = array![collateral_asset_liquidation_params, debt_asset_liquidation_params].span();
-        let debt_caps = array![collateral_asset_debt_cap_params, debt_asset_debt_cap_params].span();
-        let shutdown_params = ShutdownParams {
-            recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
-        };
         let fee_params = FeeParams { fee_recipient: creator };
 
         cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension.create_pool('DefaultExtensionPO', fee_params, creator);
+
+        // Add assets.
+        let mut asset_params_copy = asset_params;
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
         extension
-            .create_pool(
-                'DefaultExtensionPO',
-                asset_params,
-                max_position_ltv_params,
-                models,
-                oracle_params,
-                liquidation_params,
-                debt_caps,
-                shutdown_params,
-                fee_params,
-                creator,
+            .add_asset(
+                :pool_id,
+                asset_params: *asset_params_copy.pop_front().unwrap(),
+                interest_rate_config: *models[0],
+                pragma_oracle_params: *oracle_params[0],
+            );
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .add_asset(
+                :pool_id,
+                asset_params: *asset_params_copy.pop_front().unwrap(),
+                interest_rate_config: *models[1],
+                pragma_oracle_params: *oracle_params[1],
+            );
+
+        // Set liquidation config.
+        let collateral_asset = *asset_params[collateral_asset_liquidation_params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[collateral_asset_liquidation_params.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_liquidation_config(
+                :pool_id,
+                :collateral_asset,
+                :debt_asset,
+                liquidation_config: LiquidationConfig {
+                    liquidation_factor: collateral_asset_liquidation_params.liquidation_factor,
+                },
+            );
+
+        let collateral_asset = *asset_params[debt_asset_liquidation_params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[debt_asset_liquidation_params.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_liquidation_config(
+                :pool_id,
+                :collateral_asset,
+                :debt_asset,
+                liquidation_config: LiquidationConfig {
+                    liquidation_factor: debt_asset_liquidation_params.liquidation_factor,
+                },
+            );
+
+        // set the debt caps for each pair.
+
+        let collateral_asset = *asset_params[collateral_asset_debt_cap_params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[collateral_asset_debt_cap_params.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_debt_cap(
+                :pool_id, :collateral_asset, :debt_asset, debt_cap: collateral_asset_debt_cap_params.debt_cap,
+            );
+
+        let collateral_asset = *asset_params[debt_asset_debt_cap_params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[debt_asset_debt_cap_params.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension.set_debt_cap(:pool_id, :collateral_asset, :debt_asset, debt_cap: debt_asset_debt_cap_params.debt_cap);
+
+        // set the max shutdown ltv for each pair.
+        let collateral_asset = *asset_params[shutdown_ltv_params_0.collateral_asset_index].asset;
+        let debt_asset = *asset_params[shutdown_ltv_params_0.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_shutdown_ltv_config(
+                :pool_id,
+                :collateral_asset,
+                :debt_asset,
+                shutdown_ltv_config: LTVConfig { max_ltv: shutdown_ltv_params_0.max_ltv },
+            );
+
+        let collateral_asset = *asset_params[shutdown_ltv_params_1.collateral_asset_index].asset;
+        let debt_asset = *asset_params[shutdown_ltv_params_1.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_shutdown_ltv_config(
+                :pool_id,
+                :collateral_asset,
+                :debt_asset,
+                shutdown_ltv_config: LTVConfig { max_ltv: shutdown_ltv_params_1.max_ltv },
+            );
+
+        // Set lvt config.
+        let collateral_asset = *asset_params[max_position_ltv_params_0.collateral_asset_index].asset;
+        let debt_asset = *asset_params[max_position_ltv_params_0.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_ltv_config(
+                :pool_id,
+                :collateral_asset,
+                :debt_asset,
+                ltv_config: LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
+            );
+
+        let collateral_asset = *asset_params[max_position_ltv_params_1.collateral_asset_index].asset;
+        let debt_asset = *asset_params[max_position_ltv_params_1.debt_asset_index].asset;
+
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_ltv_config(
+                :pool_id,
+                :collateral_asset,
+                :debt_asset,
+                ltv_config: LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
             );
         // No stop_cheat_caller_address needed for one-shot cheat_caller_address
         pool_id

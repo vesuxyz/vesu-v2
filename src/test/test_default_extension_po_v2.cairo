@@ -12,14 +12,10 @@ mod TestDefaultExtensionPOV2 {
     use vesu::extension::components::fee_model::FeeConfig;
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig, ShutdownMode};
-    use vesu::extension::default_extension_po_v2::{
-        FeeParams, IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams, ShutdownParams,
-    };
+    use vesu::extension::default_extension_po_v2::{IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams};
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait};
-    use vesu::test::setup_v2::{
-        COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env, test_interest_rate_config,
-    };
+    use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env};
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
     use vesu::vendor::pragma::AggregationMode;
 
@@ -52,133 +48,6 @@ mod TestDefaultExtensionPOV2 {
         assert!(asset_config.last_rate_accumulator < 10 * SCALE, "Last rate accumulator too high");
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         assert!(asset_config.floor != 0, "Debt asset config not set");
-    }
-
-    #[test]
-    #[should_panic(expected: "empty-asset-params")]
-    fn test_create_pool_empty_asset_params() {
-        let Env { extension, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        let asset_params = array![].span();
-        let max_position_ltv_params = array![].span();
-        let interest_rate_configs = array![].span();
-        let oracle_params = array![].span();
-        let liquidation_params = array![].span();
-        let debt_caps_params = array![].span();
-        let shutdown_ltv_params = array![].span();
-        let shutdown_params = ShutdownParams {
-            recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
-        };
-
-        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
-        extension
-            .create_pool(
-                'DefaultExtensionPOV2',
-                asset_params,
-                max_position_ltv_params,
-                interest_rate_configs,
-                oracle_params,
-                liquidation_params,
-                debt_caps_params,
-                shutdown_params,
-                FeeParams { fee_recipient: users.creator },
-                users.creator,
-            );
-        stop_cheat_caller_address(extension.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: "interest-rate-params-mismatch")]
-    fn test_create_pool_interest_rate_params_mismatch() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        let collateral_asset_params = AssetParams {
-            asset: config.collateral_asset.contract_address,
-            floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
-            initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
-            max_utilization: SCALE,
-            is_legacy: true,
-            fee_rate: 0,
-        };
-
-        let asset_params = array![collateral_asset_params].span();
-        let max_position_ltv_params = array![].span();
-        let interest_rate_configs = array![].span();
-        let oracle_params = array![].span();
-        let liquidation_params = array![].span();
-        let debt_caps_params = array![].span();
-        let shutdown_ltv_params = array![].span();
-        let shutdown_params = ShutdownParams {
-            recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
-        };
-
-        start_cheat_caller_address(config.collateral_asset.contract_address, users.creator);
-        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_cheat_caller_address(config.collateral_asset.contract_address);
-
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension
-            .create_pool(
-                'DefaultExtensionPOV2',
-                asset_params,
-                max_position_ltv_params,
-                interest_rate_configs,
-                oracle_params,
-                liquidation_params,
-                debt_caps_params,
-                shutdown_params,
-                FeeParams { fee_recipient: users.creator },
-                users.creator,
-            );
-        stop_cheat_caller_address(extension.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: "pragma-oracle-params-mismatch")]
-    fn test_create_pool_pragma_oracle_params_mismatch() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        let collateral_asset_params = AssetParams {
-            asset: config.collateral_asset.contract_address,
-            floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
-            initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
-            max_utilization: SCALE,
-            is_legacy: true,
-            fee_rate: 0,
-        };
-
-        let asset_params = array![collateral_asset_params].span();
-        let max_position_ltv_params = array![].span();
-        let interest_rate_configs = array![test_interest_rate_config()].span();
-        let oracle_params = array![].span();
-        let liquidation_params = array![].span();
-        let debt_caps_params = array![].span();
-        let shutdown_ltv_params = array![].span();
-        let shutdown_params = ShutdownParams {
-            recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
-        };
-
-        start_cheat_caller_address(config.collateral_asset.contract_address, users.creator);
-        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_cheat_caller_address(config.collateral_asset.contract_address);
-
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension
-            .create_pool(
-                'DefaultExtensionPOV2',
-                asset_params,
-                max_position_ltv_params,
-                interest_rate_configs,
-                oracle_params,
-                liquidation_params,
-                debt_caps_params,
-                shutdown_params,
-                FeeParams { fee_recipient: users.creator },
-                users.creator,
-            );
-        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
