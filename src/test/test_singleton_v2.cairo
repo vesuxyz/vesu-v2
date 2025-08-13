@@ -407,20 +407,6 @@ mod TestSingletonV2 {
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-extension")]
-    fn test_set_extension_not_extension() {
-        let Env {
-            singleton, extension, config, users, ..,
-        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        let new_extension = contract_address_const::<'new_extension'>();
-
-        create_pool(extension, config, users.owner, Option::None);
-
-        singleton.set_extension(new_extension);
-    }
-
-    #[test]
     #[should_panic(expected: ('Caller is not the owner',))]
     fn test_singleton_upgrade_only_owner() {
         let Env { singleton, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());

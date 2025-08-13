@@ -70,7 +70,6 @@ pub trait ISingletonV2<TContractState> {
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
     );
     fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
-    fn set_extension(ref self: TContractState, extension: ContractAddress);
     fn claim_fee_shares(ref self: TContractState, asset: ContractAddress);
 
     fn upgrade_name(self: @TContractState) -> felt252;
@@ -1034,14 +1033,6 @@ mod SingletonV2 {
             self.asset_configs.write(asset, asset_config);
 
             self.emit(SetAssetParameter { asset, parameter, value });
-        }
-
-        /// Sets the extension address.
-        /// * `extension` - address of the extension contract
-        fn set_extension(ref self: ContractState, extension: ContractAddress) {
-            assert!(get_caller_address() == self.ownable.owner(), "caller-not-owner");
-            assert!(extension != Zero::zero(), "extension-not-set");
-            self._set_extension(extension);
         }
 
         /// Attributes the outstanding fee shares to the extension

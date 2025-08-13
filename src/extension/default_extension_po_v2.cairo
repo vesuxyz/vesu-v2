@@ -106,7 +106,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         shutdown_ltv_config: LTVConfig,
     );
     fn set_shutdown_mode(ref self: TContractState, shutdown_mode: ShutdownMode);
-    fn set_pool_owner(ref self: TContractState, owner: ContractAddress);
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
     fn update_shutdown_status(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
@@ -183,12 +182,6 @@ mod DefaultExtensionPOV2 {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetPoolOwner {
-        #[key]
-        owner: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SetShutdownModeAgent {
         #[key]
         agent: ContractAddress,
@@ -206,7 +199,6 @@ mod DefaultExtensionPOV2 {
         InterestRateModelEvents: interest_rate_model_component::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
         FeeModelEvents: fee_model_component::Event,
-        SetPoolOwner: SetPoolOwner,
         SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
     }
@@ -252,6 +244,7 @@ mod DefaultExtensionPOV2 {
 
         fn burn_inflation_fee(ref self: ContractState, asset: ContractAddress, is_legacy: bool) {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
+
             // burn inflation fee
             let asset = IERC20Dispatcher { contract_address: asset };
             transfer_asset(
@@ -423,6 +416,10 @@ mod DefaultExtensionPOV2 {
             // assert that all arrays have equal length
             assert!(asset_params.len() == interest_rate_configs.len(), "interest-rate-params-mismatch");
             assert!(asset_params.len() == pragma_oracle_params.len(), "pragma-oracle-params-mismatch");
+
+            // create the pool in the singleton
+            let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
+            singleton.create_pool(asset_params, ltv_params, get_contract_address());
 
             // set the pool name
             self.pool_name.write(name);
@@ -635,15 +632,6 @@ mod DefaultExtensionPOV2 {
         ) {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             self.position_hooks.set_shutdown_ltv_config(collateral_asset, debt_asset, shutdown_ltv_config);
-        }
-
-        /// Sets the owner
-        /// # Arguments
-        /// * `owner` - address of the new owner
-        fn set_pool_owner(ref self: ContractState, owner: ContractAddress) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            self.owner.write(owner);
-            self.emit(SetPoolOwner { owner });
         }
 
         /// Sets the shutdown mode agent

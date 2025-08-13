@@ -398,24 +398,6 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-owner")]
-    fn test_set_pool_owner_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-        create_pool(extension, config, users.owner, Option::None);
-        extension.set_pool_owner(users.lender);
-    }
-
-    #[test]
-    fn test_set_pool_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-        create_pool(extension, config, users.owner, Option::None);
-
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_pool_owner(users.lender);
-        stop_cheat_caller_address(extension.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: "caller-not-owner")]
     fn test_set_ltv_config_caller_not_owner() {
         let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 

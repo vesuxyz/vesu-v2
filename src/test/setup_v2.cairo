@@ -142,14 +142,6 @@ pub fn setup_env(
         contract_address: deploy_with_args("DefaultExtensionPOV2", args),
     };
 
-    start_cheat_caller_address(extension.contract_address, Zero::zero());
-    extension.set_pool_owner(users.owner);
-    stop_cheat_caller_address(extension.contract_address);
-
-    start_cheat_caller_address(singleton.contract_address, users.owner);
-    singleton.set_extension(extension.contract_address);
-    stop_cheat_caller_address(singleton.contract_address);
-
     // deploy collateral and borrow assets
     let (collateral_asset, debt_asset, third_asset) = if collateral_address.is_non_zero()
         && debt_address.is_non_zero()
