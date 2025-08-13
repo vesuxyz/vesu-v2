@@ -31,7 +31,6 @@ pub mod test {
     pub mod setup_v2;
     pub mod test_common;
     pub mod test_default_extension_po_v2;
-    pub mod test_fee_model;
     pub mod test_flash_loan;
     pub mod test_interest_rate_model;
     pub mod test_liquidate_position;

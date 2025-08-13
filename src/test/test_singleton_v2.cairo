@@ -417,8 +417,9 @@ mod TestSingletonV2 {
 
     #[test]
     fn test_singleton_upgrade() {
-        let Env { singleton, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
+        start_cheat_caller_address(singleton.contract_address, users.owner);
         singleton.upgrade(new_classhash);
         let tag = IMockSingletonUpgradeDispatcher { contract_address: singleton.contract_address }.tag();
         assert!(tag == 'MockSingletonUpgrade', "Invalid tag");
@@ -427,8 +428,9 @@ mod TestSingletonV2 {
     #[test]
     #[should_panic(expected: ('invalid upgrade name',))]
     fn test_singleton_upgrade_wrong_name() {
-        let Env { singleton, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgradeWrongName").unwrap().contract_class().class_hash;
+        start_cheat_caller_address(singleton.contract_address, users.owner);
         singleton.upgrade(new_classhash);
     }
 
@@ -440,6 +442,7 @@ mod TestSingletonV2 {
         assert!(ownable_dispatcher.owner() == users.owner, "Owner is not the contract address");
 
         let new_owner = contract_address_const::<'new_owner'>();
+        start_cheat_caller_address(singleton.contract_address, users.owner);
         ownable_dispatcher.transfer_ownership(new_owner);
         assert!(ownable_dispatcher.owner() == users.owner, "Invalid owner");
         assert!(ownable_dispatcher.pending_owner() == new_owner, "Invalid pending owner");

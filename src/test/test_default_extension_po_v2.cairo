@@ -878,9 +878,10 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_upgrade() {
-        let Env { extension, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { extension, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let new_class_hash = *declare("MockExtensionPOV2Upgrade").unwrap().contract_class().class_hash;
+        start_cheat_caller_address(extension.contract_address, users.owner);
         extension.upgrade(new_class_hash);
         let tag = IMockSingletonUpgradeDispatcher { contract_address: extension.contract_address }.tag();
         assert!(tag == 'MockExtensionPOV2Upgrade', "Invalid tag");
@@ -889,8 +890,9 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "invalid-upgrade-name")]
     fn test_extension_upgrade_wrong_name() {
-        let Env { extension, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { extension, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_class_hash = *declare("MockSingletonUpgradeWrongName").unwrap().contract_class().class_hash;
+        start_cheat_caller_address(extension.contract_address, users.owner);
         extension.upgrade(new_class_hash);
     }
 }

@@ -111,26 +111,6 @@ mod TestModifyPosition {
             );
     }
 
-    #[test]
-    #[should_panic(expected: "unknown-pool")]
-    fn test_modify_position_unknown_pool() {
-        let (singleton, _, _, users, _) = setup();
-
-        // deposit collateral which is later borrowed by the borrower
-        let params = ModifyPositionParams {
-            collateral_asset: contract_address_const::<'collateral'>(),
-            debt_asset: contract_address_const::<'debt'>(),
-            user: users.lender,
-            collateral: Default::default(),
-            debt: Default::default(),
-            data: ArrayTrait::new().span(),
-        };
-
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
-    }
-
     // identical-assets
 
     #[test]

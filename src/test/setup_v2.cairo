@@ -111,7 +111,7 @@ pub fn setup_env(
     third_address: ContractAddress,
 ) -> Env {
     let users = Users {
-        owner: get_contract_address(),
+        owner: contract_address_const::<'owner'>(),
         lender: contract_address_const::<'lender'>(),
         borrower: contract_address_const::<'borrower'>(),
         seeder: contract_address_const::<'seeder'>(),
