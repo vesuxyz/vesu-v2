@@ -515,7 +515,11 @@ mod SingletonV2 {
             let extension = self.extension.read();
             assert!(extension.is_non_zero(), "unknown-pool");
 
-            let mut asset_config = self.asset_configs.read((asset));
+            let mut asset_config = self.asset_configs.read(asset);
+            if asset.is_non_zero() {
+                // Check that the asset is registered.
+                assert_asset_config_exists(asset_config)
+            }
             let mut fee_shares = 0;
 
             if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
