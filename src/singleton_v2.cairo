@@ -509,6 +509,10 @@ mod SingletonV2 {
             assert!(extension.is_non_zero(), "unknown-pool");
 
             let mut asset_config = self.asset_configs.read(asset);
+            if asset.is_non_zero() {
+                // Check that the asset is registered.
+                assert_asset_config_exists(asset_config)
+            }
 
             if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
                 let new_asset_config = rate_accumulator(extension, asset, asset_config);
