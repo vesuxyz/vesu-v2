@@ -6,8 +6,9 @@ use snforge_std::{
 };
 #[feature("deprecated-starknet-consts")]
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
-use vesu::data_model::{AssetParams, DebtCapParams, LTVParams};
+use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
+use vesu::extension::components::position_hooks::LiquidationConfig;
 use vesu::extension::default_extension_po_v2::{
     FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
     PragmaOracleParams, ShutdownParams,
@@ -363,19 +364,78 @@ pub fn create_pool(
     };
 
     cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
-    extension
-        .create_pool(
-            'DefaultExtensionPOV2',
-            asset_params,
-            max_position_ltv_params,
-            interest_rate_configs,
-            oracle_params,
-            liquidation_params,
-            debt_caps,
-            shutdown_params,
-            FeeParams { fee_recipient: creator },
-            creator,
-        );
+    let pool_id = extension.create_pool('DefaultExtensionPOV2', FeeParams { fee_recipient: creator }, creator);
+
+    // Add assets.
+    let mut asset_params_copy = asset_params;
+    let mut i = 0;
+    while !asset_params_copy.is_empty() {
+        let asset_params = *asset_params_copy.pop_front().unwrap();
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .add_asset(
+                :pool_id,
+                :asset_params,
+                interest_rate_config: *interest_rate_configs[i],
+                pragma_oracle_params: *oracle_params[i],
+            );
+
+        i += 1;
+    }
+
+    // Set liquidation config.
+    let mut liquidation_params_copy = liquidation_params;
+    while !liquidation_params_copy.is_empty() {
+        let params = *liquidation_params_copy.pop_front().unwrap();
+        let collateral_asset = *asset_params[params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[params.debt_asset_index].asset;
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_liquidation_config(
+                :pool_id,
+                :collateral_asset,
+                :debt_asset,
+                liquidation_config: LiquidationConfig { liquidation_factor: params.liquidation_factor },
+            );
+
+        i += 1;
+    }
+
+    // set the debt caps for each pair.
+    let mut debt_caps_copy = debt_caps;
+    while !debt_caps_copy.is_empty() {
+        let params = *debt_caps_copy.pop_front().unwrap();
+        let collateral_asset = *asset_params[params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[params.debt_asset_index].asset;
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension.set_debt_cap(:pool_id, :collateral_asset, :debt_asset, debt_cap: params.debt_cap);
+    }
+
+    // set the max shutdown ltv for each pair.
+    let mut shutdown_ltv_params = shutdown_params.ltv_params;
+    while !shutdown_ltv_params.is_empty() {
+        let params = *shutdown_ltv_params.pop_front().unwrap();
+        let collateral_asset = *asset_params[params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[params.debt_asset_index].asset;
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_shutdown_ltv_config(
+                :pool_id, :collateral_asset, :debt_asset, shutdown_ltv_config: LTVConfig { max_ltv: params.max_ltv },
+            );
+    }
+
+    // Set lvt config.
+    let mut max_position_ltv_params_copy = max_position_ltv_params;
+    while !max_position_ltv_params_copy.is_empty() {
+        let params = max_position_ltv_params_copy.pop_front().unwrap();
+        let collateral_asset = *asset_params[*params.collateral_asset_index].asset;
+        let debt_asset = *asset_params[*params.debt_asset_index].asset;
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        extension
+            .set_ltv_config(
+                :pool_id, :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: *params.max_ltv },
+            );
+    }
     stop_cheat_caller_address(extension.contract_address);
 
     assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPOV2', "pool name not set");

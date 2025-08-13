@@ -120,9 +120,7 @@ mod SingletonV2 {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
-    };
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::syscalls::replace_class_syscall;
     use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
     use vesu::common::{
