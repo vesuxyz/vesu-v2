@@ -44,7 +44,6 @@ export class EnvAssetParams {
 }
 
 export interface PoolConfig {
-  id: bigint;
   description: string;
   type: string;
   params: CreatePoolParams;

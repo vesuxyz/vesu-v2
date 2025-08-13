@@ -13,12 +13,12 @@ assert(
   toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(),
   "pragma_oracle-neq",
 );
-assert((await extensionPO.pool_owner(pool.id)) === BigInt(pool.params.owner.toLowerCase()), "pool_owner-neq");
+assert((await extensionPO.pool_owner()) === BigInt(pool.params.owner.toLowerCase()), "pool_owner-neq");
 assert(
-  (await extensionPO.fee_config(pool.id)).fee_recipient === BigInt(pool.params.fee_params.fee_recipient.toLowerCase()),
+  (await extensionPO.fee_config()).fee_recipient === BigInt(pool.params.fee_params.fee_recipient.toLowerCase()),
   "fee_recipient-neq",
 );
-const shutdown_config = await extensionPO.shutdown_config(pool.id);
+const shutdown_config = await extensionPO.shutdown_config();
 assert(shutdown_config.recovery_period === pool.params.shutdown_params.recovery_period, "recovery_period-neq");
 assert(
   shutdown_config.subscription_period === pool.params.shutdown_params.subscription_period,
@@ -26,7 +26,7 @@ assert(
 );
 
 for (const [index, asset] of assets.entries()) {
-  const oracle_config = await extensionPO.oracle_config(pool.id, asset.address);
+  const oracle_config = await extensionPO.oracle_config(asset.address);
   assert(
     shortString.decodeShortString(oracle_config.pragma_key) === pool.params.pragma_oracle_params[index].pragma_key,
     "pragma_key-neq",
@@ -47,7 +47,7 @@ for (const [index, asset] of assets.entries()) {
   //   "aggregation_mode-neq",
   // );
 
-  const interest_rate_config = await extensionPO.interest_rate_config(pool.id, asset.address);
+  const interest_rate_config = await extensionPO.interest_rate_config(asset.address);
   assert(
     interest_rate_config.min_target_utilization === pool.params.interest_rate_configs[index].min_target_utilization,
     "min_target_utilization-neq",
@@ -83,7 +83,7 @@ for (const [index, asset] of assets.entries()) {
     "target_rate_percent-neq",
   );
 
-  const { "0": asset_config } = await singleton.asset_config_unsafe(pool.id, asset.address);
+  const { "0": asset_config } = await singleton.asset_config_unsafe(asset.address);
   assert(asset_config.total_collateral_shares >= 0n, "total_collateral_shares-neq");
   assert(asset_config.total_nominal_debt >= 0n, "total_nominal_debt-neq");
   assert(asset_config.reserve >= 0n, "reserve-neq");
@@ -96,22 +96,22 @@ for (const [index, asset] of assets.entries()) {
   assert(asset_config.last_full_utilization_rate > 0n, "last_full_utilization_rate-neq");
   assert(asset_config.fee_rate === pool.params.asset_params[index].fee_rate, "fee_rate-neq");
 
-  assert((await extensionPO.price(pool.id, asset.address)).value > 0n, "price-neq");
-  assert((await singleton.rate_accumulator_unsafe(pool.id, asset.address)) > 0n, "rate_accumulator-neq");
-  assert((await singleton.utilization_unsafe(pool.id, asset.address)) >= 0n, "utilization-neq");
+  assert((await extensionPO.price(asset.address)).value > 0n, "price-neq");
+  assert((await singleton.rate_accumulator_unsafe(asset.address)) > 0n, "rate_accumulator-neq");
+  assert((await singleton.utilization_unsafe(asset.address)) >= 0n, "utilization-neq");
 }
 
 for (const [, asset] of pool.params.ltv_params.entries()) {
   let collateral_asset = assets[asset.collateral_asset_index];
   let debt_asset = assets[asset.debt_asset_index];
-  let ltv_config = await singleton.ltv_config(pool.id, collateral_asset.address, debt_asset.address);
+  let ltv_config = await singleton.ltv_config(collateral_asset.address, debt_asset.address);
   assert(ltv_config.max_ltv === asset.max_ltv, "max_ltv-neq");
 }
 
 for (const [, asset] of pool.params.liquidation_params.entries()) {
   let collateral_asset = assets[asset.collateral_asset_index];
   let debt_asset = assets[asset.debt_asset_index];
-  let liquidation_config = await extensionPO.liquidation_config(pool.id, collateral_asset.address, debt_asset.address);
+  let liquidation_config = await extensionPO.liquidation_config(collateral_asset.address, debt_asset.address);
   assert(liquidation_config.liquidation_factor === asset.liquidation_factor, "liquidation_factor-neq");
 }
 
@@ -119,7 +119,7 @@ for (const [, asset] of pool.params.liquidation_params.entries()) {
 //   let collateral_asset = assets[asset.collateral_asset_index];
 //   let debt_asset = assets[asset.debt_asset_index];
 //   assert(
-//     (await extensionPO.debt_caps(pool.id, collateral_asset.address, debt_asset.address)) === asset.debt_cap,
+//     (await extensionPO.debt_caps(collateral_asset.address, debt_asset.address)) === asset.debt_cap,
 //     "debt_cap-neq",
 //   );
 // }
@@ -127,6 +127,6 @@ for (const [, asset] of pool.params.liquidation_params.entries()) {
 for (const [, asset] of pool.params.shutdown_params.ltv_params.entries()) {
   let collateral_asset = assets[asset.collateral_asset_index];
   let debt_asset = assets[asset.debt_asset_index];
-  let ltv_config = await extensionPO.shutdown_ltv_config(pool.id, collateral_asset.address, debt_asset.address);
+  let ltv_config = await extensionPO.shutdown_ltv_config(collateral_asset.address, debt_asset.address);
   assert(ltv_config.max_ltv === asset.max_ltv, "shutdown_max_ltv-neq");
 }

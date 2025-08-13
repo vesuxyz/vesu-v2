@@ -30,23 +30,23 @@ export async function setup(network: string | undefined) {
   const [deployerAccount, accounts] = await loadAccounts(provider, isDevnet);
   logAddresses("Accounts:", { deployer: deployerAccount, ...accounts });
 
-  const { creator, lender, borrower } = accounts;
-  return new Deployer(provider, deployerAccount, config, creator, lender, borrower);
+  const { owner, lender, borrower } = accounts;
+  return new Deployer(provider, deployerAccount, config, owner, lender, borrower);
 }
 
 async function loadAccounts(provider: RpcProvider, isDevnet: boolean) {
   if (isDevnet) {
     const predeployed = await predeployedAccounts(provider);
     const all = predeployed.map(({ address, private_key }) => new Account(provider, address, private_key));
-    const [deployer, creator, lender, borrower] = all;
-    return [deployer, { creator, lender, borrower }] as const;
+    const [deployer, owner, lender, borrower] = all;
+    return [deployer, { owner, lender, borrower }] as const;
   }
 
   if (!process.env.ADDRESS || !process.env.PRIVATE_KEY) {
     throw new Error("Missing ADDRESS or ACCOUNT_PRIVATE_KEY env var");
   }
   const deployer = new Account(provider, process.env.ADDRESS, process.env.PRIVATE_KEY);
-  return [deployer, { creator: deployer, lender: deployer, borrower: deployer }] as const;
+  return [deployer, { owner: deployer, lender: deployer, borrower: deployer }] as const;
 }
 
 async function predeployedAccounts(provider: RpcProvider): Promise<Array<{ address: string; private_key: string }>> {

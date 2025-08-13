@@ -11,7 +11,7 @@ mod TestPragmaOracle {
         PragmaOracleParams, ShutdownParams,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
-    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::singleton_v2::ISingletonV2Dispatcher;
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
         IMockPragmaSummaryDispatcherTrait,
@@ -23,15 +23,13 @@ mod TestPragmaOracle {
 
     fn create_custom_pool(
         extension: IDefaultExtensionPOV2Dispatcher,
-        creator: ContractAddress,
+        owner: ContractAddress,
         singleton: ISingletonV2Dispatcher,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         timeout: u64,
         number_of_sources: u32,
-    ) -> felt252 {
-        let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
-
+    ) {
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
             max_target_utilization: 85_000,
@@ -116,9 +114,9 @@ mod TestPragmaOracle {
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
         };
-        let fee_params = FeeParams { fee_recipient: creator };
+        let fee_params = FeeParams { fee_recipient: owner };
 
-        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -130,21 +128,20 @@ mod TestPragmaOracle {
                 debt_caps,
                 shutdown_params,
                 fee_params,
-                creator,
+                owner,
             );
         // No stop_cheat_caller_address needed for one-shot cheat_caller_address
-        pool_id
     }
 
     #[test]
     fn test_get_default_price() {
         let (_, default_extension_po, config, _, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
 
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
-        let debt_asset_price = extension_dispatcher.price(pool_id, debt_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let debt_asset_price = extension_dispatcher.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == SCALE, "Debt asset price not correctly set");
@@ -155,7 +152,7 @@ mod TestPragmaOracle {
     #[test]
     fn test_get_price_high() {
         let (_, default_extension_po, config, _, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
 
@@ -167,8 +164,8 @@ mod TestPragmaOracle {
         // set debt asset price
         pragma_oracle.set_price(DEBT_PRAGMA_KEY, max);
 
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
-        let debt_asset_price = extension_dispatcher.price(pool_id, debt_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let debt_asset_price = extension_dispatcher.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");
@@ -189,9 +186,9 @@ mod TestPragmaOracle {
 
         let timeout = 10;
 
-        let pool_id = create_custom_pool(
+        create_custom_pool(
             extension,
-            users.creator,
+            users.owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -205,13 +202,13 @@ mod TestPragmaOracle {
 
         // called at timeout
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout);
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
 
         // called at timeout - 1
         start_cheat_block_timestamp_global(get_block_timestamp() - 1);
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
     }
@@ -225,9 +222,9 @@ mod TestPragmaOracle {
 
         let timeout = 10;
 
-        let pool_id = create_custom_pool(
+        create_custom_pool(
             extension,
-            users.creator,
+            users.owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -241,7 +238,7 @@ mod TestPragmaOracle {
 
         // called at timeout + 1
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout + 1);
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         // stale price
         assert!(!collateral_asset_price.is_valid, "Collateral asset validity should be false");
@@ -255,9 +252,9 @@ mod TestPragmaOracle {
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
-        let pool_id = create_custom_pool(
+        create_custom_pool(
             extension,
-            users.creator,
+            users.owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -271,14 +268,14 @@ mod TestPragmaOracle {
         // number of sources == min_number_of_sources + 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
 
         // number of sources == min_number_of_sources
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
     }
@@ -291,9 +288,9 @@ mod TestPragmaOracle {
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
-        let pool_id = create_custom_pool(
+        create_custom_pool(
             extension,
-            users.creator,
+            users.owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -307,7 +304,7 @@ mod TestPragmaOracle {
         // number of sources == min_number_of_sources - 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources - 1);
 
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
 
         assert!(!collateral_asset_price.is_valid, "Debt asset validity should be false");
     }
@@ -315,19 +312,17 @@ mod TestPragmaOracle {
     #[test]
     fn test_price_twap() {
         let (_, default_extension_po, config, _, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         store(
             default_extension_po.contract_address,
-            map_entry_address(
-                selector!("oracle_configs"), array![pool_id, collateral_asset.contract_address.into()].span(),
-            ),
+            map_entry_address(selector!("oracle_configs"), array![collateral_asset.contract_address.into()].span()),
             array![COLL_PRAGMA_KEY, 0, 2, 1, 1, 1].span(),
         );
 
         store(
             default_extension_po.contract_address,
-            map_entry_address(selector!("oracle_configs"), array![pool_id, debt_asset.contract_address.into()].span()),
+            map_entry_address(selector!("oracle_configs"), array![debt_asset.contract_address.into()].span()),
             array![DEBT_PRAGMA_KEY, 0, 2, 1, 1, 1].span(),
         );
 
@@ -343,8 +338,8 @@ mod TestPragmaOracle {
         pragma_oracle.set_price(DEBT_PRAGMA_KEY, 0);
         pragma_summary.set_twap(DEBT_PRAGMA_KEY, max, 18);
 
-        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
-        let debt_asset_price = extension_dispatcher.price(pool_id, debt_asset.contract_address);
+        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let debt_asset_price = extension_dispatcher.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");

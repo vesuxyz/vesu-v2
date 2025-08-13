@@ -17,15 +17,15 @@ mod TestPoolDonation {
     #[test]
     fn test_donate_to_reserve_pool() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
 
-        assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
+        assert!(singleton.extension().is_non_zero(), "Pool not created");
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
-        singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
+        singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_cheat_caller_address(singleton.contract_address);
 
         let initial_singleton_debt_asset_balance = debt_asset.balance_of(singleton.contract_address);
@@ -34,7 +34,6 @@ mod TestPoolDonation {
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -55,11 +54,11 @@ mod TestPoolDonation {
         assert!(balance == initial_singleton_debt_asset_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
         let (old_position, collateral, _) = singleton
-            .position(pool_id, debt_asset.contract_address, collateral_asset.contract_address, users.lender);
+            .position(debt_asset.contract_address, collateral_asset.contract_address, users.lender);
 
         assert!(collateral == liquidity_to_deposit, "Collateral not set");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let old_pool_reserve = asset_config.reserve;
 
         let amount_to_donate_to_reserve = 25 * debt_scale;
@@ -68,7 +67,6 @@ mod TestPoolDonation {
 
         // deposit collateral and debt assets
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -85,15 +83,15 @@ mod TestPoolDonation {
         start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
+            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.donate_to_reserve(pool_id, debt_asset.contract_address, amount_to_donate_to_reserve);
+        singleton.donate_to_reserve(debt_asset.contract_address, amount_to_donate_to_reserve);
         stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
+            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
 
         let balance = debt_asset.balance_of(users.lender);
@@ -103,11 +101,11 @@ mod TestPoolDonation {
         );
 
         let (new_position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, collateral_asset.contract_address, users.lender);
+            .position(debt_asset.contract_address, collateral_asset.contract_address, users.lender);
 
         assert!(new_position.collateral_shares == old_position.collateral_shares, "Collateral shares should unchanged");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let new_pool_reserve = asset_config.reserve;
         assert!(
             new_pool_reserve == old_pool_reserve + amount_to_donate_to_reserve - response.debt_delta.abs(),
@@ -116,26 +114,10 @@ mod TestPoolDonation {
     }
 
     #[test]
-    #[should_panic(expected: "unknown-pool")]
-    fn test_donate_to_reserve_pool_wrong_pool_id() {
-        let (singleton, _, config, users, _) = setup();
-        let TestConfig { pool_id, debt_asset, debt_scale, .. } = config;
-
-        assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
-        assert!(singleton.extension(100).is_zero(), "Pool exists");
-
-        let amount_to_donate_to_reserve = 25 * debt_scale;
-
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.donate_to_reserve(100, debt_asset.contract_address, amount_to_donate_to_reserve);
-        stop_cheat_caller_address(singleton.contract_address);
-    }
-
-    #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_donate_to_reserve_pool_incorrect_asset() {
         let (singleton, _, config, users, _) = setup();
-        let TestConfig { pool_id, debt_asset, .. } = config;
+        let TestConfig { debt_asset, .. } = config;
 
         let mock_asset_class = ContractClass { class_hash: get_class_hash(debt_asset.contract_address) };
 
@@ -153,12 +135,12 @@ mod TestPoolDonation {
         fake_asset.approve(singleton.contract_address, supply);
         stop_cheat_caller_address(singleton.contract_address);
 
-        assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
+        assert!(singleton.extension().is_non_zero(), "Pool not created");
 
         let amount_to_donate_to_reserve = 2 * fake_asset_scale;
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.donate_to_reserve(pool_id, fake_asset.contract_address, amount_to_donate_to_reserve);
+        singleton.donate_to_reserve(fake_asset.contract_address, amount_to_donate_to_reserve);
         stop_cheat_caller_address(singleton.contract_address);
     }
 }

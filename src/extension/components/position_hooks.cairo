@@ -74,7 +74,9 @@ pub mod position_hooks_component {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
     use openzeppelin::utils::math::{Rounding, u256_mul_div};
-    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
     use vesu::data_model::{Context, LTVConfig, Position, assert_ltv_config};
@@ -88,29 +90,25 @@ pub mod position_hooks_component {
 
     #[storage]
     pub struct Storage {
-        // contains the shutdown configuration for each pool
-        // pool_id -> shutdown configuration
-        pub shutdown_configs: Map<felt252, ShutdownConfig>,
-        // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
-        // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
-        pub shutdown_ltv_configs: Map<(felt252, ContractAddress, ContractAddress), LTVConfig>,
-        // contains the current shutdown mode for a pool
-        // pool_id -> shutdown mode
-        pub fixed_shutdown_mode: Map<felt252, ShutdownState>,
-        // contains the liquidation configuration for each pair in a pool
-        // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
-        pub liquidation_configs: Map<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
+        // contains the shutdown configuration
+        pub shutdown_config: ShutdownConfig,
+        // specifies the ltv configuration for each pair at which the recovery mode is triggered
+        // (collateral_asset, debt_asset) -> shutdown ltv configuration
+        pub shutdown_ltv_configs: Map<(ContractAddress, ContractAddress), LTVConfig>,
+        // contains the current shutdown mode
+        pub fixed_shutdown_mode: ShutdownState,
+        // contains the liquidation configuration for each pair
+        // (collateral_asset, debt_asset) -> liquidation configuration
+        pub liquidation_configs: Map<(ContractAddress, ContractAddress), LiquidationConfig>,
         // tracks the total collateral shares and the total nominal debt for each pair
-        // (pool_id, collateral asset, debt asset) -> pair configuration
-        pub pairs: Map<(felt252, ContractAddress, ContractAddress), Pair>,
+        // (collateral asset, debt asset) -> pair configuration
+        pub pairs: Map<(ContractAddress, ContractAddress), Pair>,
         // tracks the debt caps for each asset
-        pub debt_caps: Map<(felt252, ContractAddress, ContractAddress), u256>,
+        pub debt_caps: Map<(ContractAddress, ContractAddress), u256>,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct SetLiquidationConfig {
-        #[key]
-        pool_id: felt252,
         #[key]
         collateral_asset: ContractAddress,
         #[key]
@@ -120,15 +118,11 @@ pub mod position_hooks_component {
 
     #[derive(Drop, starknet::Event)]
     pub struct SetShutdownConfig {
-        #[key]
-        pool_id: felt252,
         shutdown_config: ShutdownConfig,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct SetShutdownLTVConfig {
-        #[key]
-        pool_id: felt252,
         #[key]
         collateral_asset: ContractAddress,
         #[key]
@@ -138,16 +132,12 @@ pub mod position_hooks_component {
 
     #[derive(Drop, starknet::Event)]
     pub struct SetShutdownMode {
-        #[key]
-        pool_id: felt252,
         shutdown_mode: ShutdownMode,
         last_updated: u64,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct SetDebtCap {
-        #[key]
-        pool_id: felt252,
         #[key]
         collateral_asset: ContractAddress,
         #[key]
@@ -180,13 +170,11 @@ pub mod position_hooks_component {
         fn is_pair_collateralized(self: @ComponentState<TContractState>, ref context: Context) -> bool {
             let Pair {
                 total_collateral_shares, total_nominal_debt,
-            } = self.pairs.read((context.pool_id, context.collateral_asset, context.debt_asset));
+            } = self.pairs.read((context.collateral_asset, context.debt_asset));
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(
                 context, Position { collateral_shares: total_collateral_shares, nominal_debt: total_nominal_debt },
             );
-            let LTVConfig {
-                max_ltv,
-            } = self.shutdown_ltv_configs.read((context.pool_id, context.collateral_asset, context.debt_asset));
+            let LTVConfig { max_ltv } = self.shutdown_ltv_configs.read((context.collateral_asset, context.debt_asset));
             if max_ltv != 0 {
                 is_collateralized(collateral_value, debt_value, max_ltv.into())
             } else {
@@ -194,32 +182,28 @@ pub mod position_hooks_component {
             }
         }
 
-        /// Sets the debt cap for an asset in a pool.
+        /// Sets the debt cap for an asset.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// * `debt_cap` - debt cap
         fn set_debt_cap(
             ref self: ComponentState<TContractState>,
-            pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             debt_cap: u256,
         ) {
-            self.debt_caps.write((pool_id, collateral_asset, debt_asset), debt_cap);
-            self.emit(SetDebtCap { pool_id, collateral_asset, debt_asset, debt_cap });
+            self.debt_caps.write((collateral_asset, debt_asset), debt_cap);
+            self.emit(SetDebtCap { collateral_asset, debt_asset, debt_cap });
         }
 
-        /// Sets the liquidation configuration for an asset pairing in a pool.
+        /// Sets the liquidation configuration for an asset pairing.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// * `liquidation_config` - liquidation configuration
         fn set_liquidation_config(
             ref self: ComponentState<TContractState>,
-            pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             liquidation_config: LiquidationConfig,
@@ -229,7 +213,7 @@ pub mod position_hooks_component {
             self
                 .liquidation_configs
                 .write(
-                    (pool_id, collateral_asset, debt_asset),
+                    (collateral_asset, debt_asset),
                     LiquidationConfig {
                         liquidation_factor: if liquidation_config.liquidation_factor == 0 {
                             SCALE.try_into().unwrap()
@@ -239,39 +223,34 @@ pub mod position_hooks_component {
                     },
                 );
 
-            self.emit(SetLiquidationConfig { pool_id, collateral_asset, debt_asset, liquidation_config });
+            self.emit(SetLiquidationConfig { collateral_asset, debt_asset, liquidation_config });
         }
 
-        /// Sets the shutdown configuration for a pool.
+        /// Sets the shutdown configuration.
         /// # Arguments
-        /// * `pool_id` - pool identifier
         /// * `shutdown_config` - shutdown configuration
-        fn set_shutdown_config(
-            ref self: ComponentState<TContractState>, pool_id: felt252, shutdown_config: ShutdownConfig,
-        ) {
-            self.shutdown_configs.write(pool_id, shutdown_config);
+        fn set_shutdown_config(ref self: ComponentState<TContractState>, shutdown_config: ShutdownConfig) {
+            self.shutdown_config.write(shutdown_config);
 
-            self.emit(SetShutdownConfig { pool_id, shutdown_config });
+            self.emit(SetShutdownConfig { shutdown_config });
         }
 
-        /// Sets the shutdown ltv configuration for a pair in a pool.
+        /// Sets the shutdown ltv configuration for a pair.
         /// # Arguments
-        /// * `pool_id` - pool identifier
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// * `shutdown_ltv_config` - shutdown ltv configuration
         fn set_shutdown_ltv_config(
             ref self: ComponentState<TContractState>,
-            pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             shutdown_ltv_config: LTVConfig,
         ) {
             assert_ltv_config(shutdown_ltv_config);
 
-            self.shutdown_ltv_configs.write((pool_id, collateral_asset, debt_asset), shutdown_ltv_config);
+            self.shutdown_ltv_configs.write((collateral_asset, debt_asset), shutdown_ltv_config);
 
-            self.emit(SetShutdownLTVConfig { pool_id, collateral_asset, debt_asset, shutdown_ltv_config });
+            self.emit(SetShutdownLTVConfig { collateral_asset, debt_asset, shutdown_ltv_config });
         }
 
         /// Note: In order to get the shutdown status for the entire pool, this function needs to be called on all
@@ -283,7 +262,7 @@ pub mod position_hooks_component {
         /// * `shutdown_status` - shutdown status of the pool
         fn shutdown_status(self: @ComponentState<TContractState>, ref context: Context) -> ShutdownStatus {
             // if pool is in either subscription period, redemption period, then return mode
-            let ShutdownState { mut shutdown_mode, .. } = self.fixed_shutdown_mode.read(context.pool_id);
+            let ShutdownState { mut shutdown_mode, .. } = self.fixed_shutdown_mode.read();
 
             // check oracle status
             let invalid_oracle = !context.collateral_asset_price.is_valid || !context.debt_asset_price.is_valid;
@@ -307,22 +286,22 @@ pub mod position_hooks_component {
             ShutdownStatus { shutdown_mode, violating }
         }
 
-        /// Transitions the pool into recovery mode if a pair is violating the constraints
+        /// Transitions into recovery mode if a pair is violating the constraints
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// # Returns
-        /// * `shutdown_mode` - the shutdown mode of the pool
+        /// * `shutdown_mode` - the shutdown mode
         fn update_shutdown_status(ref self: ComponentState<TContractState>, ref context: Context) -> ShutdownMode {
-            let Context { pool_id, collateral_asset, collateral_asset_config, .. } = context;
+            let Context { collateral_asset, collateral_asset_config, .. } = context;
 
             // check if the shutdown mode has been overwritten
-            let ShutdownState { shutdown_mode, .. } = self.fixed_shutdown_mode.read(pool_id);
+            let ShutdownState { shutdown_mode, .. } = self.fixed_shutdown_mode.read();
 
             if shutdown_mode == ShutdownMode::Redemption {
                 // set max_utilization to 100% if it's not already set
                 if collateral_asset_config.max_utilization != SCALE {
                     ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
-                        .set_asset_parameter(pool_id, collateral_asset, 'max_utilization', SCALE);
+                        .set_asset_parameter(collateral_asset, 'max_utilization', SCALE);
                 }
             }
 
@@ -335,22 +314,18 @@ pub mod position_hooks_component {
 
             // if there is a current violation and no timestamp exists for the pair, then set the it (recovery)
             if violating {
-                self
-                    .fixed_shutdown_mode
-                    .write(pool_id, ShutdownState { shutdown_mode, last_updated: get_block_timestamp() });
+                self.fixed_shutdown_mode.write(ShutdownState { shutdown_mode, last_updated: get_block_timestamp() });
             }
 
             shutdown_mode
         }
 
-        /// Sets the shutdown mode for a pool which overwrites the inferred shutdown mode.
+        /// Sets the shutdown mode which overwrites the inferred shutdown mode.
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// * `shutdown_mode` - shutdown mode
-        fn set_shutdown_mode(
-            ref self: ComponentState<TContractState>, pool_id: felt252, new_shutdown_mode: ShutdownMode,
-        ) {
-            let ShutdownState { shutdown_mode, last_updated, .. } = self.fixed_shutdown_mode.read(pool_id);
+        fn set_shutdown_mode(ref self: ComponentState<TContractState>, new_shutdown_mode: ShutdownMode) {
+            let ShutdownState { shutdown_mode, last_updated, .. } = self.fixed_shutdown_mode.read();
 
             // can only transition to recovery mode if the shutdown mode is in normal mode
             assert!(
@@ -371,7 +346,7 @@ pub mod position_hooks_component {
             // can not transition into any shutdown mode if the shutdown mode is in redemption mode
             assert!(shutdown_mode != ShutdownMode::Redemption, "shutdown-mode-in-redemption");
 
-            let ShutdownConfig { recovery_period, subscription_period } = self.shutdown_configs.read(pool_id);
+            let ShutdownConfig { recovery_period, subscription_period } = self.shutdown_config.read();
 
             // can only transition to subscription mode if the recovery period has passed
             assert!(
@@ -390,9 +365,9 @@ pub mod position_hooks_component {
             let shutdown_state = ShutdownState {
                 shutdown_mode: new_shutdown_mode, last_updated: get_block_timestamp(),
             };
-            self.fixed_shutdown_mode.write(pool_id, shutdown_state);
+            self.fixed_shutdown_mode.write(shutdown_state);
 
-            self.emit(SetShutdownMode { pool_id, shutdown_mode, last_updated: shutdown_state.last_updated });
+            self.emit(SetShutdownMode { shutdown_mode, last_updated: shutdown_state.last_updated });
         }
 
         /// Updates the tracked total collateral shares and the total nominal debt assigned to a specific pair.
@@ -414,7 +389,7 @@ pub mod position_hooks_component {
             // update the balances of the pair of the modified position
             let Pair {
                 mut total_collateral_shares, mut total_nominal_debt,
-            } = self.pairs.read((context.pool_id, context.collateral_asset, context.debt_asset));
+            } = self.pairs.read((context.collateral_asset, context.debt_asset));
             if collateral_shares_delta > Zero::zero() {
                 total_collateral_shares = total_collateral_shares + collateral_shares_delta.abs();
             } else if collateral_shares_delta < Zero::zero() {
@@ -422,7 +397,7 @@ pub mod position_hooks_component {
             }
             if nominal_debt_delta > Zero::zero() {
                 total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs();
-                let debt_cap = self.debt_caps.read((context.pool_id, context.collateral_asset, context.debt_asset));
+                let debt_cap = self.debt_caps.read((context.collateral_asset, context.debt_asset));
                 if debt_cap != 0 {
                     let total_debt = calculate_debt(
                         total_nominal_debt,
@@ -438,12 +413,12 @@ pub mod position_hooks_component {
             self
                 .pairs
                 .write(
-                    (context.pool_id, context.collateral_asset, context.debt_asset),
+                    (context.collateral_asset, context.debt_asset),
                     Pair { total_collateral_shares, total_nominal_debt },
                 );
         }
 
-        /// Implements position accounting based on the current shutdown mode of a pool.
+        /// Implements position accounting based on the current shutdown mode.
         /// Each shutdown mode has different constraints on the collateral and debt amounts:
         /// - Normal Mode: collateral and debt amounts are allowed to be modified in any way
         /// - Recovery Mode: collateral can only be added, debt can only be repaid
@@ -535,7 +510,7 @@ pub mod position_hooks_component {
             // if the liquidation factor is not set, then set it to 100%
             let liquidation_config: LiquidationConfig = self
                 .liquidation_configs
-                .read((context.pool_id, context.collateral_asset, context.debt_asset));
+                .read((context.collateral_asset, context.debt_asset));
             let liquidation_factor = if liquidation_config.liquidation_factor == 0 {
                 SCALE
             } else {

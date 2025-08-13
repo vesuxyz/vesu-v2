@@ -1,10 +1,9 @@
 import { CreatePoolParams, LiquidatePositionParams, ModifyPositionParams, Protocol, calculateRates } from ".";
 
-type OmitPool<T> = Omit<T, "pool_id" | "user" | "receive_as_shares">;
+type OmitPool<T> = Omit<T, "user" | "receive_as_shares">;
 
 export class Pool {
   constructor(
-    public id: bigint,
     public protocol: Protocol,
     public params: CreatePoolParams,
   ) {}
@@ -12,7 +11,6 @@ export class Pool {
   async lend({ collateral_asset, debt_asset, collateral, debt, data }: OmitPool<ModifyPositionParams>) {
     const { deployer, singleton } = this.protocol;
     const params: ModifyPositionParams = {
-      pool_id: this.id,
       collateral_asset,
       debt_asset,
       user: deployer.lender.address,
@@ -28,7 +26,6 @@ export class Pool {
   async borrow({ collateral_asset, debt_asset, collateral, debt, data }: OmitPool<ModifyPositionParams>) {
     const { deployer, singleton } = this.protocol;
     const params: ModifyPositionParams = {
-      pool_id: this.id,
       collateral_asset,
       debt_asset,
       user: deployer.borrower.address,
@@ -44,7 +41,6 @@ export class Pool {
   async liquidate({ collateral_asset, debt_asset, data }: OmitPool<LiquidatePositionParams>) {
     const { deployer, singleton } = this.protocol;
     const params: LiquidatePositionParams = {
-      pool_id: this.id,
       collateral_asset,
       debt_asset,
       user: deployer.borrower.address,
@@ -59,6 +55,6 @@ export class Pool {
   async borrowAndSupplyRates(assetAddress: string) {
     const index = this.params.asset_params.findIndex(({ asset }) => asset === assetAddress);
     const config = this.params.interest_rate_configs[index];
-    return await calculateRates(this.protocol, this.id, assetAddress, config);
+    return await calculateRates(this.protocol, assetAddress, config);
   }
 }

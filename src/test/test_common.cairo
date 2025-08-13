@@ -267,7 +267,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            pool_id: 1,
             extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
@@ -319,7 +318,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            pool_id: 1,
             extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
@@ -465,7 +463,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            pool_id: 1,
             extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
@@ -578,7 +575,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            pool_id: 1,
             extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),

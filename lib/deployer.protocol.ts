@@ -25,7 +25,7 @@ export class Deployer extends BaseDeployer {
     public provider: RpcProvider,
     account: Account,
     public config: Config,
-    public creator: Account,
+    public owner: Account,
     public lender: Account,
     public borrower: Account,
   ) {
@@ -45,7 +45,6 @@ export class Deployer extends BaseDeployer {
     const contracts = { ...protocolContracts, ...envContracts };
     await this.setApprovals(contracts.singleton, contracts.assets);
     await this.setApprovals(contracts.extensionPO, contracts.assets);
-    await this.setExtensionWhitelist(contracts.singleton, contracts.extensionPO);
     logAddresses("Deployed:", contracts);
     return Protocol.from(contracts, this);
   }
@@ -73,7 +72,6 @@ export class Deployer extends BaseDeployer {
     const [contracts, calls] = await this.deferProtocol(pragma);
     const response = await this.execute([...calls]);
     await this.waitForTransaction(response.transaction_hash);
-    await this.setExtensionWhitelist(contracts.singleton, contracts.extensionPO);
     return [contracts, response] as const;
   }
 
@@ -88,7 +86,7 @@ export class Deployer extends BaseDeployer {
     const [singleton, singletonCalls] = await this.deferContract(
       "SingletonV2",
       CallData.compile({
-        owner: this.creator.address,
+        owner: this.owner.address,
       }),
     );
     const [extensionPO, extensionCalls] = await this.deferExtensions(singleton.address, pragma);
@@ -149,24 +147,19 @@ export class Deployer extends BaseDeployer {
       const { initial_supply } = this.config.env![index].erc20Params();
       return asset.populateTransaction.approve(contract.address, initial_supply);
     });
-    let response = await this.creator.execute(approvalCalls);
+
+    let response = await this.owner.execute(approvalCalls);
     await this.waitForTransaction(response.transaction_hash);
     response = await this.lender.execute(approvalCalls);
     await this.waitForTransaction(response.transaction_hash);
     response = await this.borrower.execute(approvalCalls);
     await this.waitForTransaction(response.transaction_hash);
 
-    // transfer INFLATION_FEE to creator
+    // transfer INFLATION_FEE to owner
     const transferCalls = assets.map((asset, index) => {
-      return asset.populateTransaction.transfer(this.creator.address, 2000);
+      return asset.populateTransaction.transfer(this.owner.address, 2000);
     });
     response = await this.lender.execute(transferCalls);
-    await this.waitForTransaction(response.transaction_hash);
-  }
-
-  async setExtensionWhitelist(contract: Contract, extension: Contract) {
-    const calldata = contract.populateTransaction.set_extension_whitelist(extension.address, true);
-    const response = await this.execute([calldata]);
     await this.waitForTransaction(response.transaction_hash);
   }
 }

@@ -1,4 +1,3 @@
-import assert from "assert";
 import { Contract } from "starknet";
 import { CreatePoolParams, Deployer, Pool, PragmaContracts, ProtocolContracts } from ".";
 
@@ -29,12 +28,9 @@ export class Protocol implements ProtocolContracts {
   }
 
   async createPoolFromParams(params: CreatePoolParams) {
-    const { singleton, extensionPO, deployer } = this;
-    const nonce = await singleton.creator_nonce(extensionPO.address);
-    const poolId = await singleton.calculate_pool_id(extensionPO.address, nonce + 1n);
-    assert((await singleton.extension(poolId)) === 0n, "pool with id already exists");
+    const { extensionPO, deployer } = this;
 
-    extensionPO.connect(deployer.creator);
+    extensionPO.connect(deployer.owner);
     const response = await extensionPO.create_pool(
       params.pool_name,
       params.asset_params,
@@ -49,8 +45,7 @@ export class Protocol implements ProtocolContracts {
     );
     await deployer.waitForTransaction(response.transaction_hash);
 
-    assert((await singleton.extension(poolId)) !== 0n, "pool not created");
-    const pool = new Pool(poolId, this, params);
+    const pool = new Pool(this, params);
 
     return [pool, response] as const;
   }
@@ -61,7 +56,7 @@ export class Protocol implements ProtocolContracts {
       [name] = Object.keys(config.pools);
     }
     const poolConfig = config.pools[name];
-    return new Pool(poolConfig.id, this, poolConfig.params);
+    return new Pool(this, poolConfig.params);
   }
 
   patchPoolParamsWithEnv({ asset_params, fee_params, owner, ...others }: CreatePoolParams): CreatePoolParams {
@@ -69,8 +64,8 @@ export class Protocol implements ProtocolContracts {
       asset: this.assets[index].address,
       ...rest,
     }));
-    fee_params = { fee_recipient: this.deployer.creator.address };
-    owner = this.deployer.creator.address;
+    fee_params = { fee_recipient: this.deployer.owner.address };
+    owner = this.deployer.owner.address;
     return { asset_params, fee_params, owner, ...others };
   }
 }

@@ -3,13 +3,9 @@ use vesu::data_model::{AssetConfig, Position};
 
 #[starknet::interface]
 pub trait IMockSingleton<TContractState> {
-    fn asset_config(ref self: TContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256);
+    fn asset_config(ref self: TContractState, asset: ContractAddress) -> (AssetConfig, u256);
     fn position(
-        ref self: TContractState,
-        pool_id: felt252,
-        collateral_asset: ContractAddress,
-        debt_asset: ContractAddress,
-        user: ContractAddress,
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     ) -> (Position, u256, u256);
 }
 
@@ -25,7 +21,7 @@ mod MockSingleton {
 
     #[abi(embed_v0)]
     impl MockSingletonImpl of IMockSingleton<ContractState> {
-        fn asset_config(ref self: ContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256) {
+        fn asset_config(ref self: ContractState, asset: ContractAddress) -> (AssetConfig, u256) {
             (
                 AssetConfig {
                     total_collateral_shares: SCALE,
@@ -46,7 +42,6 @@ mod MockSingleton {
 
         fn position(
             ref self: ContractState,
-            pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             user: ContractAddress,

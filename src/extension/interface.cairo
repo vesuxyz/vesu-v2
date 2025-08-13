@@ -5,10 +5,9 @@ use vesu::data_model::{Amount, AssetPrice, Context};
 #[starknet::interface]
 pub trait IExtension<TContractState> {
     fn singleton(self: @TContractState) -> ContractAddress;
-    fn price(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> AssetPrice;
+    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
     fn interest_rate(
         self: @TContractState,
-        pool_id: felt252,
         asset: ContractAddress,
         utilization: u256,
         last_updated: u64,
@@ -16,7 +15,6 @@ pub trait IExtension<TContractState> {
     ) -> u256;
     fn rate_accumulator(
         self: @TContractState,
-        pool_id: felt252,
         asset: ContractAddress,
         utilization: u256,
         last_updated: u64,

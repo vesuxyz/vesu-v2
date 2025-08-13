@@ -13,7 +13,6 @@ const deployment = {
     summary_stats: protocol.pragma.summary_stats.address,
   },
   assets: protocol.assets.map((asset) => asset.address),
-  pools: [],
 };
 
 fs.writeFileSync(

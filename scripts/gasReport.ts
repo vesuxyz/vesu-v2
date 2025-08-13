@@ -18,14 +18,13 @@ assert(
   toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(),
   "pragma_oracle-neq",
 );
-assert(toAddress(await extensionPO.pool_owner(pool.id)) === pool.params.owner.toLowerCase(), "pool_owner-neq");
+assert(toAddress(await extensionPO.pool_owner()) === pool.params.owner.toLowerCase(), "pool_owner-neq");
 assert(
-  toAddress((await extensionPO.fee_config(pool.id)).fee_recipient) ===
-    pool.params.fee_params.fee_recipient.toLowerCase(),
+  toAddress((await extensionPO.fee_config()).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
   "fee_recipient-neq",
 );
 
-const shutdown_config = await extensionPO.shutdown_config(pool.id);
+const shutdown_config = await extensionPO.shutdown_config();
 assert(shutdown_config.recovery_period === pool.params.shutdown_params.recovery_period, "recovery_period-neq");
 assert(
   shutdown_config.subscription_period === pool.params.shutdown_params.subscription_period,
@@ -33,7 +32,7 @@ assert(
 );
 
 for (const [index, asset] of assets.entries()) {
-  const oracle_config = await extensionPO.oracle_config(pool.id, asset.address);
+  const oracle_config = await extensionPO.oracle_config(asset.address);
   assert(
     shortString.decodeShortString(oracle_config.pragma_key) === pool.params.pragma_oracle_params[index].pragma_key,
     "pragma_key-neq",
@@ -44,7 +43,7 @@ for (const [index, asset] of assets.entries()) {
     "number_of_sources-neq",
   );
 
-  const interest_rate_config = await extensionPO.interest_rate_config(pool.id, asset.address);
+  const interest_rate_config = await extensionPO.interest_rate_config(asset.address);
   assert(
     interest_rate_config.min_target_utilization === pool.params.interest_rate_configs[index].min_target_utilization,
     "min_target_utilization-neq",
@@ -80,7 +79,7 @@ for (const [index, asset] of assets.entries()) {
     "target_rate_percent-neq",
   );
 
-  const { "0": asset_config } = await singleton.asset_config_unsafe(pool.id, asset.address);
+  const { "0": asset_config } = await singleton.asset_config_unsafe(asset.address);
   assert(
     asset_config.total_collateral_shares === (2000n * BigInt(1e18)) / BigInt(asset_config.scale),
     "total_collateral_shares-neq",
@@ -96,9 +95,9 @@ for (const [index, asset] of assets.entries()) {
   assert(asset_config.last_full_utilization_rate > 0n, "last_full_utilization_rate-neq");
   assert(asset_config.fee_rate === 0n, "fee_rate-neq");
 
-  assert((await extensionPO.price(pool.id, asset.address)).value > 0n, "price-neq");
-  assert((await singleton.rate_accumulator_unsafe(pool.id, asset.address)) > 0n, "rate_accumulator-neq");
-  assert((await singleton.utilization_unsafe(pool.id, asset.address)) === 0n, "utilization-neq");
+  assert((await extensionPO.price(asset.address)).value > 0n, "price-neq");
+  assert((await singleton.rate_accumulator_unsafe(asset.address)) > 0n, "rate_accumulator-neq");
+  assert((await singleton.utilization_unsafe(asset.address)) === 0n, "utilization-neq");
 }
 
 const { lender, borrower } = deployer;
@@ -113,7 +112,7 @@ const debtScale = 10n ** (await debtAsset.decimals());
 const liquidityToDeposit = 40_000n * debtScale; // 40k USDC ($40k)
 const collateralToDeposit = 1n * collateralScale; // 1 WBTC ($40k)
 const debtToDraw = liquidityToDeposit / 2n; // 20k USDC ($20k)
-const rateAccumulator = await singleton.rate_accumulator_unsafe(pool.id, debtAsset.address);
+const rateAccumulator = await singleton.rate_accumulator_unsafe(debtAsset.address);
 const nominalDebtToDraw = await singleton.calculate_nominal_debt(toI257(debtToDraw), rateAccumulator, debtScale);
 
 {
@@ -158,7 +157,6 @@ assert(formatRate(supplyAPY) === "2.64%", `Incorrect supply APY: ${formatRate(su
 }
 
 const { "0": collateralized } = await singleton.check_collateralization_unsafe(
-  pool.id,
   collateralAsset.address,
   debtAsset.address,
   borrower.address,

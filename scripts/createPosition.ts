@@ -7,7 +7,7 @@ const protocol = await deployer.loadProtocol();
 
 const poolName = "pool-example";
 const pool = await protocol.loadPool(poolName);
-console.log("Using pool:", poolName, "with id:", pool.id);
+console.log("Using pool:", poolName);
 
 const liquidityToDeposit = 10n ** 9n;
 const { lender } = deployer;

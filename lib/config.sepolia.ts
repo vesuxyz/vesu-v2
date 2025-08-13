@@ -54,7 +54,6 @@ export const config: Config = {
   env,
   pools: {
     "genesis-pool": {
-      id: 1n,
       description: "",
       type: "",
       params: {

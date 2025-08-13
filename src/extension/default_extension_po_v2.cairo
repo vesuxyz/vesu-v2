@@ -44,30 +44,26 @@ pub trait IDefaultExtensionCallback<TContractState> {
 
 #[starknet::interface]
 pub trait IDefaultExtensionPOV2<TContractState> {
-    fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
-    fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
-    fn shutdown_mode_agent(self: @TContractState, pool_id: felt252) -> ContractAddress;
+    fn pool_name(self: @TContractState) -> felt252;
+    fn pool_owner(self: @TContractState) -> ContractAddress;
+    fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
     fn pragma_summary(self: @TContractState) -> ContractAddress;
-    fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
-    fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
-    fn debt_caps(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> u256;
-    fn interest_rate_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> InterestRateConfig;
+    fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
+    fn fee_config(self: @TContractState) -> FeeConfig;
+    fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
+    fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> LiquidationConfig;
-    fn shutdown_config(self: @TContractState, pool_id: felt252) -> ShutdownConfig;
+    fn shutdown_config(self: @TContractState) -> ShutdownConfig;
     fn shutdown_ltv_config(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> LTVConfig;
     fn shutdown_status(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownStatus;
-    fn pairs(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> Pair;
+    fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
     fn create_pool(
         ref self: TContractState,
         name: felt252,
@@ -80,60 +76,42 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         shutdown_params: ShutdownParams,
         fee_params: FeeParams,
         owner: ContractAddress,
-    ) -> felt252;
+    );
     fn add_asset(
         ref self: TContractState,
-        pool_id: felt252,
         asset_params: AssetParams,
         interest_rate_config: InterestRateConfig,
         pragma_oracle_params: PragmaOracleParams,
     );
-    fn set_asset_parameter(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256,
-    );
+    fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn set_debt_cap(
-        ref self: TContractState,
-        pool_id: felt252,
-        collateral_asset: ContractAddress,
-        debt_asset: ContractAddress,
-        debt_cap: u256,
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
     );
-    fn set_interest_rate_parameter(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256,
-    );
-    fn set_oracle_parameter(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252,
-    );
+    fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
+    fn set_oracle_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: felt252);
     fn set_liquidation_config(
         ref self: TContractState,
-        pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         liquidation_config: LiquidationConfig,
     );
     fn set_ltv_config(
-        ref self: TContractState,
-        pool_id: felt252,
-        collateral_asset: ContractAddress,
-        debt_asset: ContractAddress,
-        ltv_config: LTVConfig,
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
     );
-    fn set_shutdown_config(ref self: TContractState, pool_id: felt252, shutdown_config: ShutdownConfig);
+    fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
     fn set_shutdown_ltv_config(
         ref self: TContractState,
-        pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         shutdown_ltv_config: LTVConfig,
     );
-    fn set_shutdown_mode(ref self: TContractState, pool_id: felt252, shutdown_mode: ShutdownMode);
-    fn set_pool_owner(ref self: TContractState, pool_id: felt252, owner: ContractAddress);
-    fn set_shutdown_mode_agent(ref self: TContractState, pool_id: felt252, shutdown_mode_agent: ContractAddress);
+    fn set_shutdown_mode(ref self: TContractState, shutdown_mode: ShutdownMode);
+    fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
     fn update_shutdown_status(
-        ref self: TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownMode;
-    fn set_fee_config(ref self: TContractState, pool_id: felt252, fee_config: FeeConfig);
-    fn claim_fees(ref self: TContractState, pool_id: felt252, collateral_asset: ContractAddress);
+    fn set_fee_config(ref self: TContractState, fee_config: FeeConfig);
+    fn claim_fees(ref self: TContractState, collateral_asset: ContractAddress);
 
     // Upgrade
     fn upgrade_name(self: @TContractState) -> felt252;
@@ -147,9 +125,7 @@ mod DefaultExtensionPOV2 {
     use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::event::EventEmitter;
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
-    };
+    use starknet::storage::{StorageMapReadAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::syscalls::replace_class_syscall;
     #[feature("deprecated-starknet-consts")]
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
@@ -185,10 +161,10 @@ mod DefaultExtensionPOV2 {
     struct Storage {
         // address of the singleton contract
         singleton: ContractAddress,
-        // tracks the owner for each pool
-        owner: Map<felt252, ContractAddress>,
-        // tracks the name for each pool
-        pool_names: Map<felt252, felt252>,
+        // tracks the owner
+        owner: ContractAddress,
+        // tracks the name
+        pool_name: felt252,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
@@ -201,22 +177,12 @@ mod DefaultExtensionPOV2 {
         // storage for the fee model component
         #[substorage(v0)]
         fee_model: fee_model_component::Storage,
-        // tracks the address that can transition the shutdown mode of a pool
-        shutdown_mode_agent: Map<felt252, ContractAddress>,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct SetPoolOwner {
-        #[key]
-        pool_id: felt252,
-        #[key]
-        owner: ContractAddress,
+        // tracks the address that can transition the shutdown mode
+        shutdown_mode_agent: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     struct SetShutdownModeAgent {
-        #[key]
-        pool_id: felt252,
         #[key]
         agent: ContractAddress,
     }
@@ -233,7 +199,6 @@ mod DefaultExtensionPOV2 {
         InterestRateModelEvents: interest_rate_model_component::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
         FeeModelEvents: fee_model_component::Event,
-        SetPoolOwner: SetPoolOwner,
         SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
     }
@@ -277,7 +242,7 @@ mod DefaultExtensionPOV2 {
             assert!(get_caller_address() == owner, "caller-not-singleton-owner");
         }
 
-        fn burn_inflation_fee(ref self: ContractState, pool_id: felt252, asset: ContractAddress, is_legacy: bool) {
+        fn burn_inflation_fee(ref self: ContractState, asset: ContractAddress, is_legacy: bool) {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
 
             // burn inflation fee
@@ -289,7 +254,6 @@ mod DefaultExtensionPOV2 {
             singleton
                 .modify_position(
                     ModifyPositionParams {
-                        pool_id,
                         collateral_asset: asset.contract_address,
                         debt_asset: Zero::zero(),
                         user: contract_address_const::<'ZERO'>(),
@@ -312,30 +276,24 @@ mod DefaultExtensionPOV2 {
     #[abi(embed_v0)]
     impl DefaultExtensionPOV2Impl of IDefaultExtensionPOV2<ContractState> {
         /// Returns the name of a pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
         /// # Returns
         /// * `name` - name of the pool
-        fn pool_name(self: @ContractState, pool_id: felt252) -> felt252 {
-            self.pool_names.read(pool_id)
+        fn pool_name(self: @ContractState) -> felt252 {
+            self.pool_name.read()
         }
 
         /// Returns the owner of a pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
         /// # Returns
         /// * `owner` - address of the owner
-        fn pool_owner(self: @ContractState, pool_id: felt252) -> ContractAddress {
-            self.owner.read(pool_id)
+        fn pool_owner(self: @ContractState) -> ContractAddress {
+            self.owner.read()
         }
 
-        /// Returns the address of the shutdown mode agent for a given pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
+        /// Returns the address of the shutdown mode agent
         /// # Returns
         /// * `shutdown_mode_agent` - address of the shutdown mode agent
-        fn shutdown_mode_agent(self: @ContractState, pool_id: felt252) -> ContractAddress {
-            self.shutdown_mode_agent.read(pool_id)
+        fn shutdown_mode_agent(self: @ContractState) -> ContractAddress {
+            self.shutdown_mode_agent.read()
         }
 
         /// Returns the address of the pragma oracle contract
@@ -352,96 +310,82 @@ mod DefaultExtensionPOV2 {
             self.pragma_oracle.summary_address()
         }
 
-        /// Returns the oracle configuration for a given pool and asset
+        /// Returns the oracle configuration for a given asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// # Returns
         /// * `oracle_config` - oracle configuration
-        fn oracle_config(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig {
-            self.pragma_oracle.oracle_configs.read((pool_id, asset))
+        fn oracle_config(self: @ContractState, asset: ContractAddress) -> OracleConfig {
+            self.pragma_oracle.oracle_configs.read(asset)
         }
 
-        /// Returns the fee configuration for a given pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
+        /// Returns the fee configuration
         /// # Returns
         /// * `fee_config` - fee configuration
-        fn fee_config(self: @ContractState, pool_id: felt252) -> FeeConfig {
-            self.fee_model.fee_configs.read(pool_id)
+        fn fee_config(self: @ContractState) -> FeeConfig {
+            self.fee_model.fee_config.read()
         }
 
-        /// Returns the debt cap for a given asset in a pool
+        /// Returns the debt cap for a given asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// # Returns
         /// * `debt_cap` - debt cap
-        fn debt_caps(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> u256 {
-            self.position_hooks.debt_caps.read((pool_id, collateral_asset, debt_asset))
+        fn debt_caps(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256 {
+            self.position_hooks.debt_caps.read((collateral_asset, debt_asset))
         }
 
-        /// Returns the interest rate configuration for a given pool and asset
+        /// Returns the interest rate configuration for a given asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// # Returns
         /// * `interest_rate_config` - interest rate configuration
-        fn interest_rate_config(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> InterestRateConfig {
-            self.interest_rate_model.interest_rate_configs.read((pool_id, asset))
+        fn interest_rate_config(self: @ContractState, asset: ContractAddress) -> InterestRateConfig {
+            self.interest_rate_model.interest_rate_configs.read(asset)
         }
 
-        /// Returns the liquidation configuration for a given pool and pairing of assets
+        /// Returns the liquidation configuration for a given pairing of assets
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// # Returns
         /// * `liquidation_config` - liquidation configuration
         fn liquidation_config(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> LiquidationConfig {
-            self.position_hooks.liquidation_configs.read((pool_id, collateral_asset, debt_asset))
+            self.position_hooks.liquidation_configs.read((collateral_asset, debt_asset))
         }
 
-        /// Returns the shutdown configuration for a given pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
+        /// Returns the shutdown configuration
         /// # Returns
         /// * `recovery_period` - recovery period
         /// * `subscription_period` - subscription period
-        fn shutdown_config(self: @ContractState, pool_id: felt252) -> ShutdownConfig {
-            self.position_hooks.shutdown_configs.read(pool_id)
+        fn shutdown_config(self: @ContractState) -> ShutdownConfig {
+            self.position_hooks.shutdown_config.read()
         }
 
-        /// Returns the shutdown LTV configuration for a given pair in a given pool
+        /// Returns the shutdown LTV configuration for a given pair
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// # Returns
         /// * `shutdown_ltv_config` - shutdown LTV configuration
         fn shutdown_ltv_config(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> LTVConfig {
-            self.position_hooks.shutdown_ltv_configs.read((pool_id, collateral_asset, debt_asset))
+            self.position_hooks.shutdown_ltv_configs.read((collateral_asset, debt_asset))
         }
 
         /// Returns the total (sum of all positions) collateral shares and nominal debt balances for a given pair
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// # Returns
         /// * `total_collateral_shares` - total collateral shares
         /// * `total_nominal_debt` - total nominal debt
-        fn pairs(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> Pair {
-            self.position_hooks.pairs.read((pool_id, collateral_asset, debt_asset))
+        fn pairs(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair {
+            self.position_hooks.pairs.read((collateral_asset, debt_asset))
         }
 
         /// Creates a new pool
@@ -455,8 +399,6 @@ mod DefaultExtensionPOV2 {
         /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
-        /// # Returns
-        /// * `pool_id` - id of the pool
         fn create_pool(
             ref self: ContractState,
             name: felt252,
@@ -469,7 +411,7 @@ mod DefaultExtensionPOV2 {
             shutdown_params: ShutdownParams,
             fee_params: FeeParams,
             owner: ContractAddress,
-        ) -> felt252 {
+        ) {
             assert!(asset_params.len() > 0, "empty-asset-params");
             // assert that all arrays have equal length
             assert!(asset_params.len() == interest_rate_configs.len(), "interest-rate-params-mismatch");
@@ -477,20 +419,19 @@ mod DefaultExtensionPOV2 {
 
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            let pool_id = singleton.create_pool(asset_params, ltv_params, get_contract_address());
+            singleton.create_pool(asset_params, ltv_params, get_contract_address());
 
             // set the pool name
-            self.pool_names.write(pool_id, name);
+            self.pool_name.write(name);
 
             // set the pool owner
-            self.owner.write(pool_id, owner);
+            self.owner.write(owner);
 
             let mut asset_params_copy = asset_params;
             let mut i = 0;
             while !asset_params_copy.is_empty() {
                 let asset_params = *asset_params_copy.pop_front().unwrap();
                 let asset = asset_params.asset;
-
                 // set the oracle config
                 let params = *pragma_oracle_params.pop_front().unwrap();
                 let PragmaOracleParams {
@@ -499,20 +440,16 @@ mod DefaultExtensionPOV2 {
                 self
                     .pragma_oracle
                     .set_oracle_config(
-                        pool_id,
                         asset,
                         OracleConfig {
                             pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
                         },
                     );
-
                 // set the interest rate model configuration
                 let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
-                self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
-
+                self.interest_rate_model.set_interest_rate_config(asset, interest_rate_config);
                 // burn inflation fee
-                self.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
-
+                self.burn_inflation_fee(asset, asset_params.is_legacy);
                 i += 1;
             }
 
@@ -525,7 +462,6 @@ mod DefaultExtensionPOV2 {
                 self
                     .position_hooks
                     .set_liquidation_config(
-                        pool_id,
                         collateral_asset,
                         debt_asset,
                         LiquidationConfig { liquidation_factor: params.liquidation_factor },
@@ -538,7 +474,7 @@ mod DefaultExtensionPOV2 {
                 let params = *debt_caps.pop_front().unwrap();
                 let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
                 let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, params.debt_cap);
+                self.position_hooks.set_debt_cap(collateral_asset, debt_asset, params.debt_cap);
             }
 
             // set the max shutdown LTVs for each pair
@@ -549,42 +485,35 @@ mod DefaultExtensionPOV2 {
                 let debt_asset = *asset_params.at(params.debt_asset_index).asset;
                 self
                     .position_hooks
-                    .set_shutdown_ltv_config(
-                        pool_id, collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv },
-                    );
+                    .set_shutdown_ltv_config(collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
             }
 
             // set the shutdown config
             let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
-            self.position_hooks.set_shutdown_config(pool_id, ShutdownConfig { recovery_period, subscription_period });
+            self.position_hooks.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
 
             // set the fee config
-            self.fee_model.set_fee_config(pool_id, FeeConfig { fee_recipient: fee_params.fee_recipient });
-
-            pool_id
+            self.fee_model.set_fee_config(FeeConfig { fee_recipient: fee_params.fee_recipient });
         }
 
-        /// Adds an asset to a pool
+        /// Adds an asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset_params` - asset parameters
         /// * `interest_rate_model` - interest rate model
         /// * `pragma_oracle_params` - pragma oracle parameters
         fn add_asset(
             ref self: ContractState,
-            pool_id: felt252,
             asset_params: AssetParams,
             interest_rate_config: InterestRateConfig,
             pragma_oracle_params: PragmaOracleParams,
         ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             let asset = asset_params.asset;
 
             // set the oracle config
             self
                 .pragma_oracle
                 .set_oracle_config(
-                    pool_id,
                     asset,
                     OracleConfig {
                         pragma_key: pragma_oracle_params.pragma_key,
@@ -597,175 +526,143 @@ mod DefaultExtensionPOV2 {
                 );
 
             // set the interest rate model configuration
-            self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
+            self.interest_rate_model.set_interest_rate_config(asset, interest_rate_config);
 
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            singleton.set_asset_config(pool_id, asset_params);
+            singleton.set_asset_config(asset_params);
 
             // burn inflation fee
-            self.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
+            self.burn_inflation_fee(asset, asset_params.is_legacy);
         }
 
-        /// Sets the debt cap for a given asset in a pool
+        /// Sets the debt cap for a given asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// * `debt_cap` - debt cap
         fn set_debt_cap(
-            ref self: ContractState,
-            pool_id: felt252,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            debt_cap: u256,
+            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
         ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, debt_cap);
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.position_hooks.set_debt_cap(collateral_asset, debt_asset, debt_cap);
         }
 
-        /// Sets a parameter for a given interest rate configuration for an asset in a pool
+        /// Sets a parameter for a given interest rate configuration for an asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_interest_rate_parameter(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256,
+            ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256,
         ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.interest_rate_model.set_interest_rate_parameter(pool_id, asset, parameter, value);
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
         }
 
-        /// Sets a parameter for a given oracle configuration of an asset in a pool
+        /// Sets a parameter for a given oracle configuration of an asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
-        fn set_oracle_parameter(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252,
-        ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.pragma_oracle.set_oracle_parameter(pool_id, asset, parameter, value);
+        fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.pragma_oracle.set_oracle_parameter(asset, parameter, value);
         }
 
-        /// Sets the loan-to-value configuration between two assets (pair) in the pool in the singleton
+        /// Sets the loan-to-value configuration between two assets (pair)
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// * `ltv_config` - ltv configuration
         fn set_ltv_config(
             ref self: ContractState,
-            pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             ltv_config: LTVConfig,
         ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             ISingletonV2Dispatcher { contract_address: self.singleton.read() }
-                .set_ltv_config(pool_id, collateral_asset, debt_asset, ltv_config);
+                .set_ltv_config(collateral_asset, debt_asset, ltv_config);
         }
 
-        /// Sets the liquidation config for a given pair in the pool
+        /// Sets the liquidation config for a given pair
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// * `liquidation_config` - liquidation config
         fn set_liquidation_config(
             ref self: ContractState,
-            pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             liquidation_config: LiquidationConfig,
         ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.position_hooks.set_liquidation_config(pool_id, collateral_asset, debt_asset, liquidation_config);
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.position_hooks.set_liquidation_config(collateral_asset, debt_asset, liquidation_config);
         }
 
-        /// Sets a parameter of an asset for a given pool
+        /// Sets a parameter of an asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
-        fn set_asset_parameter(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256,
-        ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
+        fn set_asset_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256) {
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             ISingletonV2Dispatcher { contract_address: self.singleton.read() }
-                .set_asset_parameter(pool_id, asset, parameter, value);
+                .set_asset_parameter(asset, parameter, value);
         }
 
-        /// Sets the shutdown config for a given pool
+        /// Sets the shutdown config
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `shutdown_config` - shutdown config
-        fn set_shutdown_config(ref self: ContractState, pool_id: felt252, shutdown_config: ShutdownConfig) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.position_hooks.set_shutdown_config(pool_id, shutdown_config);
+        fn set_shutdown_config(ref self: ContractState, shutdown_config: ShutdownConfig) {
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.position_hooks.set_shutdown_config(shutdown_config);
         }
 
-        /// Sets the shutdown LTV config for a given pair in the pool
+        /// Sets the shutdown LTV config for a given pair
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// * `shutdown_ltv_config` - shutdown LTV config
         fn set_shutdown_ltv_config(
             ref self: ContractState,
-            pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             shutdown_ltv_config: LTVConfig,
         ) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.position_hooks.set_shutdown_ltv_config(pool_id, collateral_asset, debt_asset, shutdown_ltv_config);
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.position_hooks.set_shutdown_ltv_config(collateral_asset, debt_asset, shutdown_ltv_config);
         }
 
-        /// Sets the owner of a pool
+        /// Sets the shutdown mode agent
         /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `owner` - address of the new owner
-        fn set_pool_owner(ref self: ContractState, pool_id: felt252, owner: ContractAddress) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.owner.write(pool_id, owner);
-            self.emit(SetPoolOwner { pool_id, owner });
-        }
-
-        /// Sets the shutdown mode agent for a specific pool
-        /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `shutdown_mode_agent` - address of the shutdown mode agent
-        fn set_shutdown_mode_agent(ref self: ContractState, pool_id: felt252, shutdown_mode_agent: ContractAddress) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.shutdown_mode_agent.write(pool_id, shutdown_mode_agent);
-            self.emit(SetShutdownModeAgent { pool_id, agent: shutdown_mode_agent });
+        fn set_shutdown_mode_agent(ref self: ContractState, shutdown_mode_agent: ContractAddress) {
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.shutdown_mode_agent.write(shutdown_mode_agent);
+            self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
         }
 
-        /// Sets the shutdown mode for a given pool and overwrites the inferred shutdown mode
+        /// Sets the shutdown mode and overwrites the inferred shutdown mode
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `shutdown_mode` - shutdown mode
-        fn set_shutdown_mode(ref self: ContractState, pool_id: felt252, shutdown_mode: ShutdownMode) {
-            let shutdown_mode_agent = self.shutdown_mode_agent.read(pool_id);
+        fn set_shutdown_mode(ref self: ContractState, shutdown_mode: ShutdownMode) {
+            let shutdown_mode_agent = self.shutdown_mode_agent.read();
             assert!(
-                get_caller_address() == self.owner.read(pool_id) || get_caller_address() == shutdown_mode_agent,
+                get_caller_address() == self.owner.read() || get_caller_address() == shutdown_mode_agent,
                 "caller-not-owner-or-agent",
             );
             assert!(
                 get_caller_address() != shutdown_mode_agent || shutdown_mode == ShutdownMode::Recovery,
                 "shutdown-mode-not-recovery",
             );
-            self.position_hooks.set_shutdown_mode(pool_id, shutdown_mode);
+            self.position_hooks.set_shutdown_mode(shutdown_mode);
         }
 
-        /// Returns the shutdown mode for a specific pair in a pool.
+        /// Returns the shutdown mode for a specific pair.
         /// To check the shutdown status of the pool, the shutdown mode for all pairs must be checked.
         /// See `shutdown_status` in `position_hooks.cairo`.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// # Returns
@@ -776,45 +673,42 @@ mod DefaultExtensionPOV2 {
         /// * `count_at_violation_timestamp_timestamp` - count of how many pairs violated the invariants at that
         /// timestamp
         fn shutdown_status(
-            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownStatus {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            let mut context = singleton.context(pool_id, collateral_asset, debt_asset, Zero::zero());
+            let mut context = singleton.context(collateral_asset, debt_asset, Zero::zero());
             self.position_hooks.shutdown_status(ref context)
         }
 
-        /// Updates the shutdown mode for a specific pair in a pool.
+        /// Updates the shutdown mode for a specific pair.
         /// See `update_shutdown_status` in `position_hooks.cairo`.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// # Returns
         /// * `shutdown_mode` - shutdown mode
         fn update_shutdown_status(
-            ref self: ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownMode {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            let mut context = singleton.context(pool_id, collateral_asset, debt_asset, Zero::zero());
+            let mut context = singleton.context(collateral_asset, debt_asset, Zero::zero());
             self.position_hooks.update_shutdown_status(ref context)
         }
 
-        /// Sets the fee configuration for a specific pool.
+        /// Sets the fee configuration
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `fee_config` - new fee configuration parameters
-        fn set_fee_config(ref self: ContractState, pool_id: felt252, fee_config: FeeConfig) {
-            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.fee_model.set_fee_config(pool_id, fee_config);
+        fn set_fee_config(ref self: ContractState, fee_config: FeeConfig) {
+            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
+            self.fee_model.set_fee_config(fee_config);
         }
 
-        /// Claims the fees for a specific pair in a pool.
+        /// Claims the fees for a specific pair.
         /// See `claim_fees` in `fee_model.cairo`.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
-        fn claim_fees(ref self: ContractState, pool_id: felt252, collateral_asset: ContractAddress) {
-            self.fee_model.claim_fees(pool_id, collateral_asset);
+        fn claim_fees(ref self: ContractState, collateral_asset: ContractAddress) {
+            self.fee_model.claim_fees(collateral_asset);
         }
 
         /// Returns the name of the contract
@@ -846,20 +740,18 @@ mod DefaultExtensionPOV2 {
             self.singleton.read()
         }
 
-        /// Returns the price for a given asset in a given pool
+        /// Returns the price for a given asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// # Returns
         /// * `AssetPrice` - latest price of the asset and its validity
-        fn price(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> AssetPrice {
-            let (value, is_valid) = self.pragma_oracle.price(pool_id, asset);
+        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
+            let (value, is_valid) = self.pragma_oracle.price(asset);
             AssetPrice { value, is_valid }
         }
 
-        /// Returns the current interest rate for a given asset in a given pool, given it's utilization
+        /// Returns the current interest rate for a given asset, given it's utilization
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `utilization` - utilization of the asset
         /// * `last_updated` - last time the interest rate was updated
@@ -868,7 +760,6 @@ mod DefaultExtensionPOV2 {
         /// * `interest_rate` - current interest rate
         fn interest_rate(
             self: @ContractState,
-            pool_id: felt252,
             asset: ContractAddress,
             utilization: u256,
             last_updated: u64,
@@ -876,13 +767,12 @@ mod DefaultExtensionPOV2 {
         ) -> u256 {
             let (interest_rate, _) = self
                 .interest_rate_model
-                .interest_rate(pool_id, asset, utilization, last_updated, last_full_utilization_rate);
+                .interest_rate(asset, utilization, last_updated, last_full_utilization_rate);
             interest_rate
         }
 
-        /// Returns the current rate accumulator for a given asset in a given pool, given it's utilization
+        /// Returns the current rate accumulator for a given asset, given it's utilization
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `utilization` - utilization of the asset
         /// * `last_updated` - last time the interest rate was updated
@@ -893,7 +783,6 @@ mod DefaultExtensionPOV2 {
         /// * `last_full_utilization_rate` - the interest value when utilization is 100% [SCALE]
         fn rate_accumulator(
             self: @ContractState,
-            pool_id: felt252,
             asset: ContractAddress,
             utilization: u256,
             last_updated: u64,
@@ -902,9 +791,7 @@ mod DefaultExtensionPOV2 {
         ) -> (u256, u256) {
             self
                 .interest_rate_model
-                .rate_accumulator(
-                    pool_id, asset, utilization, last_updated, last_rate_accumulator, last_full_utilization_rate,
-                )
+                .rate_accumulator(asset, utilization, last_updated, last_rate_accumulator, last_full_utilization_rate)
         }
 
         /// Modify position callback. Called by the Singleton contract before updating the position.

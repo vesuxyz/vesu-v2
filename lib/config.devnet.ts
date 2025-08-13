@@ -53,7 +53,6 @@ export const config: Config = {
   env,
   pools: {
     "gas-report-pool": {
-      id: 1n,
       description: "",
       type: "",
       params: {

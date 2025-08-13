@@ -118,13 +118,12 @@ pub mod interest_rate_model_component {
 
     #[storage]
     pub struct Storage {
-        // (pool_id, asset) -> interest rate configuration
-        pub interest_rate_configs: Map<(felt252, ContractAddress), InterestRateConfig>,
+        //  asset -> interest rate configuration
+        pub interest_rate_configs: Map<ContractAddress, InterestRateConfig>,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct SetInterestRateConfig {
-        pool_id: felt252,
         asset: ContractAddress,
         interest_rate_config: InterestRateConfig,
     }
@@ -141,42 +140,32 @@ pub mod interest_rate_model_component {
     > of Trait<TContractState> {
         /// Sets the interest rate configuration for a specific pool and asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `interest_rate_config` - interest rate configuration
         fn set_interest_rate_config(
-            ref self: ComponentState<TContractState>,
-            pool_id: felt252,
-            asset: ContractAddress,
-            interest_rate_config: InterestRateConfig,
+            ref self: ComponentState<TContractState>, asset: ContractAddress, interest_rate_config: InterestRateConfig,
         ) {
-            let current_interest_rate_config: InterestRateConfig = self.interest_rate_configs.read((pool_id, asset));
+            let current_interest_rate_config: InterestRateConfig = self.interest_rate_configs.read(asset);
             assert!(current_interest_rate_config.max_target_utilization == 0, "interest-rate-config-already-set");
             assert_interest_rate_config(interest_rate_config);
 
-            self.interest_rate_configs.write((pool_id, asset), interest_rate_config);
+            self.interest_rate_configs.write(asset, interest_rate_config);
 
-            self.emit(SetInterestRateConfig { pool_id, asset, interest_rate_config });
+            self.emit(SetInterestRateConfig { asset, interest_rate_config });
         }
 
         /// Sets a parameter for a given interest rate configuration for an asset in a pool
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_interest_rate_parameter(
-            ref self: ComponentState<TContractState>,
-            pool_id: felt252,
-            asset: ContractAddress,
-            parameter: felt252,
-            value: u256,
+            ref self: ComponentState<TContractState>, asset: ContractAddress, parameter: felt252, value: u256,
         ) {
-            let mut interest_rate_config: InterestRateConfig = self.interest_rate_configs.read((pool_id, asset));
+            let mut interest_rate_config: InterestRateConfig = self.interest_rate_configs.read(asset);
             assert!(interest_rate_config.max_target_utilization != 0, "interest-rate-config-not-set");
 
-            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
-                .claim_fee_shares(pool_id, asset);
+            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }.claim_fee_shares(asset);
 
             if parameter == 'min_target_utilization' {
                 interest_rate_config.min_target_utilization = value;
@@ -199,13 +188,12 @@ pub mod interest_rate_model_component {
             }
 
             assert_interest_rate_config(interest_rate_config);
-            self.interest_rate_configs.write((pool_id, asset), interest_rate_config);
+            self.interest_rate_configs.write(asset, interest_rate_config);
         }
 
         /// Returns the utilization based interest rate and the interest rate at full utilization
         /// for a specific asset in a pool.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `utilization` - utilization [SCALE]
         /// * `last_updated` - last point in time when the model was updated [seconds]
@@ -215,13 +203,12 @@ pub mod interest_rate_model_component {
         /// * `full_utilization_rate` - new interest rate at full utilization [SCALE]
         fn interest_rate(
             self: @ComponentState<TContractState>,
-            pool_id: felt252,
             asset: ContractAddress,
             utilization: u256,
             last_updated: u64,
             last_full_utilization_rate: u256,
         ) -> (u256, u256) {
-            let model = self.interest_rate_configs.read((pool_id, asset));
+            let model = self.interest_rate_configs.read(asset);
             let time_delta = get_block_timestamp() - last_updated;
             calculate_interest_rate(model, utilization, time_delta, last_full_utilization_rate)
         }
@@ -229,7 +216,6 @@ pub mod interest_rate_model_component {
         /// Returns the interest rate accumulator and the interest rate at full utilization
         /// for a specific asset in a pool.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `utilization` - current utilization [SCALE]
         /// * `last_updated` - last point in time when the model was updated [seconds]
@@ -240,7 +226,6 @@ pub mod interest_rate_model_component {
         /// * `full_utilization_rate` - new interest rate at full utilization [SCALE]
         fn rate_accumulator(
             self: @ComponentState<TContractState>,
-            pool_id: felt252,
             asset: ContractAddress,
             utilization: u256,
             last_updated: u64,
@@ -249,7 +234,7 @@ pub mod interest_rate_model_component {
         ) -> (u256, u256) {
             // calculate utilization based on previous rate accumulator
             let (interest_rate, next_full_utilization_rate) = self
-                .interest_rate(pool_id, asset, utilization, last_updated, last_full_utilization_rate);
+                .interest_rate(asset, utilization, last_updated, last_full_utilization_rate);
             // calculate interest rate accumulator
             let rate_accumulator = calculate_rate_accumulator(last_updated, last_rate_accumulator, interest_rate);
             (rate_accumulator, next_full_utilization_rate)
