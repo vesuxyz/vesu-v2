@@ -729,15 +729,15 @@ mod SingletonV2 {
             let extension = IExtensionDispatcher { contract_address: self.extension.read() };
             assert!(extension.contract_address.is_non_zero(), "unknown-pool");
 
-            let (collateral_asset_config, mut collateral_asset_fee_shares) = self.asset_config(collateral_asset);
-            let (debt_asset_config, mut debt_asset_fee_shares) = self.asset_config(debt_asset);
+            let (collateral_asset_config, collateral_asset_fee_shares) = self.asset_config(collateral_asset);
+            let (debt_asset_config, debt_asset_fee_shares) = self.asset_config(debt_asset);
 
-            let mut context = Context {
+            Context {
                 extension: extension.contract_address,
                 collateral_asset,
                 debt_asset,
-                collateral_asset_config: collateral_asset_config,
-                debt_asset_config: debt_asset_config,
+                collateral_asset_config,
+                debt_asset_config,
                 collateral_asset_price: if collateral_asset == Zero::zero() {
                     AssetPrice { value: 0, is_valid: true }
                 } else {
@@ -748,14 +748,12 @@ mod SingletonV2 {
                 } else {
                     extension.price(debt_asset)
                 },
-                collateral_asset_fee_shares: collateral_asset_fee_shares,
-                debt_asset_fee_shares: debt_asset_fee_shares,
+                collateral_asset_fee_shares,
+                debt_asset_fee_shares,
                 max_ltv: self.ltv_configs.read((collateral_asset, debt_asset)).max_ltv,
                 user,
                 position: self.positions.read((collateral_asset, debt_asset, user)),
-            };
-
-            context
+            }
         }
 
         /// Creates a new pool
