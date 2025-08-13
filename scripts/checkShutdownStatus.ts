@@ -62,10 +62,7 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
   const pair = await extensionPO.pairs(collateral_asset.address, debt_asset.address);
   const collateral =
     Number(
-      await singleton.calculate_collateral_unsafe(
-        collateral_asset.address,
-        toI257(pair.total_collateral_shares),
-      ),
+      await singleton.calculate_collateral_unsafe(collateral_asset.address, toI257(pair.total_collateral_shares)),
     ) / Number(context.collateral_asset_config.scale);
   const debt =
     Number(
@@ -80,8 +77,7 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
 
   const shutdown_ltv = debt_value === 0 ? 0 : debt_value / collateral_value;
   const shutdown_ltv_max =
-    Number((await extensionPO.shutdown_ltv_config(collateral_asset.address, debt_asset.address)).max_ltv) /
-    1e18;
+    Number((await extensionPO.shutdown_ltv_config(collateral_asset.address, debt_asset.address)).max_ltv) / 1e18;
 
   if (shutdown_ltv >= shutdown_ltv_max) {
     console.log("    Shutdown LTV is greater than or equal to the max LTV");

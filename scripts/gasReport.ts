@@ -20,8 +20,7 @@ assert(
 );
 assert(toAddress(await extensionPO.pool_owner()) === pool.params.owner.toLowerCase(), "pool_owner-neq");
 assert(
-  toAddress((await extensionPO.fee_config()).fee_recipient) ===
-    pool.params.fee_params.fee_recipient.toLowerCase(),
+  toAddress((await extensionPO.fee_config()).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
   "fee_recipient-neq",
 );
 

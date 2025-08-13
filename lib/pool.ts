@@ -1,6 +1,6 @@
 import { CreatePoolParams, LiquidatePositionParams, ModifyPositionParams, Protocol, calculateRates } from ".";
 
-type OmitPool<T> = Omit<T,"user" | "receive_as_shares">;
+type OmitPool<T> = Omit<T, "user" | "receive_as_shares">;
 
 export class Pool {
   constructor(

@@ -1,4 +1,3 @@
-import assert from "assert";
 import { Contract } from "starknet";
 import { CreatePoolParams, Deployer, Pool, PragmaContracts, ProtocolContracts } from ".";
 
@@ -29,7 +28,7 @@ export class Protocol implements ProtocolContracts {
   }
 
   async createPoolFromParams(params: CreatePoolParams) {
-    const { singleton, extensionPO, deployer } = this;
+    const { extensionPO, deployer } = this;
 
     extensionPO.connect(deployer.owner);
     const response = await extensionPO.create_pool(
