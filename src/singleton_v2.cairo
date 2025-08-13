@@ -128,12 +128,6 @@ mod SingletonV2 {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CreatePool {
-        #[key]
-        extension: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct ModifyPosition {
         #[key]
         collateral_asset: ContractAddress,
@@ -252,7 +246,6 @@ mod SingletonV2 {
     enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
-        CreatePool: CreatePool,
         ModifyPosition: ModifyPosition,
         LiquidatePosition: LiquidatePosition,
         AccrueFees: AccrueFees,
@@ -758,6 +751,7 @@ mod SingletonV2 {
         /// * `asset_params` - array of asset parameters
         /// * `ltv_params` - array of loan-to-value parameters
         /// * `extension` - address of the extension contract
+        // TODO: Move this to the constructor (o.w the functions is not sound).
         fn create_pool(
             ref self: ContractState,
             asset_params: Span<AssetParams>,
@@ -781,8 +775,6 @@ mod SingletonV2 {
                 let debt_asset = *asset_params.at(params.debt_asset_index).asset;
                 self.set_ltv_config(collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
             }
-
-            self.emit(CreatePool { extension });
         }
 
         /// Adjusts a positions collateral and debt balances

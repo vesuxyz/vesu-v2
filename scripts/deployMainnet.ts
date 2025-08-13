@@ -101,7 +101,6 @@ const deployment = {
   extensionPO: protocol.extensionPO.address,
   oracle: protocol.pragma.oracle.address,
   assets: protocol.assets.map((asset) => asset.address),
-  pools: [],
 };
 
 fs.writeFileSync(
