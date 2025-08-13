@@ -466,20 +466,10 @@ mod SingletonV2 {
             debt_delta: i257,
             nominal_debt_delta: i257,
         ) {
-            // collateral shares delta has to be non-zero if the collateral delta is non-zero
-            assert!(
-                collateral_delta.abs() == 0
-                    && collateral_shares_delta.abs() == 0 || collateral_delta.abs() != 0
-                    && collateral_shares_delta.abs() != 0,
-                "zero-collateral",
-            );
-            // nominal debt delta has to be non-zero if the debt delta is non-zero
-            assert!(
-                debt_delta.abs() == 0
-                    && nominal_debt_delta.abs() == 0 || debt_delta.abs() != 0
-                    && nominal_debt_delta.abs() != 0,
-                "zero-debt",
-            );
+            // collateral shares delta has to be zero if the collateral delta is zero
+            assert!((collateral_delta == 0) == (collateral_shares_delta == 0), "zero-collateral");
+            // nominal debt delta has to be zero if the debt delta is zero
+            assert!((debt_delta == 0) == (nominal_debt_delta == 0), "zero-debt");
         }
 
         /// Asserts that the position's balances aren't below the floor (dusty)
