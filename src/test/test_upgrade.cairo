@@ -134,9 +134,13 @@ mod TestUpgrade {
                 let collateral_asset = *assets_copy.at(j);
 
                 singleton.upgrade(singleton_v1_class_hash);
-                let asset_config = singleton.asset_config(pool_id, collateral_asset);
+                let (mut asset_config, _) = singleton.asset_config(pool_id, collateral_asset);
+                if asset_config.scale == 0 {
+                    asset_config.last_updated = 0;
+                }
                 singleton.upgrade(singleton_v2_class_hash);
-                assert!(asset_config == singleton.asset_config(pool_id, collateral_asset));
+                let (asset_config_v2, _) = singleton.asset_config(pool_id, collateral_asset);
+                assert!(asset_config == asset_config_v2);
 
                 let assets_copy = assets_copy.clone();
                 let mut k = 0;

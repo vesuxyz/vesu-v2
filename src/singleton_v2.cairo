@@ -860,7 +860,7 @@ mod SingletonV2 {
             let mut asset_config = self.asset_configs.read((pool_id, asset));
             let mut fee_shares = 0;
 
-            if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
+            if asset_config.scale != 0 && asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
                 let new_asset_config = rate_accumulator(pool_id, extension, asset, asset_config);
                 fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
                 asset_config = new_asset_config;
