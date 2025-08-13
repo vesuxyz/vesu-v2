@@ -131,7 +131,7 @@ mod DefaultExtensionPOV2 {
     #[feature("deprecated-starknet-consts")]
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
     use vesu::data_model::{
-        Amount, AmountDenomination, AmountType, AssetParams, AssetPrice, Context, DebtCapParams, LTVConfig, LTVParams,
+        Amount, AmountDenomination, AssetParams, AssetPrice, Context, DebtCapParams, LTVConfig, LTVParams,
         ModifyPositionParams,
     };
     use vesu::extension::components::fee_model::fee_model_component::FeeModelTrait;
@@ -265,9 +265,7 @@ mod DefaultExtensionPOV2 {
                         debt_asset: Zero::zero(),
                         user: contract_address_const::<'ZERO'>(),
                         collateral: Amount {
-                            amount_type: AmountType::Delta,
-                            denomination: AmountDenomination::Assets,
-                            value: I257Trait::new(INFLATION_FEE, false),
+                            denomination: AmountDenomination::Assets, value: I257Trait::new(INFLATION_FEE, false),
                         },
                         debt: Default::default(),
                         data: ArrayTrait::new().span(),

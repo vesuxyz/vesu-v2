@@ -13,7 +13,7 @@ pub mod fee_model_component {
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, UpdatePositionResponse};
+    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams, UpdatePositionResponse};
     use vesu::extension::components::fee_model::FeeConfig;
     use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -79,9 +79,7 @@ pub mod fee_model_component {
                             debt_asset: Zero::zero(),
                             user: get_contract_address(),
                             collateral: Amount {
-                                amount_type: AmountType::Delta,
-                                denomination: AmountDenomination::Native,
-                                value: I257Trait::new(amount, true),
+                                denomination: AmountDenomination::Native, value: I257Trait::new(amount, true),
                             },
                             debt: Default::default(),
                             data: ArrayTrait::new().span(),

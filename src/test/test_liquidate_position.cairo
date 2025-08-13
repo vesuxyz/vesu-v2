@@ -6,8 +6,7 @@ mod TestLiquidatePosition {
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
     use starknet::get_caller_address;
     use vesu::data_model::{
-        Amount, AmountDenomination, AmountType, AssetConfig, Context, LiquidatePositionParams, ModifyPositionParams,
-        Position,
+        Amount, AmountDenomination, AssetConfig, Context, LiquidatePositionParams, ModifyPositionParams, Position,
     };
     use vesu::extension::components::position_hooks::{LiquidationConfig, LiquidationData};
     use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
@@ -127,11 +126,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -146,16 +141,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -202,11 +189,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -221,16 +204,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -278,11 +253,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -297,16 +268,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -354,11 +317,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -373,16 +332,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -438,11 +389,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -457,16 +404,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -799,11 +738,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -818,13 +753,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount {
-                amount_type: AmountType::Target,
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw + nominal_debt_to_draw / 10).into(),
             },
@@ -900,11 +830,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -919,16 +845,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -984,11 +902,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1006,16 +920,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1073,11 +979,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1095,16 +997,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1162,11 +1056,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1184,16 +1074,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1276,11 +1158,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1295,12 +1173,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: collateral.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1394,11 +1268,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1413,12 +1283,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: collateral.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1512,11 +1378,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1531,12 +1393,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: collateral.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1630,11 +1488,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1649,12 +1503,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: collateral.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
             data: ArrayTrait::new().span(),
         };
 
@@ -1751,11 +1601,7 @@ mod TestLiquidatePosition {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -1770,12 +1616,8 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: collateral.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Assets, value: debt.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
+            debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
             data: ArrayTrait::new().span(),
         };
 

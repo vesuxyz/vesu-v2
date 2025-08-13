@@ -46,13 +46,6 @@ pub fn assert_ltv_config(ltv_config: LTVConfig) {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default)]
-pub enum AmountType {
-    #[default]
-    Delta,
-    Target,
-}
-
-#[derive(PartialEq, Copy, Drop, Serde, Default)]
 pub enum AmountDenomination {
     #[default]
     Native,
@@ -61,14 +54,12 @@ pub enum AmountDenomination {
 
 #[derive(PartialEq, Copy, Drop, Serde, Default)]
 pub struct Amount {
-    pub amount_type: AmountType,
     pub denomination: AmountDenomination,
     pub value: i257,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default)]
 pub struct UnsignedAmount {
-    pub amount_type: AmountType,
     pub denomination: AmountDenomination,
     pub value: u256,
 }

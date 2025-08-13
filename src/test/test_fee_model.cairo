@@ -22,6 +22,8 @@ mod TestFeeModel {
                 0x000d8d6dfec4d33bfb6895de9f3852143a17c6f92fd2a21da3d6924d34870160,
             >(),
         };
+        replace_bytecode(singleton.contract_address, *declare("SingletonV2").unwrap().contract_class().class_hash)
+            .unwrap();
 
         let extension = IDefaultExtensionPOV2Dispatcher { contract_address: singleton.extension(pool_id) };
         replace_bytecode(

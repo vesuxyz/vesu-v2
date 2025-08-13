@@ -8,7 +8,7 @@ mod TestPoolDonation {
         start_cheat_caller_address, stop_cheat_caller_address,
     };
     use starknet::get_block_timestamp;
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
     use vesu::math::pow_10;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
@@ -37,11 +37,7 @@ mod TestPoolDonation {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -74,16 +70,8 @@ mod TestPoolDonation {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 

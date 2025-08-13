@@ -4,7 +4,7 @@ mod TestInterestRateModel {
     use snforge_std::{start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address};
     use starknet::get_block_timestamp;
     use vesu::common::{calculate_debt, calculate_utilization};
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, AssetConfig, ModifyPositionParams};
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::calculate_interest_rate;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, InterestRateConfigPacking};
     use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
@@ -286,11 +286,7 @@ mod TestInterestRateModel {
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
-            collateral: Amount {
-                amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Assets,
-                value: liquidity_to_deposit.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
             data: ArrayTrait::new().span(),
         };
@@ -306,16 +302,8 @@ mod TestInterestRateModel {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            collateral: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Assets,
-                value: collateral_to_deposit.into(),
-            },
-            debt: Amount {
-                amount_type: AmountType::Target,
-                denomination: AmountDenomination::Native,
-                value: nominal_debt_to_draw.into(),
-            },
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
             data: ArrayTrait::new().span(),
         };
 
