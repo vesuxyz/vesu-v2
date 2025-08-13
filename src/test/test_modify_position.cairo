@@ -4,7 +4,7 @@ mod TestModifyPosition {
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
-    use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
+    use starknet::{get_block_timestamp, get_caller_address};
     use vesu::data_model::{Amount, AmountDenomination, AssetConfig, Context, ModifyPositionParams, Position};
     use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
