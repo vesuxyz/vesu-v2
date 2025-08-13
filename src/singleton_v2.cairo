@@ -117,9 +117,7 @@ mod SingletonV2 {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
-    };
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::syscalls::replace_class_syscall;
     use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
     use vesu::common::{
@@ -139,7 +137,6 @@ mod SingletonV2 {
         IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait, ISingletonV2, ISingletonV2Dispatcher,
         ISingletonV2DispatcherTrait,
     };
-    use vesu::units::INFLATION_FEE_SHARES;
 
     #[storage]
     struct Storage {
@@ -558,8 +555,6 @@ mod SingletonV2 {
         fn update_position(
             ref self: ContractState, ref context: Context, collateral: Amount, debt: Amount, bad_debt: u256,
         ) -> UpdatePositionResponse {
-            let initial_total_collateral_shares = context.collateral_asset_config.total_collateral_shares;
-
             // apply the position modification to the context
             let (collateral_delta, mut collateral_shares_delta, debt_delta, nominal_debt_delta) =
                 apply_position_update_to_context(
@@ -567,25 +562,6 @@ mod SingletonV2 {
             );
 
             let Context { pool_id, collateral_asset, debt_asset, user, .. } = context;
-
-            // charge the inflation fee for the first depositor for that asset in the pool
-            let inflation_fee = if initial_total_collateral_shares == 0 && !collateral_shares_delta.is_negative() {
-                assert!(user != Zero::zero(), "zero-user-not-allowed");
-                self
-                    .positions
-                    .write(
-                        (pool_id, collateral_asset, debt_asset, Zero::zero()),
-                        Position { collateral_shares: INFLATION_FEE_SHARES, nominal_debt: 0 },
-                    );
-                assert!(
-                    context.position.collateral_shares >= INFLATION_FEE_SHARES,
-                    "inflation-fee-gt-collateral-shares-delta",
-                );
-                context.position.collateral_shares -= INFLATION_FEE_SHARES;
-                INFLATION_FEE_SHARES
-            } else {
-                0
-            };
 
             // store updated context
             self.positions.write((pool_id, collateral_asset, debt_asset, user), context.position);
@@ -615,10 +591,6 @@ mod SingletonV2 {
             // verify invariants:
             self.assert_delta_invariants(collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta);
             self.assert_floor_invariant(context);
-
-            // deduct inflation fee from the collateral shares delta
-            collateral_shares_delta =
-                I257Trait::new(collateral_shares_delta.abs() - inflation_fee, collateral_shares_delta.is_negative());
 
             UpdatePositionResponse {
                 collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta, bad_debt,
