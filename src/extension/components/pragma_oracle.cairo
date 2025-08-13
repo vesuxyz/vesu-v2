@@ -132,7 +132,8 @@ pub mod pragma_oracle_component {
             };
             let valid = (timeout == 0 || (timeout != 0 && time_delta <= timeout))
                 && (number_of_sources == 0
-                    || (number_of_sources != 0 && number_of_sources <= response.num_sources_aggregated));
+                    || (number_of_sources != 0 && number_of_sources <= response.num_sources_aggregated))
+                && (response.price.into() != 0);
 
             (price, valid)
         }
