@@ -270,20 +270,19 @@ mod TestInterestRateModel {
     #[test]
     fn test_set_interest_rate_model_fee_shares() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-        assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
+        assert!(singleton.extension().is_non_zero(), "Pool not created");
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
-        singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
+        singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_cheat_caller_address(singleton.contract_address);
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -304,7 +303,6 @@ mod TestInterestRateModel {
 
         // deposit collateral and debt assets
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -329,15 +327,15 @@ mod TestInterestRateModel {
         start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
+            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_interest_rate_parameter(pool_id, debt_asset.contract_address, 'max_target_utilization', 86_000);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
         stop_cheat_caller_address(extension.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
+            .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
     }
 }

@@ -6,11 +6,10 @@ const UTILIZATION_SCALE_TO_SCALE = 10n ** 13n;
 
 export async function calculateRates(
   { singleton, extensionPO }: ProtocolContracts,
-  poolId: bigint,
   asset: string,
   interest_rate_config: InterestRateConfig,
 ) {
-  const { "0": asset_config } = await singleton.asset_config_unsafe(poolId, asset);
+  const { "0": asset_config } = await singleton.asset_config_unsafe(asset);
   const utilization = calculateUtilization(asset_config);
   const { last_updated: lastUpdated, last_full_utilization_rate: lastFullUtilizationRate } = asset_config;
 
@@ -19,7 +18,7 @@ export async function calculateRates(
   const offchainRate = calculateInterestRate(interest_rate_config, utilization, timeDelta, lastFullUtilizationRate);
 
   // onchain, comment out in prod
-  const onchainRate = await extensionPO.interest_rate(poolId, asset, utilization, lastUpdated, lastFullUtilizationRate);
+  const onchainRate = await extensionPO.interest_rate(asset, utilization, lastUpdated, lastFullUtilizationRate);
   assert(formatRate(Number(onchainRate) / 1e18) == formatRate(Number(offchainRate) / 1e18), "Offchain rate mismatch");
 
   return toAnnualRates(offchainRate, asset_config);

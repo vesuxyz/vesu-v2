@@ -5,15 +5,15 @@ const deployer = await setup(process.env.NETWORK);
 
 const protocol = await deployer.loadProtocol();
 const { singleton, assets, extensionPO } = protocol;
-await extensionPO.connect(deployer.creator);
+await extensionPO.connect(deployer.owner);
 
 const poolName = "genesis-pool";
 const pool = await protocol.loadPool(poolName);
 
-const oldest_violation_timestamp = await extensionPO.oldest_violation_timestamp(pool.id);
+const oldest_violation_timestamp = await extensionPO.oldest_violation_timestamp();
 if (oldest_violation_timestamp !== 0n) {
   console.log("Violation found at timestamp: ", oldest_violation_timestamp);
-  const violation_timestamp_count = await extensionPO.violation_timestamp_count(pool.id, oldest_violation_timestamp);
+  const violation_timestamp_count = await extensionPO.violation_timestamp_count(oldest_violation_timestamp);
   console.log("Violation count: ", violation_timestamp_count);
 }
 
@@ -29,7 +29,7 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
   console.log("");
   console.log(`  • ${collateral_asset_symbol} / ${debt_asset_symbol}`);
 
-  const context = await singleton.context_unsafe(pool.id, collateral_asset.address, debt_asset.address, "0x0");
+  const context = await singleton.context_unsafe(collateral_asset.address, debt_asset.address, "0x0");
 
   const collateral_asset_price = Number(context.collateral_asset_price.value) / 1e18;
   const debt_asset_price = Number(context.debt_asset_price.value) / 1e18;
@@ -59,11 +59,10 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
     console.log("      rate_accumulator: ", debt_accumulator);
   }
 
-  const pair = await extensionPO.pairs(pool.id, collateral_asset.address, debt_asset.address);
+  const pair = await extensionPO.pairs(collateral_asset.address, debt_asset.address);
   const collateral =
     Number(
       await singleton.calculate_collateral_unsafe(
-        pool.id,
         collateral_asset.address,
         toI257(pair.total_collateral_shares),
       ),
@@ -81,7 +80,7 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
 
   const shutdown_ltv = debt_value === 0 ? 0 : debt_value / collateral_value;
   const shutdown_ltv_max =
-    Number((await extensionPO.shutdown_ltv_config(pool.id, collateral_asset.address, debt_asset.address)).max_ltv) /
+    Number((await extensionPO.shutdown_ltv_config(collateral_asset.address, debt_asset.address)).max_ltv) /
     1e18;
 
   if (shutdown_ltv >= shutdown_ltv_max) {
@@ -90,7 +89,7 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
     console.log("      shutdown_ltv_max:", shutdown_ltv_max);
   }
 
-  const shutdown_status = await extensionPO.shutdown_status(pool.id, collateral_asset.address, debt_asset.address);
+  const shutdown_status = await extensionPO.shutdown_status(collateral_asset.address, debt_asset.address);
 
   if (shutdown_status.violating) {
     console.log("    Shutdown status is violating");
@@ -98,7 +97,6 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
   }
 
   const violation_timestamp = await extensionPO.violation_timestamp_for_pair(
-    pool.id,
     collateral_asset.address,
     debt_asset.address,
   );
@@ -108,6 +106,6 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
     console.log("      violation_timestamp:", violation_timestamp);
   }
 
-  // const response = await extensionPO.update_shutdown_status(pool.id, collateral_asset.address, debt_asset.address);
+  // const response = await extensionPO.update_shutdown_status(collateral_asset.address, debt_asset.address);
   // await deployer.waitForTransaction(response.transaction_hash);
 }

@@ -42,7 +42,6 @@ mod TestLiquidatePosition {
         let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
 
         let context = Context {
-            pool_id: 1,
             extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
@@ -87,7 +86,6 @@ mod TestLiquidatePosition {
         let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
 
         let context = Context {
-            pool_id: 1,
             extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
@@ -119,14 +117,13 @@ mod TestLiquidatePosition {
     #[should_panic(expected: "not-undercollateralized")]
     fn test_liquidate_position_not_undercollateralized() {
         let (singleton, _, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -146,7 +143,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -170,19 +166,16 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         let (_, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(collateralized, "Not collateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -199,14 +192,13 @@ mod TestLiquidatePosition {
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_1() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -226,7 +218,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -255,13 +246,12 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
 
         let (_, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -278,14 +268,13 @@ mod TestLiquidatePosition {
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_2() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -305,7 +294,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -334,13 +322,12 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_num_sources_aggregated(DEBT_PRAGMA_KEY, 1);
 
         let (_, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -357,14 +344,13 @@ mod TestLiquidatePosition {
     #[should_panic(expected: 'invalid-liquidation-data')]
     fn test_liquidate_position_invalid_liquidation_data() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -384,7 +370,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -412,13 +397,12 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (position_before, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -431,12 +415,12 @@ mod TestLiquidatePosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
         assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
         assert(position.collateral_shares == 0, 'should not have shares');
     }
@@ -444,14 +428,13 @@ mod TestLiquidatePosition {
     #[test]
     fn test_liquidate_position_partial_no_bad_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -471,7 +454,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -499,19 +481,16 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (position_before, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -524,12 +503,12 @@ mod TestLiquidatePosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
         assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
         assert(position.collateral_shares == 0, 'should not have shares');
     }
@@ -537,14 +516,13 @@ mod TestLiquidatePosition {
     // #[test]
     // fn test_liquidate_position_partial_floor() {
     //     let (singleton, extension, config, users, terms) = setup();
-    //     let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+    //     let TestConfig { collateral_asset, debt_asset, .. } = config;
     //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
     //     // LENDER
 
     //     // deposit collateral which is later borrowed by the borrower
     //     let params = ModifyPositionParams {
-    //         pool_id,
     //         collateral_asset: debt_asset.contract_address,
     //         debt_asset: collateral_asset.contract_address,
     //         user: users.lender,
@@ -564,7 +542,6 @@ mod TestLiquidatePosition {
     //     // BORROWER
 
     //     let params = ModifyPositionParams {
-    //         pool_id,
     //         collateral_asset: collateral_asset.contract_address,
     //         debt_asset: debt_asset.contract_address,
     //         user: users.borrower,
@@ -586,7 +563,7 @@ mod TestLiquidatePosition {
     //     stop_prank(CheatTarget::One(singleton.contract_address));
 
     //     start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
-    //     singleton.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', SCALE);
+    //     singleton.set_asset_parameter(collateral_asset.contract_address, 'floor', SCALE);
     //     stop_prank(CheatTarget::One(singleton.contract_address));
 
     //     // LIQUIDATOR
@@ -596,11 +573,11 @@ mod TestLiquidatePosition {
     //     mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
     //     let (_, _, debt) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
     //     let (collateralized, _, _) = singleton
     //         .check_collateralization(
-    //             pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+    //             collateral_asset.contract_address, debt_asset.contract_address, users.borrower
     //         );
     //     assert!(!collateralized, "Not undercollateralized");
 
@@ -608,7 +585,6 @@ mod TestLiquidatePosition {
     //     LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
     //     let params = LiquidatePositionParams {
-    //         pool_id,
     //         collateral_asset: collateral_asset.contract_address,
     //         debt_asset: debt_asset.contract_address,
     //         user: users.borrower,
@@ -621,12 +597,12 @@ mod TestLiquidatePosition {
     //     stop_prank(CheatTarget::One(singleton.contract_address));
 
     //     let (position, _, _) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
     //     assert(position.collateral_shares == 0, 'no shares should be remaining');
     //     assert(position.nominal_debt == 0, 'should debt should be remaining');
 
     //     let (position, _, _) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
     //     assert(position.collateral_shares == 0, 'should not have shares');
     // }
@@ -634,19 +610,18 @@ mod TestLiquidatePosition {
     // #[test]
     // fn test_liquidate_position_partial_no_bad_debt_discounted() {
     //     let (singleton, extension, config, users, terms) = setup();
-    //     let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+    //     let TestConfig { collateral_asset, debt_asset, .. } = config;
     //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-    //     start_prank(CheatTarget::One(extension.contract_address), users.creator);
+    //     start_prank(CheatTarget::One(extension.contract_address), users.owner);
     //     extension
-    //         .set_asset_parameter(pool_id, collateral_asset.contract_address, 'liquidation_factor', 90 * SCALE / 100);
+    //         .set_asset_parameter(collateral_asset.contract_address, 'liquidation_factor', 90 * SCALE / 100);
     //     stop_prank(CheatTarget::One(extension.contract_address));
 
     //     // LENDER
 
     //     // deposit collateral which is later borrowed by the borrower
     //     let params = ModifyPositionParams {
-    //         pool_id,
     //         collateral_asset: debt_asset.contract_address,
     //         debt_asset: collateral_asset.contract_address,
     //         user: users.lender,
@@ -666,7 +641,6 @@ mod TestLiquidatePosition {
     //     // BORROWER
 
     //     let params = ModifyPositionParams {
-    //         pool_id,
     //         collateral_asset: collateral_asset.contract_address,
     //         debt_asset: debt_asset.contract_address,
     //         user: users.borrower,
@@ -694,13 +668,12 @@ mod TestLiquidatePosition {
     //     mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
     //     let (position_before, _, debt) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
     //     let mut liquidation_data: Array<felt252> = ArrayTrait::new();
     //     LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
     //     let params = LiquidatePositionParams {
-    //         pool_id,
     //         collateral_asset: collateral_asset.contract_address,
     //         debt_asset: debt_asset.contract_address,
     //         user: users.borrower,
@@ -713,12 +686,12 @@ mod TestLiquidatePosition {
     //     stop_prank(CheatTarget::One(singleton.contract_address));
 
     //     let (position, _, _) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
     //     assert(position.collateral_shares < position_before.collateral_shares / 2, 'not half of collateral shares');
     //     assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
 
     //     let (position, _, _) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
     //     assert(position.collateral_shares == 0, 'should not have shares');
     // }
@@ -726,14 +699,13 @@ mod TestLiquidatePosition {
     // #[test]
     // fn test_liquidate_position_partial_no_bad_debt_in_shares() {
     //     let (singleton, extension, config, users, terms) = setup();
-    //     let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+    //     let TestConfig { collateral_asset, debt_asset, .. } = config;
     //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
     //     // LENDER
 
     //     // deposit collateral which is later borrowed by the borrower
     //     let params = ModifyPositionParams {
-    //         pool_id,
     //         collateral_asset: debt_asset.contract_address,
     //         debt_asset: collateral_asset.contract_address,
     //         user: users.lender,
@@ -753,7 +725,6 @@ mod TestLiquidatePosition {
     //     // BORROWER
 
     //     let params = ModifyPositionParams {
-    //         pool_id,
     //         collateral_asset: collateral_asset.contract_address,
     //         debt_asset: debt_asset.contract_address,
     //         user: users.borrower,
@@ -781,11 +752,11 @@ mod TestLiquidatePosition {
     //     mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
     //     let (position_before, _, debt) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
     //     let (collateralized, _, _) = singleton
     //         .check_collateralization(
-    //             pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower
+    //             collateral_asset.contract_address, debt_asset.contract_address, users.borrower
     //         );
     //     assert!(!collateralized, "Not undercollateralized");
 
@@ -793,7 +764,6 @@ mod TestLiquidatePosition {
     //     LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
 
     //     let params = LiquidatePositionParams {
-    //         pool_id,
     //         collateral_asset: collateral_asset.contract_address,
     //         debt_asset: debt_asset.contract_address,
     //         user: users.borrower,
@@ -806,12 +776,12 @@ mod TestLiquidatePosition {
     //     stop_prank(CheatTarget::One(singleton.contract_address));
 
     //     let (position, _, _) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
     //     assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
     //     assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
 
     //     let (position, _, _) = singleton
-    //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+    //         .position(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
 
     //     assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
     // }
@@ -819,14 +789,13 @@ mod TestLiquidatePosition {
     #[test]
     fn test_liquidate_position_partial_bad_debt_2() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -846,7 +815,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -867,7 +835,7 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -877,12 +845,10 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (position_before, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
@@ -893,7 +859,6 @@ mod TestLiquidatePosition {
             .balance_of(users.lender);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -910,12 +875,12 @@ mod TestLiquidatePosition {
         assert(balance_delta <= debt / 2, 'not more than specified');
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         assert(position.collateral_shares < position_before.collateral_shares / 2, 'not lt half collateral shares');
         assert(position.nominal_debt < position_before.nominal_debt / 2, 'not lt half of nominal debt');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
 
         assert(reserve_before + debt / 2 == asset_config.reserve, 'reserve should eq');
         assert(reserve_before + balance_delta == asset_config.reserve, 'covered debt added to reserve');
@@ -925,14 +890,13 @@ mod TestLiquidatePosition {
     #[should_panic(expected: "less-than-min-collateral")]
     fn test_liquidate_position_partial_insufficient_collateral_released() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -952,7 +916,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -980,12 +943,10 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (position_before, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
@@ -993,7 +954,6 @@ mod TestLiquidatePosition {
             .serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1006,7 +966,7 @@ mod TestLiquidatePosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
         assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
     }
@@ -1014,14 +974,13 @@ mod TestLiquidatePosition {
     #[test]
     fn test_liquidate_position_partial_bad_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1038,13 +997,12 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1072,19 +1030,16 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (_, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1097,25 +1052,24 @@ mod TestLiquidatePosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert(reserve_before == asset_config.reserve, 'reserve should be the same');
     }
 
     #[test]
     fn test_liquidate_position_full_bad_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1132,13 +1086,12 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1166,19 +1119,16 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 4);
 
         let (_, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1191,25 +1141,24 @@ mod TestLiquidatePosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert(reserve_before > asset_config.reserve, 'reserve should be the same');
     }
 
     #[test]
     fn test_liquidate_position_full_no_bad_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1226,13 +1175,12 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
 
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1260,19 +1208,16 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (_, _, debt) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1285,18 +1230,18 @@ mod TestLiquidatePosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert(reserve_before == asset_config.reserve, 'reserve should be the same');
     }
 
     #[test]
     fn test_liquidate_position_scenario_1_full_liquidation() {
         let (singleton, extension, config, users, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
         let collateral = 80 * collateral_scale;
@@ -1309,10 +1254,9 @@ mod TestLiquidatePosition {
             * debt_scale
             / collateral_scale;
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
+        start_cheat_caller_address(extension.contract_address, users.owner);
         extension
             .set_liquidation_config(
-                pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
@@ -1329,7 +1273,6 @@ mod TestLiquidatePosition {
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1349,7 +1292,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1370,10 +1312,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1383,16 +1325,13 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1409,21 +1348,21 @@ mod TestLiquidatePosition {
         assert(response.bad_debt != 0, 'bad_debt neq');
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
     #[test]
     fn test_liquidate_position_scenario_2_full_liquidation() {
         let (singleton, extension, config, users, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
         let collateral = 80 * collateral_scale;
@@ -1433,10 +1372,9 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt;
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
+        start_cheat_caller_address(extension.contract_address, users.owner);
         extension
             .set_liquidation_config(
-                pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
@@ -1453,7 +1391,6 @@ mod TestLiquidatePosition {
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1473,7 +1410,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1494,10 +1430,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1507,16 +1443,13 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1533,21 +1466,21 @@ mod TestLiquidatePosition {
         assert(response.bad_debt != 0, 'bad_debt neq');
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
     #[test]
     fn test_liquidate_position_scenario_3_full_liquidation() {
         let (singleton, extension, config, users, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
         let collateral = 80 * collateral_scale;
@@ -1557,10 +1490,9 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 90 / 100;
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
+        start_cheat_caller_address(extension.contract_address, users.owner);
         extension
             .set_liquidation_config(
-                pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
@@ -1577,7 +1509,6 @@ mod TestLiquidatePosition {
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1597,7 +1528,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1618,10 +1548,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1631,16 +1561,13 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1657,21 +1584,21 @@ mod TestLiquidatePosition {
         assert(response.bad_debt != 0, 'bad_debt neq');
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
     #[test]
     fn test_liquidate_position_scenario_4_full_liquidation() {
         let (singleton, extension, config, users, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
         let collateral = 80 * collateral_scale;
@@ -1681,10 +1608,9 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 2;
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
+        start_cheat_caller_address(extension.contract_address, users.owner);
         extension
             .set_liquidation_config(
-                pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
@@ -1701,7 +1627,6 @@ mod TestLiquidatePosition {
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1721,7 +1646,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1742,10 +1666,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1755,16 +1679,13 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1781,21 +1702,21 @@ mod TestLiquidatePosition {
         assert(response.bad_debt != 0, 'bad_debt neq');
 
         let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert(position.collateral_shares == 0, 'collateral shares should be 0');
         assert(position.nominal_debt == 0, 'debt shares should be 0');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         assert!(collateral_reserve_before - collateral == asset_config.reserve, "collateral reserve should decrease");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert!(debt_reserve_before + debt - response.bad_debt == asset_config.reserve, "debt reserve should increase");
     }
 
     #[test]
     fn test_liquidate_position_scenario_5_partial_liquidation() {
         let (singleton, extension, config, users, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
         let collateral = 80 * collateral_scale;
@@ -1808,10 +1729,9 @@ mod TestLiquidatePosition {
             * debt_scale)
             / (debt_price * 2);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
+        start_cheat_caller_address(extension.contract_address, users.owner);
         extension
             .set_liquidation_config(
-                pool_id,
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
@@ -1828,7 +1748,6 @@ mod TestLiquidatePosition {
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1848,7 +1767,6 @@ mod TestLiquidatePosition {
         // BORROWER
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1869,10 +1787,10 @@ mod TestLiquidatePosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         let debt_reserve_before = asset_config.reserve;
 
         // LIQUIDATOR
@@ -1882,16 +1800,13 @@ mod TestLiquidatePosition {
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
-            .check_collateralization(
-                pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower,
-            );
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
         let mut liquidation_data: Array<felt252> = ArrayTrait::new();
         LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
 
         let params = LiquidatePositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1908,17 +1823,17 @@ mod TestLiquidatePosition {
         assert(response.bad_debt != 0, 'bad_debt neq');
 
         let (position, p_collateral, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
         assert!(p_collateral == (collateral / 2), "collateral should be half");
         assert!(position.nominal_debt == (debt * SCALE) / (2 * debt_scale), "debt shares should be half");
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         assert!(
             collateral_reserve_before - (collateral / 2) == asset_config.reserve, "collateral reserve should decrease",
         );
 
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert!(
             debt_reserve_before + (debt / 2) - response.bad_debt == asset_config.reserve,
             "debt reserve should increase",

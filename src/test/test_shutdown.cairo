@@ -19,36 +19,34 @@ mod TestShutdown {
     #[test]
     fn test_set_shutdown_mode_recovery() {
         let (_, extension, config, _, _) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
     }
 
     #[test]
     #[should_panic(expected: "shutdown-mode-not-recovery")]
     fn test_set_shutdown_mode_not_recovery() {
-        let (_, extension, config, _, _) = setup();
-        let TestConfig { pool_id, .. } = config;
+        let (_, extension, _, _, _) = setup();
 
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
     }
 
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_from_none() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -68,7 +66,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -96,7 +93,6 @@ mod TestShutdown {
         // User 1
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.lender,
@@ -121,14 +117,13 @@ mod TestShutdown {
     #[test]
     fn test_recovery_mode_made_safer() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -148,7 +143,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -178,7 +172,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -196,14 +189,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_decreasing_collateral() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -223,7 +215,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -253,7 +244,6 @@ mod TestShutdown {
         // User 1
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.lender,
@@ -271,7 +261,6 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.lender,
@@ -293,14 +282,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_increasing_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -320,7 +308,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -350,7 +337,6 @@ mod TestShutdown {
         // User 1
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.lender,
@@ -368,7 +354,6 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.lender,
@@ -389,14 +374,13 @@ mod TestShutdown {
     #[test]
     fn test_subscription_mode_decreasing_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -416,7 +400,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -442,29 +425,28 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -484,14 +466,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_collateral() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -511,7 +492,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -537,29 +517,28 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -579,14 +558,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_decreasing_collateral() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -606,7 +584,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -632,23 +609,23 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -656,7 +633,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -678,14 +654,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -705,7 +680,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -731,23 +705,23 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -755,7 +729,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -776,14 +749,13 @@ mod TestShutdown {
     #[test]
     fn test_redemption_mode_decreasing_collateral() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -803,7 +775,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -829,23 +800,23 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -854,7 +825,6 @@ mod TestShutdown {
         stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -871,18 +841,17 @@ mod TestShutdown {
 
         // Redemption
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -902,14 +871,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_collateral() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -929,7 +897,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -955,24 +922,24 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -981,7 +948,6 @@ mod TestShutdown {
         stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -998,22 +964,21 @@ mod TestShutdown {
 
         // Redemption
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
 
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1033,14 +998,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_decreasing_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1060,7 +1024,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1086,24 +1049,24 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -1112,7 +1075,6 @@ mod TestShutdown {
         stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1131,21 +1093,20 @@ mod TestShutdown {
 
         // Redemption
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1167,14 +1128,13 @@ mod TestShutdown {
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1194,7 +1154,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1220,24 +1179,24 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -1246,7 +1205,6 @@ mod TestShutdown {
         stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1263,21 +1221,20 @@ mod TestShutdown {
 
         // Redemption
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1301,14 +1258,13 @@ mod TestShutdown {
     #[should_panic(expected: "non-zero-debt")]
     fn test_redemption_mode_non_zero_debt() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1328,7 +1284,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1354,39 +1309,38 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // Redemption
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1407,7 +1361,7 @@ mod TestShutdown {
     #[test]
     fn test_redemption_mode_max_utilization() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, collateral_scale, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, collateral_scale, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         let borrower = extension.contract_address;
@@ -1424,14 +1378,13 @@ mod TestShutdown {
         stop_cheat_caller_address(debt_asset.contract_address);
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
-        singleton.set_asset_parameter(pool_id, collateral_asset.contract_address, 'max_utilization', SCALE / 2);
+        singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 2);
         stop_cheat_caller_address(singleton.contract_address);
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1451,7 +1404,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: borrower,
@@ -1475,7 +1427,6 @@ mod TestShutdown {
         //
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1497,24 +1448,24 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -1523,7 +1474,6 @@ mod TestShutdown {
         stop_cheat_caller_address(debt_asset.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: borrower,
@@ -1543,26 +1493,25 @@ mod TestShutdown {
         // third user has to borrow from same pair to increase utilization
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
-        singleton.set_asset_parameter(pool_id, collateral_asset.contract_address, 'max_utilization', SCALE / 100);
+        singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 100);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(extension.contract_address);
 
-        extension.update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        extension.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: borrower,
@@ -1588,7 +1537,7 @@ mod TestShutdown {
     #[test]
     fn test_recovery_mode_complex() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
         } = terms;
@@ -1596,7 +1545,6 @@ mod TestShutdown {
         // User 1
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1614,7 +1562,6 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: third_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1634,7 +1581,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1656,7 +1602,6 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: third_asset.contract_address,
             user: users.borrower,
@@ -1684,9 +1629,9 @@ mod TestShutdown {
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
         // update shutdown mode
-        extension.update_shutdown_status(pool_id, debt_asset.contract_address, collateral_asset.contract_address);
+        extension.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
 
-        let status = extension.shutdown_status(pool_id, debt_asset.contract_address, collateral_asset.contract_address);
+        let status = extension.shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Pair 2: None -> Recovery
@@ -1696,9 +1641,9 @@ mod TestShutdown {
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // update shutdown mode
-        extension.update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        extension.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Pair 3: None -> Recovery
@@ -1706,10 +1651,9 @@ mod TestShutdown {
         let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         mock_pragma_oracle.set_price(THIRD_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // update shutdown mode
-        extension.update_shutdown_status(pool_id, collateral_asset.contract_address, third_asset.contract_address);
+        extension.update_shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
 
-        let status = extension
-            .shutdown_status(pool_id, collateral_asset.contract_address, third_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Pair 1: Recovery --> None
@@ -1717,9 +1661,9 @@ mod TestShutdown {
         // oracle recovery in pair 1 --> normal
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 2);
         // update shutdown mode
-        extension.update_shutdown_status(pool_id, debt_asset.contract_address, collateral_asset.contract_address);
+        extension.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
 
-        let status = extension.shutdown_status(pool_id, debt_asset.contract_address, collateral_asset.contract_address);
+        let status = extension.shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
         // should still be in recovery because of pair 2
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
     }
@@ -1744,14 +1688,13 @@ mod TestShutdown {
             Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::Some(interest_rate_config),
         );
 
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1771,7 +1714,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1795,27 +1737,26 @@ mod TestShutdown {
         let current_time = current_time + (360 * DAY_IN_SECONDS);
         start_cheat_block_timestamp_global(current_time);
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
 
-        let context = singleton
-            .context(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+        let context = singleton.context(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert!(context.collateral_asset_config.last_rate_accumulator > 18 * SCALE);
         assert!(context.debt_asset_config.last_rate_accumulator > 18 * SCALE);
 
         // Recovery
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(collateral_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
-        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
 
         stop_cheat_block_timestamp_global();
@@ -1825,7 +1766,7 @@ mod TestShutdown {
     #[test]
     fn test_shutdown_collateral_accounting() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, third_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
         } = terms;
@@ -1833,7 +1774,6 @@ mod TestShutdown {
         // Lender
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1851,7 +1791,6 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: third_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1871,7 +1810,6 @@ mod TestShutdown {
         // Borrower
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1893,7 +1831,6 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: third_asset.contract_address,
             user: users.borrower,
@@ -1923,25 +1860,24 @@ mod TestShutdown {
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // update shutdown mode
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
 
-        let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        let status = extension.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
     }
 
     #[test]
     fn test_fixed_shutdown_mode() {
         let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         // User 1
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: debt_asset.contract_address,
             debt_asset: collateral_asset.contract_address,
             user: users.lender,
@@ -1961,7 +1897,6 @@ mod TestShutdown {
         // User 2
 
         let params = ModifyPositionParams {
-            pool_id,
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
@@ -1982,30 +1917,30 @@ mod TestShutdown {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(extension.contract_address);
         let shutdown_mode = extension
-            .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+            .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Recovery, "shutdown-mode-not-recovery");
 
-        let shutdown_config = extension.shutdown_config(pool_id);
+        let shutdown_config = extension.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(extension.contract_address);
         let shutdown_mode = extension
-            .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+            .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Subscription, "shutdown-mode-not-subscription");
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(extension.contract_address, users.creator);
-        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(extension.contract_address);
         let shutdown_mode = extension
-            .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+            .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Redemption, "shutdown-mode-not-redemption");
     }
 }

@@ -105,7 +105,6 @@ export interface CreatePoolParams {
 }
 
 export interface ModifyPositionParams {
-  pool_id: bigint;
   collateral_asset: string;
   debt_asset: string;
   user: string;
@@ -115,7 +114,6 @@ export interface ModifyPositionParams {
 }
 
 export interface TransferPositionParams {
-  pool_id: bigint;
   from_collateral_asset: string;
   to_collateral_asset: string;
   from_debt_asset: string;
@@ -129,7 +127,6 @@ export interface TransferPositionParams {
 }
 
 export interface LiquidatePositionParams {
-  pool_id: bigint;
   collateral_asset: string;
   debt_asset: string;
   user: string;

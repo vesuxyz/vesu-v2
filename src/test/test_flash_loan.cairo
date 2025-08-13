@@ -65,7 +65,7 @@ mod FlashLoan {
     #[test]
     fn test_flash_loan_fractional_pool_amount() {
         let (singleton, _, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         let flash_loan_receiver_add = deploy_contract("FlashLoanReceiver");
@@ -76,7 +76,6 @@ mod FlashLoan {
         let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
-            pool_id,
             debt_asset: collateral_asset.contract_address,
             collateral_asset: debt_asset.contract_address,
             user: users.lender,
@@ -140,7 +139,7 @@ mod FlashLoan {
     #[test]
     fn test_flash_loan_entire_pool() {
         let (singleton, _, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         let flash_loan_receiver_add = deploy_contract("FlashLoanReceiver");
@@ -151,7 +150,6 @@ mod FlashLoan {
         let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
-            pool_id,
             debt_asset: collateral_asset.contract_address,
             collateral_asset: debt_asset.contract_address,
             user: users.lender,
@@ -209,7 +207,7 @@ mod FlashLoan {
     #[should_panic(expected: ('ERC20: insufficient balance',))]
     fn test_flash_loan_malicious_user() {
         let (singleton, _, config, users, terms) = setup();
-        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         let malicious_flash_loan_receiver_add = deploy_contract("MaliciousFlashLoanReceiver");
@@ -221,7 +219,6 @@ mod FlashLoan {
         let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
-            pool_id,
             debt_asset: collateral_asset.contract_address,
             collateral_asset: debt_asset.contract_address,
             user: users.lender,

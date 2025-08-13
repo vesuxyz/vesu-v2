@@ -2,15 +2,22 @@
 mod TestFeeModel {
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare, replace_bytecode};
+    use starknet::ContractAddress;
     #[feature("deprecated-starknet-consts")]
     use starknet::contract_address_const;
     use vesu::extension::default_extension_po_v2::{
         IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
-    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::singleton_v2::ISingletonV2Dispatcher;
+
+    // define test interface of singleton extension function that get pool id
+    #[starknet::interface]
+    trait ISingletonForTest<TContractState> {
+        fn extension(self: @TContractState, pool_id: felt252) -> ContractAddress;
+    }
 
     fn setup(pool_id: felt252) -> (ISingletonV2Dispatcher, IDefaultExtensionPOV2Dispatcher) {
-        let singleton = ISingletonV2Dispatcher {
+        let singleton = ISingletonForTestDispatcher {
             contract_address: contract_address_const::<
                 0x000d8d6dfec4d33bfb6895de9f3852143a17c6f92fd2a21da3d6924d34870160,
             >(),
@@ -22,6 +29,7 @@ mod TestFeeModel {
         )
             .unwrap();
 
+        let singleton = ISingletonV2Dispatcher { contract_address: singleton.contract_address };
         (singleton, extension)
     }
 
@@ -36,12 +44,12 @@ mod TestFeeModel {
             >(),
         };
 
-        let owner = extension.pool_owner(pool_id);
-        let fee_recipient = extension.fee_config(pool_id).fee_recipient;
+        let owner = extension.pool_owner();
+        let fee_recipient = extension.fee_config().fee_recipient;
         let initial_balance = asset.balance_of(fee_recipient);
 
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.claim_fees(pool_id, asset.contract_address);
+        extension.claim_fees(asset.contract_address);
 
         assert!(asset.balance_of(fee_recipient) > initial_balance);
     }

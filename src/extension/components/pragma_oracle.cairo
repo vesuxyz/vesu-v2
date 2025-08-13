@@ -37,20 +37,18 @@ pub mod pragma_oracle_component {
     pub struct Storage {
         pub oracle_address: ContractAddress,
         pub summary_address: ContractAddress,
-        // (pool_id, asset) -> oracle configuration
-        pub oracle_configs: Map<(felt252, ContractAddress), OracleConfig>,
+        // asset -> oracle configuration
+        pub oracle_configs: Map<ContractAddress, OracleConfig>,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct SetOracleConfig {
-        pool_id: felt252,
         asset: ContractAddress,
         oracle_config: OracleConfig,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct SetOracleParameter {
-        pool_id: felt252,
         asset: ContractAddress,
         parameter: felt252,
         value: felt252,
@@ -94,18 +92,17 @@ pub mod pragma_oracle_component {
             self.oracle_address.read()
         }
 
-        /// Returns the current price for an asset in a given pool and the validity status of the price.
+        /// Returns the current price for an asset and the validity status of the price.
         /// The price can be invalid if price is too old (stale) or if the number of price sources is too low.
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// # Returns
         /// * `price` - current price of the asset
         /// * `valid` - whether the price is valid
-        fn price(self: @ComponentState<TContractState>, pool_id: felt252, asset: ContractAddress) -> (u256, bool) {
+        fn price(self: @ComponentState<TContractState>, asset: ContractAddress) -> (u256, bool) {
             let OracleConfig {
                 pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
-            } = self.oracle_configs.read((pool_id, asset));
+            } = self.oracle_configs.read(asset);
             let dispatcher = IPragmaABIDispatcher { contract_address: self.oracle_address.read() };
             let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
 
@@ -137,40 +134,31 @@ pub mod pragma_oracle_component {
             (price, valid)
         }
 
-        /// Sets the oracle configuration for a given pool and asset
+        /// Sets the oracle configuration for a given asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `oracle_config` - oracle configuration
         fn set_oracle_config(
-            ref self: ComponentState<TContractState>,
-            pool_id: felt252,
-            asset: ContractAddress,
-            oracle_config: OracleConfig,
+            ref self: ComponentState<TContractState>, asset: ContractAddress, oracle_config: OracleConfig,
         ) {
-            let OracleConfig { pragma_key, .. } = self.oracle_configs.read((pool_id, asset));
+            let OracleConfig { pragma_key, .. } = self.oracle_configs.read(asset);
             assert!(pragma_key == 0, "oracle-config-already-set");
             assert_oracle_config(oracle_config);
 
-            self.oracle_configs.write((pool_id, asset), oracle_config);
+            self.oracle_configs.write(asset, oracle_config);
 
-            self.emit(SetOracleConfig { pool_id, asset, oracle_config });
+            self.emit(SetOracleConfig { asset, oracle_config });
         }
 
-        /// Sets a parameter for a given oracle configuration of an asset in a pool
+        /// Sets a parameter for a given oracle configuration of an asset
         /// # Arguments
-        /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_oracle_parameter(
-            ref self: ComponentState<TContractState>,
-            pool_id: felt252,
-            asset: ContractAddress,
-            parameter: felt252,
-            value: felt252,
+            ref self: ComponentState<TContractState>, asset: ContractAddress, parameter: felt252, value: felt252,
         ) {
-            let mut oracle_config: OracleConfig = self.oracle_configs.read((pool_id, asset));
+            let mut oracle_config: OracleConfig = self.oracle_configs.read(asset);
             assert!(oracle_config.pragma_key != 0, "oracle-config-not-set");
 
             if parameter == 'pragma_key' {
@@ -196,9 +184,9 @@ pub mod pragma_oracle_component {
             }
 
             assert_oracle_config(oracle_config);
-            self.oracle_configs.write((pool_id, asset), oracle_config);
+            self.oracle_configs.write(asset, oracle_config);
 
-            self.emit(SetOracleParameter { pool_id, asset, parameter, value });
+            self.emit(SetOracleParameter { asset, parameter, value });
         }
     }
 }

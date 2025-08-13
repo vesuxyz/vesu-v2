@@ -27,7 +27,6 @@ pub const THIRD_PRAGMA_KEY: felt252 = 18669995996566340;
 #[derive(Copy, Drop, Serde)]
 pub struct Users {
     pub owner: ContractAddress,
-    pub creator: ContractAddress,
     pub lender: ContractAddress,
     pub borrower: ContractAddress,
     pub seeder: ContractAddress,
@@ -53,7 +52,6 @@ pub struct Env {
 
 #[derive(Copy, Drop, Serde)]
 pub struct TestConfig {
-    pub pool_id: felt252,
     pub collateral_asset: IERC20Dispatcher,
     pub debt_asset: IERC20Dispatcher,
     pub third_asset: IERC20Dispatcher,
@@ -114,7 +112,6 @@ pub fn setup_env(
 ) -> Env {
     let users = Users {
         owner: get_contract_address(),
-        creator: contract_address_const::<'creator'>(),
         lender: contract_address_const::<'lender'>(),
         borrower: contract_address_const::<'borrower'>(),
         seeder: contract_address_const::<'seeder'>(),
@@ -145,7 +142,13 @@ pub fn setup_env(
         contract_address: deploy_with_args("DefaultExtensionPOV2", args),
     };
 
-    singleton.set_extension_whitelist(extension.contract_address, true);
+    start_cheat_caller_address(extension.contract_address, Zero::zero());
+    extension.set_pool_owner(users.owner);
+    stop_cheat_caller_address(extension.contract_address);
+
+    start_cheat_caller_address(singleton.contract_address, users.owner);
+    singleton.set_extension(extension.contract_address);
+    stop_cheat_caller_address(singleton.contract_address);
 
     // deploy collateral and borrow assets
     let (collateral_asset, debt_asset, third_asset) = if collateral_address.is_non_zero()
@@ -160,25 +163,25 @@ pub fn setup_env(
         deploy_assets(users.lender)
     };
 
-    // transfer 2x INFLATION_FEE to creator
+    // transfer 2x INFLATION_FEE to owner
     start_cheat_caller_address(collateral_asset.contract_address, users.lender);
-    collateral_asset.transfer(users.creator, INFLATION_FEE * 2);
+    collateral_asset.transfer(users.owner, INFLATION_FEE * 2);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(debt_asset.contract_address, users.lender);
-    debt_asset.transfer(users.creator, INFLATION_FEE * 2);
+    debt_asset.transfer(users.owner, INFLATION_FEE * 2);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.lender);
-    third_asset.transfer(users.creator, INFLATION_FEE * 2);
+    third_asset.transfer(users.owner, INFLATION_FEE * 2);
     stop_cheat_caller_address(third_asset.contract_address);
 
-    // approve Extension and ExtensionV2 to transfer assets on behalf of creator
-    start_cheat_caller_address(collateral_asset.contract_address, users.creator);
+    // approve Extension and ExtensionV2 to transfer assets on behalf of owner
+    start_cheat_caller_address(collateral_asset.contract_address, users.owner);
     collateral_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
-    start_cheat_caller_address(debt_asset.contract_address, users.creator);
+    start_cheat_caller_address(debt_asset.contract_address, users.owner);
     debt_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
-    start_cheat_caller_address(third_asset.contract_address, users.creator);
+    start_cheat_caller_address(third_asset.contract_address, users.owner);
     third_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
@@ -211,13 +214,10 @@ pub fn setup_env(
     }
 
     // create pool config
-    let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
     let collateral_scale = pow_10(collateral_asset.decimals().into());
     let debt_scale = pow_10(debt_asset.decimals().into());
     let third_scale = pow_10(third_asset.decimals().into());
-    let config = TestConfig {
-        pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale,
-    };
+    let config = TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale };
 
     Env { singleton, extension, config, users }
 }
@@ -238,7 +238,7 @@ pub fn test_interest_rate_config() -> InterestRateConfig {
 pub fn create_pool(
     extension: IDefaultExtensionPOV2Dispatcher,
     config: TestConfig,
-    creator: ContractAddress,
+    owner: ContractAddress,
     interest_rate_config: Option<InterestRateConfig>,
 ) {
     let interest_rate_config = interest_rate_config.unwrap_or(test_interest_rate_config());
@@ -362,7 +362,7 @@ pub fn create_pool(
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
     };
 
-    cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
+    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
             'DefaultExtensionPOV2',
@@ -373,12 +373,12 @@ pub fn create_pool(
             liquidation_params,
             debt_caps,
             shutdown_params,
-            FeeParams { fee_recipient: creator },
-            creator,
+            FeeParams { fee_recipient: owner },
+            owner,
         );
     stop_cheat_caller_address(extension.contract_address);
 
-    assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPOV2', "pool name not set");
+    assert!(extension.pool_name() == 'DefaultExtensionPOV2', "pool name not set");
 }
 
 pub fn setup_pool(
@@ -393,10 +393,10 @@ pub fn setup_pool(
         singleton, extension, config, users, ..,
     } = setup_env(oracle_address, collateral_address, debt_address, third_address);
 
-    create_pool(extension, config, users.creator, interest_rate_config);
+    create_pool(extension, config, users.owner, interest_rate_config);
 
     let TestConfig {
-        pool_id, collateral_asset, debt_asset, third_asset, collateral_scale, debt_scale, third_scale, ..,
+        collateral_asset, debt_asset, third_asset, collateral_scale, debt_scale, third_scale, ..,
     } = config;
 
     // lending terms
@@ -404,7 +404,7 @@ pub fn setup_pool(
     let liquidity_to_deposit_third = third_scale;
     let collateral_to_deposit = collateral_scale;
     let debt_to_draw = debt_scale / 2; // 50% LTV
-    let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+    let (asset_config, _) = singleton.asset_config(debt_asset.contract_address);
     let rate_accumulator = asset_config.last_rate_accumulator;
     let nominal_debt_to_draw = singleton.calculate_nominal_debt(debt_to_draw.into(), rate_accumulator, debt_scale);
 
@@ -424,11 +424,11 @@ pub fn setup_pool(
         stop_cheat_caller_address(collateral_asset.contract_address);
     }
 
-    start_cheat_caller_address(extension.contract_address, users.creator);
-    extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', SCALE / 10_000);
-    extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', SCALE / 10_000);
-    extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', SCALE / 10_000);
-    extension.set_shutdown_mode_agent(pool_id, get_contract_address());
+    start_cheat_caller_address(extension.contract_address, users.owner);
+    extension.set_asset_parameter(collateral_asset.contract_address, 'floor', SCALE / 10_000);
+    extension.set_asset_parameter(debt_asset.contract_address, 'floor', SCALE / 10_000);
+    extension.set_asset_parameter(third_asset.contract_address, 'floor', SCALE / 10_000);
+    extension.set_shutdown_mode_agent(get_contract_address());
     stop_cheat_caller_address(extension.contract_address);
 
     (singleton, extension, config, users, terms)
