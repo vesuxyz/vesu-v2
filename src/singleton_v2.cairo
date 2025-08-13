@@ -665,10 +665,16 @@ mod SingletonV2 {
         /// * `asset_config` - asset configuration
         /// * `fee_shares` - accrued fee shares minted to the fee recipient
         fn asset_config(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256) {
+            // Check that the asset is non-zero asset.
+            assert!(asset.is_non_zero(), "asset-is-zero");
+
             let extension = self.extensions.read(pool_id);
             assert!(extension.is_non_zero(), "unknown-pool");
 
             let mut asset_config = self.asset_configs.read((pool_id, asset));
+            // Check that the asset is registered.
+            assert!(asset_config.scale != 0, "asset-not-exists");
+
             let mut fee_shares = 0;
 
             if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
