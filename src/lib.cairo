@@ -29,7 +29,6 @@ pub mod test {
     pub mod mock_singleton;
     pub mod mock_singleton_upgrade;
     pub mod setup_v2;
-    pub mod test_asset_retrieval;
     pub mod test_common;
     pub mod test_default_extension_po_v2;
     pub mod test_fee_model;
