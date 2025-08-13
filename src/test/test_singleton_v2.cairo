@@ -24,6 +24,19 @@ mod TestSingletonV2 {
     }
 
     #[test]
+    #[should_panic(expected: "asset-config-nonexistent")]
+    fn test_non_existent_asset_config() {
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(extension, config, users.owner, Option::None);
+
+        let dummy_address = contract_address_const::<'dummy'>();
+        singleton.asset_config(dummy_address);
+    }
+
+    #[test]
     #[should_panic(expected: "asset-config-already-exists")]
     fn test_create_pool_duplicate_asset() {
         let Env {
