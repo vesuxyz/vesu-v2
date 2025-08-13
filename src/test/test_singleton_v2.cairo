@@ -3,8 +3,8 @@ mod TestSingletonV2 {
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::interface::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
     use snforge_std::{
-        DeclareResultTrait, declare, start_cheat_block_timestamp_global, start_cheat_caller_address,
-        stop_cheat_caller_address,
+        CheatSpan, DeclareResultTrait, cheat_caller_address, declare, start_cheat_block_timestamp_global,
+        start_cheat_caller_address, stop_cheat_caller_address,
     };
     #[feature("deprecated-starknet-consts")]
     use starknet::{contract_address_const, get_block_timestamp, get_contract_address};
@@ -419,7 +419,7 @@ mod TestSingletonV2 {
     fn test_singleton_upgrade() {
         let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
         singleton.upgrade(new_classhash);
         let tag = IMockSingletonUpgradeDispatcher { contract_address: singleton.contract_address }.tag();
         assert!(tag == 'MockSingletonUpgrade', "Invalid tag");
@@ -430,7 +430,7 @@ mod TestSingletonV2 {
     fn test_singleton_upgrade_wrong_name() {
         let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgradeWrongName").unwrap().contract_class().class_hash;
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
         singleton.upgrade(new_classhash);
     }
 
@@ -442,7 +442,7 @@ mod TestSingletonV2 {
         assert!(ownable_dispatcher.owner() == users.owner, "Owner is not the contract address");
 
         let new_owner = contract_address_const::<'new_owner'>();
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
         ownable_dispatcher.transfer_ownership(new_owner);
         assert!(ownable_dispatcher.owner() == users.owner, "Invalid owner");
         assert!(ownable_dispatcher.pending_owner() == new_owner, "Invalid pending owner");
