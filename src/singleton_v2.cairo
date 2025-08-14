@@ -1,8 +1,8 @@
 use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
-    Amount, AssetConfig, AssetParams, Context, LTVConfig, LTVParams, LiquidatePositionParams, ModifyPositionParams,
-    Position, UpdatePositionResponse,
+    Amount, AssetConfig, AssetParams, Context, LTVConfig, LiquidatePositionParams, ModifyPositionParams, Position,
+    UpdatePositionResponse,
 };
 
 #[starknet::interface]
@@ -47,12 +47,7 @@ pub trait ISingletonV2<TContractState> {
     fn context(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     ) -> Context;
-    fn create_pool(
-        ref self: TContractState,
-        asset_params: Span<AssetParams>,
-        ltv_params: Span<LTVParams>,
-        extension: ContractAddress,
-    );
+    fn create_pool(ref self: TContractState, extension: ContractAddress);
     fn modify_position(ref self: TContractState, params: ModifyPositionParams) -> UpdatePositionResponse;
     fn liquidate_position(ref self: TContractState, params: LiquidatePositionParams) -> UpdatePositionResponse;
     fn flash_loan(
@@ -94,9 +89,9 @@ mod SingletonV2 {
         calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
     };
     use vesu::data_model::{
-        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LTVParams,
-        LiquidatePositionParams, ModifyPositionParams, Position, UpdatePositionResponse, assert_asset_config,
-        assert_asset_config_exists, assert_ltv_config,
+        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams,
+        ModifyPositionParams, Position, UpdatePositionResponse, assert_asset_config, assert_asset_config_exists,
+        assert_ltv_config,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::math::pow_10;
@@ -741,29 +736,9 @@ mod SingletonV2 {
         /// * `ltv_params` - array of loan-to-value parameters
         /// * `extension` - address of the extension contract
         // TODO: Move this to the constructor (o.w the functions is not sound).
-        fn create_pool(
-            ref self: ContractState,
-            asset_params: Span<AssetParams>,
-            mut ltv_params: Span<LTVParams>,
-            extension: ContractAddress,
-        ) {
+        fn create_pool(ref self: ContractState, extension: ContractAddress) {
             // link the extension to the pool
             self._set_extension(extension);
-
-            // store all asset configurations
-            let mut asset_params_copy = asset_params;
-            while !asset_params_copy.is_empty() {
-                let params = *asset_params_copy.pop_front().unwrap();
-                self.set_asset_config(params);
-            }
-
-            // store all loan-to-value configurations for each asset pair
-            while !ltv_params.is_empty() {
-                let params = *ltv_params.pop_front().unwrap();
-                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                self.set_ltv_config(collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
-            }
         }
 
         /// Adjusts a positions collateral and debt balances

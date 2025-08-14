@@ -389,10 +389,7 @@ mod DefaultExtensionPOV2 {
         fn create_pool(ref self: ContractState, name: felt252, fee_params: FeeParams, owner: ContractAddress) {
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            singleton
-                .create_pool(
-                    asset_params: array![].span(), ltv_params: array![].span(), extension: get_contract_address(),
-                );
+            singleton.create_pool(extension: get_contract_address());
 
             // set the pool name
             self.pool_name.write(name);
