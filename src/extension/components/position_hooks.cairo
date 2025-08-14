@@ -78,8 +78,8 @@ pub mod position_hooks_component {
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_block_timestamp};
-    use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
-    use vesu::data_model::{Context, LTVConfig, Position, assert_ltv_config};
+    use vesu::common::{calculate_collateral_and_debt_value, calculate_debt};
+    use vesu::data_model::Context;
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, LiquidationData, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus,
         assert_liquidation_config,
@@ -92,9 +92,6 @@ pub mod position_hooks_component {
     pub struct Storage {
         // contains the shutdown configuration
         pub shutdown_config: ShutdownConfig,
-        // specifies the ltv configuration for each pair at which the recovery mode is triggered
-        // (collateral_asset, debt_asset) -> shutdown ltv configuration
-        pub shutdown_ltv_configs: Map<(ContractAddress, ContractAddress), LTVConfig>,
         // contains the current shutdown mode
         pub fixed_shutdown_mode: ShutdownState,
         // contains the liquidation configuration for each pair
@@ -122,15 +119,6 @@ pub mod position_hooks_component {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct SetShutdownLTVConfig {
-        #[key]
-        collateral_asset: ContractAddress,
-        #[key]
-        debt_asset: ContractAddress,
-        shutdown_ltv_config: LTVConfig,
-    }
-
-    #[derive(Drop, starknet::Event)]
     pub struct SetShutdownMode {
         shutdown_mode: ShutdownMode,
         last_updated: u64,
@@ -150,7 +138,6 @@ pub mod position_hooks_component {
     pub enum Event {
         SetLiquidationConfig: SetLiquidationConfig,
         SetShutdownConfig: SetShutdownConfig,
-        SetShutdownLTVConfig: SetShutdownLTVConfig,
         SetShutdownMode: SetShutdownMode,
         SetDebtCap: SetDebtCap,
     }
@@ -162,26 +149,6 @@ pub mod position_hooks_component {
         +IDefaultExtensionCallback<TContractState>,
         +Drop<TContractState>,
     > of Trait<TContractState> {
-        /// Checks if a pair is collateralized based on the current oracle prices and the shutdown ltv configuration.
-        /// # Arguments
-        /// * `context` - contextual state of the user (position owner)
-        /// # Returns
-        /// * `bool` - true if the pair is collateralized, false otherwise
-        fn is_pair_collateralized(self: @ComponentState<TContractState>, ref context: Context) -> bool {
-            let Pair {
-                total_collateral_shares, total_nominal_debt,
-            } = self.pairs.read((context.collateral_asset, context.debt_asset));
-            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(
-                context, Position { collateral_shares: total_collateral_shares, nominal_debt: total_nominal_debt },
-            );
-            let LTVConfig { max_ltv } = self.shutdown_ltv_configs.read((context.collateral_asset, context.debt_asset));
-            if max_ltv != 0 {
-                is_collateralized(collateral_value, debt_value, max_ltv.into())
-            } else {
-                true
-            }
-        }
-
         /// Sets the debt cap for an asset.
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
@@ -235,24 +202,6 @@ pub mod position_hooks_component {
             self.emit(SetShutdownConfig { shutdown_config });
         }
 
-        /// Sets the shutdown ltv configuration for a pair.
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `shutdown_ltv_config` - shutdown ltv configuration
-        fn set_shutdown_ltv_config(
-            ref self: ComponentState<TContractState>,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            shutdown_ltv_config: LTVConfig,
-        ) {
-            assert_ltv_config(shutdown_ltv_config);
-
-            self.shutdown_ltv_configs.write((collateral_asset, debt_asset), shutdown_ltv_config);
-
-            self.emit(SetShutdownLTVConfig { collateral_asset, debt_asset, shutdown_ltv_config });
-        }
-
         /// Note: In order to get the shutdown status for the entire pool, this function needs to be called on all
         /// pairs associated with the pool.
         /// The furthest progressed shutdown mode for a pair is the shutdown mode of the pool.
@@ -267,16 +216,13 @@ pub mod position_hooks_component {
             // check oracle status
             let invalid_oracle = !context.collateral_asset_price.is_valid || !context.debt_asset_price.is_valid;
 
-            // check if pair is collateralized
-            let collateralized = self.is_pair_collateralized(ref context);
-
             // check rate accumulator values
             let collateral_accumulator = context.collateral_asset_config.last_rate_accumulator;
             let debt_accumulator = context.debt_asset_config.last_rate_accumulator;
             let safe_rate_accumulator = collateral_accumulator < 18 * SCALE && debt_accumulator < 18 * SCALE;
 
             // either the oracle price is invalid or the pair is not collateralized or unsafe rate accumulator
-            let violating = invalid_oracle || !collateralized || !safe_rate_accumulator;
+            let violating = invalid_oracle || !safe_rate_accumulator;
 
             // set shutdown mode to recovery if there is a violation and the shutdown mode is not set already
             if shutdown_mode == ShutdownMode::None && violating {

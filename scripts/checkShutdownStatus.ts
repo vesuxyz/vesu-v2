@@ -75,16 +75,6 @@ for (const [, asset] of pool.params.ltv_params.entries()) {
   const collateral_value = collateral * collateral_asset_price;
   const debt_value = debt * debt_asset_price;
 
-  const shutdown_ltv = debt_value === 0 ? 0 : debt_value / collateral_value;
-  const shutdown_ltv_max =
-    Number((await extensionPO.shutdown_ltv_config(collateral_asset.address, debt_asset.address)).max_ltv) / 1e18;
-
-  if (shutdown_ltv >= shutdown_ltv_max) {
-    console.log("    Shutdown LTV is greater than or equal to the max LTV");
-    console.log("      shutdown_ltv:    ", shutdown_ltv);
-    console.log("      shutdown_ltv_max:", shutdown_ltv_max);
-  }
-
   const shutdown_status = await extensionPO.shutdown_status(collateral_asset.address, debt_asset.address);
 
   if (shutdown_status.violating) {

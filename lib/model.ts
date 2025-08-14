@@ -84,7 +84,6 @@ export interface AssetConfig {
 export interface ShutdownParams {
   recovery_period: bigint;
   subscription_period: bigint;
-  ltv_params: LTVParams[];
 }
 
 export interface FeeParams {
