@@ -548,6 +548,44 @@ mod TestSingletonV2 {
     }
 
     #[test]
+    #[should_panic(expected: "eic-data-not-empty")]
+    fn test_singleton_upgrade_eic_data_not_empty() {
+        let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        singleton.upgrade(new_classhash, Zero::zero(), array!['mock-eic-data'].span());
+    }
+
+    #[test]
+    fn test_singleton_upgrade_eic() {
+        let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
+        let eic_classhash = *declare("MockEIC").unwrap().contract_class().class_hash;
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        singleton.upgrade(new_classhash, eic_classhash, array!['mock-eic-data'].span());
+    }
+
+    #[test]
+    #[should_panic(expected: "eic-initialize-failed")]
+    fn test_singleton_upgrade_invalid_eic_data() {
+        let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
+        let eic_classhash = *declare("MockEIC").unwrap().contract_class().class_hash;
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        singleton.upgrade(new_classhash, eic_classhash, array!['invalid-mock-eic-data'].span());
+    }
+
+    #[test]
+    #[should_panic(expected: "eic-initialize-failed")]
+    fn test_singleton_upgrade_eic_initialize_failed() {
+        let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
+        let eic_classhash = *declare("MockEICFailure").unwrap().contract_class().class_hash;
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        singleton.upgrade(new_classhash, eic_classhash, array![].span());
+    }
+
+    #[test]
     fn test_singleton_change_owner() {
         let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let ownable_dispatcher = IOwnableTwoStepDispatcher { contract_address: singleton.contract_address };

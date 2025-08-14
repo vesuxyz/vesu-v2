@@ -1074,7 +1074,9 @@ mod SingletonV2 {
                 eic_data.serialize(ref eic_data_serialized);
 
                 let res = library_call_syscall(
-                    class_hash: eic_implementation, function_selector: selector!("initialize"), calldata: eic_data_serialized.span(),
+                    class_hash: eic_implementation,
+                    function_selector: selector!("initialize"),
+                    calldata: eic_data_serialized.span(),
                 );
                 assert!(res.is_ok(), "eic-initialize-failed");
             } else {
