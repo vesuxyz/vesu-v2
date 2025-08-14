@@ -72,9 +72,10 @@ mod TestShutdown {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
-        mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 5 / 10);
+        // Manually move to recovery.
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(extension.contract_address);
 
         // User 1
 
@@ -128,9 +129,10 @@ mod TestShutdown {
 
         // Recovery
 
-        // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
-        mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
+        // Manually move to recovery.
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(extension.contract_address);
 
         // User 2
 
@@ -185,9 +187,10 @@ mod TestShutdown {
 
         // Recovery
 
-        // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
-        mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
+        // Manually move to recovery.
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(extension.contract_address);
 
         // User 1
 
@@ -256,9 +259,10 @@ mod TestShutdown {
 
         // Recovery
 
-        // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
-        mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 5 / 10);
+        // Manually move to recovery.
+        start_cheat_caller_address(extension.contract_address, users.owner);
+        extension.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(extension.contract_address);
 
         // User 1
 

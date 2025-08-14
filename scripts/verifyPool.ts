@@ -123,10 +123,3 @@ for (const [, asset] of pool.params.liquidation_params.entries()) {
 //     "debt_cap-neq",
 //   );
 // }
-
-for (const [, asset] of pool.params.shutdown_params.ltv_params.entries()) {
-  let collateral_asset = assets[asset.collateral_asset_index];
-  let debt_asset = assets[asset.debt_asset_index];
-  let ltv_config = await extensionPO.shutdown_ltv_config(collateral_asset.address, debt_asset.address);
-  assert(ltv_config.max_ltv === asset.max_ltv, "shutdown_max_ltv-neq");
-}
