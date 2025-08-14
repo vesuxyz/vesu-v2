@@ -119,7 +119,7 @@ pub fn setup_env(
     };
 
     let singleton = ISingletonV2Dispatcher {
-        contract_address: deploy_with_args("SingletonV2", array![users.owner.into()]),
+        contract_address: deploy_with_args("SingletonV2", array!['PoolName', users.owner.into()]),
     };
 
     cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
@@ -328,7 +328,7 @@ pub fn create_pool(
     let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
 
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension.create_pool('DefaultExtensionPOV2', owner);
+    extension.create_pool(owner);
 
     // Add assets.
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
@@ -463,7 +463,7 @@ pub fn create_pool(
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
     extension.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
 
-    assert!(extension.pool_name() == 'DefaultExtensionPOV2', "pool name not set");
+    assert!(singleton.pool_name() == 'PoolName', "pool name not set");
 }
 
 pub fn setup_pool(

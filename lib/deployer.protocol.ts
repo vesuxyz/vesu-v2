@@ -86,6 +86,7 @@ export class Deployer extends BaseDeployer {
     const [singleton, singletonCalls] = await this.deferContract(
       "SingletonV2",
       CallData.compile({
+        name: "Genesis Pool",
         owner: this.owner.address,
       }),
     );
