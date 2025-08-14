@@ -316,7 +316,7 @@ mod TestInterestRateModel {
         let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
         assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
         stop_cheat_caller_address(singleton.contract_address);
 
