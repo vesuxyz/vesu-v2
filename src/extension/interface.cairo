@@ -36,11 +36,14 @@ pub trait IExtension<TContractState> {
         collateral_shares_delta: i257,
         debt_delta: i257,
         nominal_debt_delta: i257,
-        data: Span<felt252>,
         caller: ContractAddress,
     ) -> bool;
     fn before_liquidate_position(
-        ref self: TContractState, context: Context, data: Span<felt252>, caller: ContractAddress,
+        ref self: TContractState,
+        context: Context,
+        min_collateral_to_receive: u256,
+        debt_to_repay: u256,
+        caller: ContractAddress,
     ) -> (u256, u256, u256);
     fn after_liquidate_position(
         ref self: TContractState,
@@ -50,7 +53,6 @@ pub trait IExtension<TContractState> {
         debt_delta: i257,
         nominal_debt_delta: i257,
         bad_debt: u256,
-        data: Span<felt252>,
         caller: ContractAddress,
     ) -> bool;
 }

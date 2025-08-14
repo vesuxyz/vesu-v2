@@ -802,7 +802,6 @@ mod SingletonV2 {
                         collateral_shares_delta,
                         debt_delta,
                         nominal_debt_delta,
-                        data,
                         get_caller_address(),
                     ),
                 "after-modify-position-failed",
@@ -833,13 +832,16 @@ mod SingletonV2 {
         /// # Returns
         /// * `response` - see UpdatePositionResponse
         fn liquidate_position(ref self: ContractState, params: LiquidatePositionParams) -> UpdatePositionResponse {
-            let LiquidatePositionParams { collateral_asset, debt_asset, user, data, .. } = params;
+            let LiquidatePositionParams {
+                collateral_asset, debt_asset, user, min_collateral_to_receive, debt_to_repay, ..,
+            } = params;
 
             let context = self.context(collateral_asset, debt_asset, user);
 
             // call before-hook of the extension
             let extension = IExtensionDispatcher { contract_address: context.extension };
-            let (collateral, debt, bad_debt) = extension.before_liquidate_position(context, data, get_caller_address());
+            let (collateral, debt, bad_debt) = extension
+                .before_liquidate_position(context, min_collateral_to_receive, debt_to_repay, get_caller_address());
 
             // convert unsigned amounts to signed amounts
             let collateral = Amount {
@@ -872,7 +874,6 @@ mod SingletonV2 {
                         debt_delta,
                         nominal_debt_delta,
                         bad_debt,
-                        data,
                         get_caller_address(),
                     ),
                 "after-liquidate-position-failed",

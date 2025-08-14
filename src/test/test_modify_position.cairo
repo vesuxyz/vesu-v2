@@ -106,7 +106,6 @@ mod TestModifyPosition {
                 Default::default(),
                 Default::default(),
                 Default::default(),
-                data: ArrayTrait::new().span(),
                 caller: get_caller_address(),
             );
     }

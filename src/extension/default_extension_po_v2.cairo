@@ -733,7 +733,6 @@ mod DefaultExtensionPOV2 {
         /// * `collateral_shares_delta` - collateral shares balance delta of the position
         /// * `debt_delta` - debt balance delta of the position
         /// * `nominal_debt_delta` - nominal debt balance delta of the position
-        /// * `data` - modify position data
         /// * `caller` - address of the caller
         /// # Returns
         /// * `bool` - true if the callback was successful
@@ -744,14 +743,13 @@ mod DefaultExtensionPOV2 {
             collateral_shares_delta: i257,
             debt_delta: i257,
             nominal_debt_delta: i257,
-            data: Span<felt252>,
             caller: ContractAddress,
         ) -> bool {
             assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
             self
                 .position_hooks
                 .after_modify_position(
-                    context, collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta, data, caller,
+                    context, collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta, caller,
                 )
         }
 
@@ -761,17 +759,22 @@ mod DefaultExtensionPOV2 {
         /// * `context` - contextual state of the user (position owner)
         /// * `collateral` - amount of collateral to be set/added/removed
         /// * `debt` - amount of debt to be set/added/removed
-        /// * `data` - liquidation data
+        /// * `min_collateral_to_receive` - minimum amount of collateral to be received
+        /// * `debt_to_repay` - amount of debt to be repaid
         /// * `caller` - address of the caller
         /// # Returns
         /// * `collateral` - amount of collateral to be removed
         /// * `debt` - amount of debt to be removed
         /// * `bad_debt` - amount of bad debt accrued during the liquidation
         fn before_liquidate_position(
-            ref self: ContractState, context: Context, data: Span<felt252>, caller: ContractAddress,
+            ref self: ContractState,
+            context: Context,
+            min_collateral_to_receive: u256,
+            debt_to_repay: u256,
+            caller: ContractAddress,
         ) -> (u256, u256, u256) {
             assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
-            self.position_hooks.before_liquidate_position(context, data, caller)
+            self.position_hooks.before_liquidate_position(context, min_collateral_to_receive, debt_to_repay, caller)
         }
 
         /// Liquidate position callback. Called by the Singleton contract after liquidating the position.
@@ -783,7 +786,6 @@ mod DefaultExtensionPOV2 {
         /// * `debt_delta` - debt balance delta of the position
         /// * `nominal_debt_delta` - nominal debt balance delta of the position
         /// * `bad_debt` - accrued bad debt from the liquidation
-        /// * `data` - liquidation data
         /// * `caller` - address of the caller
         /// # Returns
         /// * `bool` - true if the callback was successful
@@ -795,7 +797,6 @@ mod DefaultExtensionPOV2 {
             debt_delta: i257,
             nominal_debt_delta: i257,
             bad_debt: u256,
-            data: Span<felt252>,
             caller: ContractAddress,
         ) -> bool {
             assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
@@ -808,7 +809,6 @@ mod DefaultExtensionPOV2 {
                     debt_delta,
                     nominal_debt_delta,
                     bad_debt,
-                    data,
                     caller,
                 )
         }

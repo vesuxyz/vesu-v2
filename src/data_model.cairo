@@ -111,7 +111,8 @@ pub struct LiquidatePositionParams {
     pub debt_asset: ContractAddress,
     pub user: ContractAddress,
     pub receive_as_shares: bool,
-    pub data: Span<felt252>,
+    pub min_collateral_to_receive: u256,
+    pub debt_to_repay: u256,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]

@@ -46,12 +46,6 @@ pub struct ShutdownState {
     pub last_updated: u64,
 }
 
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct LiquidationData {
-    pub min_collateral_to_receive: u256,
-    pub debt_to_repay: u256,
-}
-
 impl PairPacking of StorePacking<Pair, felt252> {
     fn pack(value: Pair) -> felt252 {
         let total_collateral_shares: u128 = value
@@ -81,8 +75,7 @@ pub mod position_hooks_component {
     use vesu::common::{calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
     use vesu::data_model::{Context, LTVConfig, Position, assert_ltv_config};
     use vesu::extension::components::position_hooks::{
-        LiquidationConfig, LiquidationData, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus,
-        assert_liquidation_config,
+        LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus, assert_liquidation_config,
     };
     use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -430,7 +423,6 @@ pub mod position_hooks_component {
         /// * `collateral_shares_delta` - collateral shares balance delta of the position
         /// * `debt_delta` - debt balance delta of the position
         /// * `nominal_debt_delta` - nominal debt balance delta of the position
-        /// * `data` - modify position data (optional)
         /// * `caller` - address of the caller
         /// # Returns
         /// * `bool` - true if it was successful, false otherwise
@@ -441,7 +433,6 @@ pub mod position_hooks_component {
             collateral_shares_delta: i257,
             debt_delta: i257,
             nominal_debt_delta: i257,
-            data: Span<felt252>,
             caller: ContractAddress,
         ) -> bool {
             self.update_pair(ref context, collateral_shares_delta, nominal_debt_delta);
@@ -477,7 +468,8 @@ pub mod position_hooks_component {
         /// debt value.
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
-        /// * `data` - liquidation data (optional)
+        /// * `min_collateral_to_receive` - minimum amount of collateral to be received
+        /// * `debt_to_repay` - amount of debt to be repaid
         /// * `caller` - address of the caller
         /// # Returns
         /// * `collateral` - amount of collateral to be removed
@@ -486,7 +478,8 @@ pub mod position_hooks_component {
         fn before_liquidate_position(
             ref self: ComponentState<TContractState>,
             mut context: Context,
-            mut data: Span<felt252>,
+            min_collateral_to_receive: u256,
+            mut debt_to_repay: u256,
             caller: ContractAddress,
         ) -> (u256, u256, u256) {
             // don't allow for liquidations if the pool is not in normal or recovery mode
@@ -497,10 +490,6 @@ pub mod position_hooks_component {
                     && context.debt_asset_price.is_valid,
                 "emergency-mode",
             );
-
-            let LiquidationData {
-                min_collateral_to_receive, mut debt_to_repay,
-            } = Serde::deserialize(ref data).expect('invalid-liquidation-data');
 
             // compute the collateral and debt value of the position
             let (collateral, mut collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(
@@ -582,7 +571,6 @@ pub mod position_hooks_component {
         /// * `debt_delta` - debt balance delta of the position
         /// * `nominal_debt_delta` - nominal debt balance delta of the position
         /// * `bad_debt` - amount of bad debt accrued during the liquidation
-        /// * `data` - liquidation data (optional)
         /// * `caller` - address of the caller
         /// # Returns
         /// * `bool` - true if it was successful, false otherwise
@@ -594,7 +582,6 @@ pub mod position_hooks_component {
             debt_delta: i257,
             nominal_debt_delta: i257,
             bad_debt: u256,
-            data: Span<felt252>,
             caller: ContractAddress,
         ) -> bool {
             self.update_pair(ref context, collateral_shares_delta, nominal_debt_delta);
