@@ -1,5 +1,5 @@
 use starknet::{ClassHash, ContractAddress};
-use vesu::data_model::{AssetParams, LTVConfig};
+use vesu::data_model::AssetParams;
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{
     LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus,
@@ -77,9 +77,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         debt_asset: ContractAddress,
         liquidation_config: LiquidationConfig,
     );
-    fn set_ltv_config(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
-    );
     fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
     fn set_shutdown_mode(ref self: TContractState, shutdown_mode: ShutdownMode);
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
@@ -103,9 +100,7 @@ mod DefaultExtensionPOV2 {
     use starknet::syscalls::replace_class_syscall;
     #[feature("deprecated-starknet-consts")]
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
-    use vesu::data_model::{
-        Amount, AmountDenomination, AssetParams, AssetPrice, Context, LTVConfig, ModifyPositionParams,
-    };
+    use vesu::data_model::{Amount, AmountDenomination, AssetParams, AssetPrice, Context, ModifyPositionParams};
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::extension::components::position_hooks::position_hooks_component::PositionHooksTrait;
@@ -427,22 +422,6 @@ mod DefaultExtensionPOV2 {
         fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             self.pragma_oracle.set_oracle_parameter(asset, parameter, value);
-        }
-
-        /// Sets the loan-to-value configuration between two assets (pair)
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `ltv_config` - ltv configuration
-        fn set_ltv_config(
-            ref self: ContractState,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            ltv_config: LTVConfig,
-        ) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            ISingletonV2Dispatcher { contract_address: self.singleton.read() }
-                .set_ltv_config(collateral_asset, debt_asset, ltv_config);
         }
 
         /// Sets the liquidation config for a given pair
