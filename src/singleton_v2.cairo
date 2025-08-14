@@ -1,8 +1,8 @@
 use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
-    Amount, AssetConfig, AssetParams, Context, LTVConfig, LTVParams, LiquidatePositionParams, ModifyPositionParams,
-    Position, UpdatePositionResponse,
+    Amount, AssetConfig, AssetParams, Context, FeeConfig, LTVConfig, LTVParams, LiquidatePositionParams,
+    ModifyPositionParams, Position, UpdatePositionResponse,
 };
 
 #[starknet::interface]
@@ -73,6 +73,8 @@ pub trait ISingletonV2<TContractState> {
     fn update_fee_shares(ref self: TContractState, asset: ContractAddress);
     fn claim_fees(ref self: TContractState, asset: ContractAddress);
     fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
+    fn fee_config(self: @TContractState) -> FeeConfig;
+    fn set_fee_config(ref self: TContractState, fee_config: FeeConfig);
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -96,12 +98,9 @@ mod SingletonV2 {
         calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
     };
     use vesu::data_model::{
-        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LTVParams,
+        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, FeeConfig, LTVConfig, LTVParams,
         LiquidatePositionParams, ModifyPositionParams, Position, UpdatePositionResponse, assert_asset_config,
         assert_asset_config_exists, assert_ltv_config,
-    };
-    use vesu::extension::default_extension_po_v2::{
-        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::math::pow_10;
@@ -115,6 +114,8 @@ mod SingletonV2 {
     struct Storage {
         // The address of the extension contract
         extension: ContractAddress,
+        // The owner of the extension
+        extension_owner: ContractAddress,
         // tracks the configuration / state of each asset
         // asset -> asset configuration
         asset_configs: Map<ContractAddress, AssetConfig>,
@@ -127,6 +128,8 @@ mod SingletonV2 {
         // tracks the delegation status for each delegator to a delegatee
         // (delegator, delegatee) -> delegation
         delegations: Map<(ContractAddress, ContractAddress), bool>,
+        // fee configuration
+        fee_config: FeeConfig,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
@@ -244,6 +247,12 @@ mod SingletonV2 {
         amount: u256,
     }
 
+    #[derive(Drop, starknet::Event)]
+    pub struct SetFeeConfig {
+        #[key]
+        fee_config: FeeConfig,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -261,6 +270,7 @@ mod SingletonV2 {
         SetExtension: SetExtension,
         ContractUpgraded: ContractUpgraded,
         ClaimFees: ClaimFees,
+        SetFeeConfig: SetFeeConfig,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -271,6 +281,8 @@ mod SingletonV2 {
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
+        // TODO: Support a different owner for the extension.
+        self.extension_owner.write(owner);
     }
 
     /// Computes the new rate accumulator and the interest rate at full utilization for a given asset
@@ -497,7 +509,6 @@ mod SingletonV2 {
         /// * `asset` - address of the asset
         /// # Returns
         /// * `asset_config` - asset configuration
-        /// * `fee_shares` - accrued fee shares minted to the fee recipient
         fn asset_config(self: @ContractState, asset: ContractAddress) -> AssetConfig {
             let extension = self.extension.read();
             assert!(extension.is_non_zero(), "unknown-pool");
@@ -1030,11 +1041,11 @@ mod SingletonV2 {
 
             // Convert shares to amount (round down).
             let amount = calculate_collateral(fee_shares, asset_config, false);
-            let fee_config = IDefaultExtensionPOV2Dispatcher { contract_address: self.extension.read() }.fee_config();
+            let fee_recipient = self.fee_config.read().fee_recipient;
 
-            IERC20Dispatcher { contract_address: asset }.transfer(fee_config.fee_recipient, amount);
+            IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, amount);
 
-            self.emit(ClaimFees { asset, recipient: fee_config.fee_recipient, amount });
+            self.emit(ClaimFees { asset, recipient: fee_recipient, amount });
         }
 
         /// Returns the number of unclaimed fee shares and the corresponding amount.
@@ -1046,6 +1057,22 @@ mod SingletonV2 {
             let amount = calculate_collateral(fee_shares, asset_config, false);
 
             (fee_shares, amount)
+        }
+
+        /// Returns the fee configuration
+        /// # Returns
+        /// * `fee_config` - fee configuration
+        fn fee_config(self: @ContractState) -> FeeConfig {
+            self.fee_config.read()
+        }
+
+        /// Sets the fee configuration.
+        /// # Arguments
+        /// * `fee_config` - new fee configuration parameters
+        fn set_fee_config(ref self: ContractState, fee_config: FeeConfig) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-owner");
+            self.fee_config.write(fee_config);
+            self.emit(SetFeeConfig { fee_config });
         }
 
         /// Returns the name of the contract

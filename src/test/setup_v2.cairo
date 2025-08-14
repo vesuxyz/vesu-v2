@@ -6,12 +6,12 @@ use snforge_std::{
 };
 #[feature("deprecated-starknet-consts")]
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
-use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
+use vesu::data_model::{AssetParams, DebtCapParams, FeeConfig, LTVConfig, LTVParams};
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
 use vesu::extension::default_extension_po_v2::{
-    FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
-    PragmaOracleParams, ShutdownParams,
+    IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, PragmaOracleParams,
+    ShutdownParams,
 };
 use vesu::math::pow_10;
 use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -121,6 +121,9 @@ pub fn setup_env(
     let singleton = ISingletonV2Dispatcher {
         contract_address: deploy_with_args("SingletonV2", array![users.owner.into()]),
     };
+
+    cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+    singleton.set_fee_config(FeeConfig { fee_recipient: users.owner });
 
     start_cheat_block_timestamp_global(get_block_timestamp() + 1);
 
@@ -342,7 +345,7 @@ pub fn create_pool(
     };
 
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension.create_pool('DefaultExtensionPOV2', FeeParams { fee_recipient: owner }, owner);
+    extension.create_pool('DefaultExtensionPOV2', owner);
 
     // Add assets.
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
