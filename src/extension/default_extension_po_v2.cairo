@@ -1,5 +1,5 @@
 use starknet::{ClassHash, ContractAddress};
-use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
+use vesu::data_model::{AssetParams, LTVConfig, LTVParams};
 use vesu::extension::components::fee_model::FeeConfig;
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{
@@ -64,19 +64,7 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownStatus;
     fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
-    fn create_pool(
-        ref self: TContractState,
-        name: felt252,
-        asset_params: Span<AssetParams>,
-        ltv_params: Span<LTVParams>,
-        interest_rate_configs: Span<InterestRateConfig>,
-        pragma_oracle_params: Span<PragmaOracleParams>,
-        liquidation_params: Span<LiquidationParams>,
-        debt_caps: Span<DebtCapParams>,
-        shutdown_params: ShutdownParams,
-        fee_params: FeeParams,
-        owner: ContractAddress,
-    );
+    fn create_pool(ref self: TContractState, name: felt252, fee_params: FeeParams, owner: ContractAddress);
     fn add_asset(
         ref self: TContractState,
         asset_params: AssetParams,
@@ -130,8 +118,7 @@ mod DefaultExtensionPOV2 {
     #[feature("deprecated-starknet-consts")]
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
     use vesu::data_model::{
-        Amount, AmountDenomination, AssetParams, AssetPrice, Context, DebtCapParams, LTVConfig, LTVParams,
-        ModifyPositionParams,
+        Amount, AmountDenomination, AssetParams, AssetPrice, Context, LTVConfig, ModifyPositionParams,
     };
     use vesu::extension::components::fee_model::fee_model_component::FeeModelTrait;
     use vesu::extension::components::fee_model::{FeeConfig, fee_model_component};
@@ -145,7 +132,7 @@ mod DefaultExtensionPOV2 {
     use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
     use vesu::extension::default_extension_po_v2::{
         FeeParams, IDefaultExtensionCallback, IDefaultExtensionPOV2, IDefaultExtensionPOV2Dispatcher,
-        IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, PragmaOracleParams, ShutdownParams,
+        IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams,
     };
     use vesu::extension::interface::IExtension;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -399,98 +386,19 @@ mod DefaultExtensionPOV2 {
         /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
-        fn create_pool(
-            ref self: ContractState,
-            name: felt252,
-            mut asset_params: Span<AssetParams>,
-            mut ltv_params: Span<LTVParams>,
-            mut interest_rate_configs: Span<InterestRateConfig>,
-            mut pragma_oracle_params: Span<PragmaOracleParams>,
-            mut liquidation_params: Span<LiquidationParams>,
-            mut debt_caps: Span<DebtCapParams>,
-            shutdown_params: ShutdownParams,
-            fee_params: FeeParams,
-            owner: ContractAddress,
-        ) {
-            assert!(asset_params.len() > 0, "empty-asset-params");
-            // assert that all arrays have equal length
-            assert!(asset_params.len() == interest_rate_configs.len(), "interest-rate-params-mismatch");
-            assert!(asset_params.len() == pragma_oracle_params.len(), "pragma-oracle-params-mismatch");
-
+        fn create_pool(ref self: ContractState, name: felt252, fee_params: FeeParams, owner: ContractAddress) {
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            singleton.create_pool(asset_params, ltv_params, get_contract_address());
+            singleton
+                .create_pool(
+                    asset_params: array![].span(), ltv_params: array![].span(), extension: get_contract_address(),
+                );
 
             // set the pool name
             self.pool_name.write(name);
 
             // set the pool owner
             self.owner.write(owner);
-
-            let mut asset_params_copy = asset_params;
-            let mut i = 0;
-            while !asset_params_copy.is_empty() {
-                let asset_params = *asset_params_copy.pop_front().unwrap();
-                let asset = asset_params.asset;
-                // set the oracle config
-                let params = *pragma_oracle_params.pop_front().unwrap();
-                let PragmaOracleParams {
-                    pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
-                } = params;
-                self
-                    .pragma_oracle
-                    .set_oracle_config(
-                        asset,
-                        OracleConfig {
-                            pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
-                        },
-                    );
-                // set the interest rate model configuration
-                let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
-                self.interest_rate_model.set_interest_rate_config(asset, interest_rate_config);
-                // burn inflation fee
-                self.burn_inflation_fee(asset, asset_params.is_legacy);
-                i += 1;
-            }
-
-            // set the liquidation config for each pair
-            let mut liquidation_params = liquidation_params;
-            while !liquidation_params.is_empty() {
-                let params = *liquidation_params.pop_front().unwrap();
-                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                self
-                    .position_hooks
-                    .set_liquidation_config(
-                        collateral_asset,
-                        debt_asset,
-                        LiquidationConfig { liquidation_factor: params.liquidation_factor },
-                    );
-            }
-
-            // set the debt caps for each pair
-            let mut debt_caps = debt_caps;
-            while !debt_caps.is_empty() {
-                let params = *debt_caps.pop_front().unwrap();
-                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                self.position_hooks.set_debt_cap(collateral_asset, debt_asset, params.debt_cap);
-            }
-
-            // set the max shutdown LTVs for each pair
-            let mut shutdown_ltv_params = shutdown_params.ltv_params;
-            while !shutdown_ltv_params.is_empty() {
-                let params = *shutdown_ltv_params.pop_front().unwrap();
-                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                self
-                    .position_hooks
-                    .set_shutdown_ltv_config(collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
-            }
-
-            // set the shutdown config
-            let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
-            self.position_hooks.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
 
             // set the fee config
             self.fee_model.set_fee_config(FeeConfig { fee_recipient: fee_params.fee_recipient });
