@@ -7,11 +7,12 @@ use snforge_std::{
 #[feature("deprecated-starknet-consts")]
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
 use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
+use vesu::extension::components::fee_model::FeeConfig;
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
 use vesu::extension::default_extension_po_v2::{
-    FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
-    PragmaOracleParams, ShutdownParams,
+    IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, PragmaOracleParams,
+    ShutdownParams,
 };
 use vesu::math::pow_10;
 use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -342,7 +343,7 @@ pub fn create_pool(
     };
 
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension.create_pool('DefaultExtensionPOV2', FeeParams { fee_recipient: owner }, owner);
+    extension.create_pool('DefaultExtensionPOV2', owner);
 
     // Add assets.
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
@@ -514,6 +515,10 @@ pub fn create_pool(
     let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
     cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
     extension.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
+
+    // set the fee config
+    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
+    extension.set_fee_config(fee_config: FeeConfig { fee_recipient: owner });
 
     assert!(extension.pool_name() == 'DefaultExtensionPOV2', "pool name not set");
 }

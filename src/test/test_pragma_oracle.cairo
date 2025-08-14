@@ -5,6 +5,7 @@ mod TestPragmaOracle {
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::is_collateralized;
     use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
+    use vesu::extension::components::fee_model::FeeConfig;
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
     use vesu::extension::default_extension_po_v2::{
@@ -111,7 +112,7 @@ mod TestPragmaOracle {
         let fee_params = FeeParams { fee_recipient: owner };
 
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.create_pool('DefaultExtensionPO', fee_params, owner);
+        extension.create_pool('DefaultExtensionPO', owner);
 
         // Add assets.
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
@@ -221,6 +222,10 @@ mod TestPragmaOracle {
         let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
         extension.set_shutdown_config(shutdown_config: ShutdownConfig { recovery_period, subscription_period });
+
+        // set the fee config
+        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
+        extension.set_fee_config(fee_config: FeeConfig { fee_recipient: fee_params.fee_recipient });
         // No stop_cheat_caller_address needed for one-shot cheat_caller_address
     }
 

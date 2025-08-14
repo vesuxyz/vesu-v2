@@ -64,7 +64,7 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownStatus;
     fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
-    fn create_pool(ref self: TContractState, name: felt252, fee_params: FeeParams, owner: ContractAddress);
+    fn create_pool(ref self: TContractState, name: felt252, owner: ContractAddress);
     fn add_asset(
         ref self: TContractState,
         asset_params: AssetParams,
@@ -386,7 +386,7 @@ mod DefaultExtensionPOV2 {
         /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
-        fn create_pool(ref self: ContractState, name: felt252, fee_params: FeeParams, owner: ContractAddress) {
+        fn create_pool(ref self: ContractState, name: felt252, owner: ContractAddress) {
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
             singleton
@@ -399,9 +399,6 @@ mod DefaultExtensionPOV2 {
 
             // set the pool owner
             self.owner.write(owner);
-
-            // set the fee config
-            self.fee_model.set_fee_config(FeeConfig { fee_recipient: fee_params.fee_recipient });
         }
 
         /// Adds an asset
