@@ -50,7 +50,7 @@ mod TestSingletonV2 {
     fn test_non_existent_asset_config() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let dummy_address = contract_address_const::<'dummy'>();
         singleton.asset_config(dummy_address);
@@ -131,7 +131,7 @@ mod TestSingletonV2 {
         stop_cheat_caller_address(singleton.contract_address);
 
         // store all loan-to-value configurations for each asset pair
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_ltv_config(
                 collateral_asset_params.asset,
@@ -243,9 +243,9 @@ mod TestSingletonV2 {
     fn test_add_asset_not_extension_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        let asset = deploy_asset(users.owner);
+        let asset = deploy_asset(users.extension_owner);
 
         let asset_params = AssetParams {
             asset: asset.contract_address,
@@ -266,9 +266,9 @@ mod TestSingletonV2 {
     fn test_add_asset() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        let asset = deploy_asset(users.owner);
+        let asset = deploy_asset(users.extension_owner);
 
         let asset_params = AssetParams {
             asset: asset.contract_address,
@@ -298,7 +298,7 @@ mod TestSingletonV2 {
     fn test_set_asset_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
@@ -381,9 +381,9 @@ mod TestSingletonV2 {
     fn test_set_ltv_config() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_ltv_config(
                 config.collateral_asset.contract_address,
