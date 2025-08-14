@@ -25,7 +25,7 @@ mod TestDefaultExtensionPOV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
@@ -48,9 +48,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_add_asset_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let asset = deploy_asset(users.owner);
 
@@ -90,9 +92,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "oracle-config-already-set")]
     fn test_add_asset_oracle_config_already_set() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -136,9 +140,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "pragma-key-must-be-set")]
     fn test_add_asset_pragma_key_must_be_set() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let asset = deploy_asset(users.owner);
 
@@ -187,7 +193,7 @@ mod TestDefaultExtensionPOV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let asset = deploy_asset(users.owner);
 
@@ -239,18 +245,22 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_asset_parameter_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         extension.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
     }
 
     #[test]
     fn test_extension_set_asset_parameter() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
@@ -268,11 +278,13 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_set_ltv_config_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
-        extension
+        singleton
             .set_ltv_config(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
@@ -286,14 +298,14 @@ mod TestDefaultExtensionPOV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let ltv_config = LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() };
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_ltv_config(config.collateral_asset.contract_address, config.debt_asset.contract_address, ltv_config);
-        stop_cheat_caller_address(extension.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
 
         let ltv_config_ = singleton
             .ltv_config(config.collateral_asset.contract_address, config.debt_asset.contract_address);
@@ -304,9 +316,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_liquidation_config_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let liquidation_factor = 10 * PERCENT;
 
@@ -320,9 +334,11 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_set_liquidation_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let liquidation_factor = 10 * PERCENT;
 
@@ -343,9 +359,11 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_set_shutdown_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = 12 * DAY_IN_SECONDS;
@@ -363,9 +381,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_shutdown_config_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = 12 * DAY_IN_SECONDS;
@@ -375,9 +395,11 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_set_shutdown_ltv_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let max_ltv = SCALE / 2;
 
@@ -399,9 +421,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_shutdown_ltv_config_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let max_ltv = SCALE / 2;
 
@@ -416,9 +440,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "invalid-ltv-config")]
     fn test_extension_set_shutdown_ltv_config_invalid_ltv_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         let max_ltv = SCALE + 1;
 
@@ -434,9 +460,11 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_set_oracle_parameter() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
@@ -484,9 +512,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_oracle_parameter_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         extension.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
     }
@@ -494,9 +524,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "invalid-oracle-parameter")]
     fn test_extension_set_oracle_parameter_invalid_oracle_parameter() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_oracle_parameter(config.collateral_asset.contract_address, 'a', 5_u64.into());
@@ -506,9 +538,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "oracle-config-not-set")]
     fn test_extension_set_oracle_parameter_oracle_config_not_set() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_oracle_parameter(Zero::zero(), 'timeout', 5_u64.into());
@@ -518,9 +552,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "time-window-must-be-less-than-start-time-offset")]
     fn test_extension_set_oracle_parameter_time_window_greater_than_start_time_offset() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 1_u64.into());
@@ -529,9 +565,11 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_set_interest_rate_parameter() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
@@ -591,9 +629,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_interest_rate_parameter_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
     }
@@ -601,9 +641,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "invalid-interest-rate-parameter")]
     fn test_extension_set_interest_rate_parameter_invalid_interest_rate_parameter() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'a', 5);
@@ -613,9 +655,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "interest-rate-config-not-set")]
     fn test_extension_set_interest_rate_parameter_interest_rate_config_not_set() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_interest_rate_parameter(Zero::zero(), 'min_target_utilization', 5);
@@ -624,9 +668,11 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_set_fee_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_fee_config(FeeConfig { fee_recipient: users.lender });
@@ -639,18 +685,22 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_fee_config_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         extension.set_fee_config(FeeConfig { fee_recipient: users.lender });
     }
 
     #[test]
     fn test_extension_set_debt_cap() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
@@ -664,9 +714,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_debt_cap_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         extension.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
 
@@ -677,9 +729,11 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     fn test_extension_set_shutdown_mode_agent() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_shutdown_mode_agent(users.lender);
@@ -692,18 +746,22 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner")]
     fn test_extension_set_shutdown_mode_agent_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         extension.set_shutdown_mode_agent(users.lender);
     }
 
     #[test]
     fn test_extension_set_shutdown_mode() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         start_cheat_caller_address(extension.contract_address, users.owner);
         extension.set_shutdown_mode_agent(users.lender);
@@ -729,9 +787,11 @@ mod TestDefaultExtensionPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-owner-or-agent")]
     fn test_extension_set_shutdown_mode_caller_not_owner_or_agent() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, Option::None);
 
         extension.set_shutdown_mode(ShutdownMode::Recovery);
     }

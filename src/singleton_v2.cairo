@@ -942,7 +942,7 @@ mod SingletonV2 {
             debt_asset: ContractAddress,
             ltv_config: LTVConfig,
         ) {
-            assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             assert!(collateral_asset != debt_asset, "identical-assets");
             assert_ltv_config(ltv_config);
 

@@ -229,6 +229,7 @@ pub fn test_interest_rate_config() -> InterestRateConfig {
 }
 
 pub fn create_pool(
+    singleton: ISingletonV2Dispatcher,
     extension: IDefaultExtensionPOV2Dispatcher,
     config: TestConfig,
     owner: ContractAddress,
@@ -477,8 +478,8 @@ pub fn create_pool(
     let collateral_asset = debt_asset_params.asset;
     let debt_asset = collateral_asset_params.asset;
 
-    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension
+    cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+    singleton
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
         );
@@ -486,8 +487,8 @@ pub fn create_pool(
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension
+    cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+    singleton
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
         );
@@ -495,8 +496,8 @@ pub fn create_pool(
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = third_asset_params.asset;
 
-    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension
+    cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+    singleton
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_2.max_ltv },
         );
@@ -504,8 +505,8 @@ pub fn create_pool(
     let collateral_asset = third_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension
+    cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+    singleton
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_3.max_ltv },
         );
@@ -530,7 +531,7 @@ pub fn setup_pool(
         singleton, extension, config, users, ..,
     } = setup_env(oracle_address, collateral_address, debt_address, third_address);
 
-    create_pool(extension, config, users.owner, interest_rate_config);
+    create_pool(singleton, extension, config, users.owner, interest_rate_config);
 
     let TestConfig {
         collateral_asset, debt_asset, third_asset, collateral_scale, debt_scale, third_scale, ..,
