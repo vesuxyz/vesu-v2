@@ -14,6 +14,7 @@ pub trait IFlashLoanReceiver<TContractState> {
 
 #[starknet::interface]
 pub trait ISingletonV2<TContractState> {
+    fn pool_name(self: @TContractState) -> felt252;
     fn extension(self: @TContractState) -> ContractAddress;
     fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
     fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
@@ -107,6 +108,8 @@ mod SingletonV2 {
 
     #[storage]
     struct Storage {
+        // tracks the name
+        pool_name: felt252,
         // The address of the extension contract
         extension: ContractAddress,
         // The owner of the extension
@@ -274,7 +277,8 @@ mod SingletonV2 {
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
+    fn constructor(ref self: ContractState, name: felt252, owner: ContractAddress) {
+        self.pool_name.write(name);
         self.ownable.initializer(owner);
         // TODO: Support a different owner for the extension.
         self.extension_owner.write(owner);
@@ -490,6 +494,13 @@ mod SingletonV2 {
 
     #[abi(embed_v0)]
     impl SingletonV2Impl of ISingletonV2<ContractState> {
+        /// Returns the name of a pool
+        /// # Returns
+        /// * `name` - name of the pool
+        fn pool_name(self: @ContractState) -> felt252 {
+            self.pool_name.read()
+        }
+
         /// Returns the extension address
         /// # Returns
         /// * `extension` - address of the extension contract
