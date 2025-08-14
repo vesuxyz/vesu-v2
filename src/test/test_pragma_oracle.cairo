@@ -12,7 +12,7 @@ mod TestPragmaOracle {
         ShutdownParams,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
-    use vesu::singleton_v2::ISingletonV2Dispatcher;
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
         IMockPragmaSummaryDispatcherTrait,
@@ -164,8 +164,8 @@ mod TestPragmaOracle {
         let collateral_asset = debt_asset_params.asset;
         let debt_asset = collateral_asset_params.asset;
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton
             .set_ltv_config(
                 :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
             );
@@ -173,8 +173,8 @@ mod TestPragmaOracle {
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton
             .set_ltv_config(
                 :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
             );
