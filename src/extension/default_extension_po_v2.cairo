@@ -693,29 +693,6 @@ mod DefaultExtensionPOV2 {
                 .rate_accumulator(asset, utilization, last_updated, last_rate_accumulator, last_full_utilization_rate)
         }
 
-        /// Modify position callback. Called by the Singleton contract before updating the position.
-        /// Note: Collateral and debt deltas are supplied by the user and not checked in the Singleton
-        /// # Arguments
-        /// * `context` - contextual state of the user (position owner)
-        /// * `collateral` - amount of collateral to be set/added/removed
-        /// * `debt` - amount of debt to be set/added/removed
-        /// * `data` - modify position data
-        /// * `caller` - address of the caller
-        /// # Returns
-        /// * `collateral` - amount of collateral to be set/added/removed
-        /// * `debt` - amount of debt to be set/added/removed
-        fn before_modify_position(
-            ref self: ContractState,
-            context: Context,
-            collateral: Amount,
-            debt: Amount,
-            data: Span<felt252>,
-            caller: ContractAddress,
-        ) -> (Amount, Amount) {
-            assert!(get_caller_address() == self.singleton.read(), "caller-not-singleton");
-            (collateral, debt)
-        }
-
         /// Modify position callback. Called by the Singleton contract after updating the position.
         /// See `after_modify_position` in `position_hooks.cairo`.
         /// # Arguments

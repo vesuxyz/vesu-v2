@@ -59,17 +59,6 @@ mod MockExtension {
             (SCALE, SCALE)
         }
 
-        fn before_modify_position(
-            ref self: ContractState,
-            context: Context,
-            collateral: Amount,
-            debt: Amount,
-            data: Span<felt252>,
-            caller: ContractAddress,
-        ) -> (Amount, Amount) {
-            (collateral, debt)
-        }
-
         fn after_modify_position(
             ref self: ContractState,
             context: Context,

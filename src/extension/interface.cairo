@@ -21,14 +21,6 @@ pub trait IExtension<TContractState> {
         last_rate_accumulator: u256,
         last_full_utilization_rate: u256,
     ) -> (u256, u256);
-    fn before_modify_position(
-        ref self: TContractState,
-        context: Context,
-        collateral: Amount,
-        debt: Amount,
-        data: Span<felt252>,
-        caller: ContractAddress,
-    ) -> (Amount, Amount);
     fn after_modify_position(
         ref self: TContractState,
         context: Context,
