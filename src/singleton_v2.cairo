@@ -15,7 +15,7 @@ pub trait IFlashLoanReceiver<TContractState> {
 #[starknet::interface]
 pub trait ISingletonV2<TContractState> {
     fn extension(self: @TContractState) -> ContractAddress;
-    fn asset_config(self: @TContractState, asset: ContractAddress) -> (AssetConfig, u256);
+    fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
     fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
     fn position(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
@@ -70,7 +70,9 @@ pub trait ISingletonV2<TContractState> {
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
     );
     fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
-    fn claim_fee_shares(ref self: TContractState, asset: ContractAddress);
+    fn update_fee_shares(ref self: TContractState, asset: ContractAddress);
+    fn claim_fees(ref self: TContractState, asset: ContractAddress);
+    fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -97,6 +99,9 @@ mod SingletonV2 {
         Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LTVParams,
         LiquidatePositionParams, ModifyPositionParams, Position, UpdatePositionResponse, assert_asset_config,
         assert_asset_config_exists, assert_ltv_config,
+    };
+    use vesu::extension::default_extension_po_v2::{
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::math::pow_10;
@@ -155,15 +160,6 @@ mod SingletonV2 {
         debt_delta: i257,
         nominal_debt_delta: i257,
         bad_debt: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct AccrueFees {
-        #[key]
-        asset: ContractAddress,
-        #[key]
-        recipient: ContractAddress,
-        fee_shares: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -240,6 +236,14 @@ mod SingletonV2 {
         new_implementation: ClassHash,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct ClaimFees {
+        #[key]
+        asset: ContractAddress,
+        recipient: ContractAddress,
+        amount: u256,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -247,7 +251,6 @@ mod SingletonV2 {
         OwnableEvent: OwnableComponent::Event,
         ModifyPosition: ModifyPosition,
         LiquidatePosition: LiquidatePosition,
-        AccrueFees: AccrueFees,
         UpdateContext: UpdateContext,
         Flashloan: Flashloan,
         ModifyDelegation: ModifyDelegation,
@@ -257,6 +260,7 @@ mod SingletonV2 {
         SetAssetParameter: SetAssetParameter,
         SetExtension: SetExtension,
         ContractUpgraded: ContractUpgraded,
+        ClaimFees: ClaimFees,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -422,33 +426,20 @@ mod SingletonV2 {
             let (contract, caller) = (get_contract_address(), get_caller_address());
 
             if collateral_delta < Zero::zero() {
-                let (asset_config, _) = self.asset_config(collateral_asset);
+                let asset_config = self.asset_config(collateral_asset);
                 transfer_asset(collateral_asset, contract, caller, collateral_delta.abs(), asset_config.is_legacy);
             } else if collateral_delta > Zero::zero() {
-                let (asset_config, _) = self.asset_config(collateral_asset);
+                let asset_config = self.asset_config(collateral_asset);
                 transfer_asset(collateral_asset, caller, contract, collateral_delta.abs(), asset_config.is_legacy);
             }
 
             if debt_delta < Zero::zero() {
-                let (asset_config, _) = self.asset_config(debt_asset);
+                let asset_config = self.asset_config(debt_asset);
                 transfer_asset(debt_asset, caller, contract, debt_delta.abs() - bad_debt, asset_config.is_legacy);
             } else if debt_delta > Zero::zero() {
-                let (asset_config, _) = self.asset_config(debt_asset);
+                let asset_config = self.asset_config(debt_asset);
                 transfer_asset(debt_asset, contract, caller, debt_delta.abs(), asset_config.is_legacy);
             }
-        }
-
-        /// Increases the extension's collateral shares balance by the fee share amount
-        fn attribute_fee_shares(
-            ref self: ContractState, extension: ContractAddress, asset: ContractAddress, fee_shares: u256,
-        ) {
-            if fee_shares == 0 {
-                return;
-            }
-            let mut position = self.positions.read((asset, Zero::zero(), extension));
-            position.collateral_shares += fee_shares;
-            self.positions.write((asset, Zero::zero(), extension), position);
-            self.emit(AccrueFees { asset, recipient: extension, fee_shares });
         }
 
         /// Updates the state of a position and the corresponding collateral and debt asset
@@ -480,10 +471,6 @@ mod SingletonV2 {
                     },
                 );
 
-            // mint fee shares to the recipient
-            self.attribute_fee_shares(context.extension, collateral_asset, context.collateral_asset_fee_shares);
-            self.attribute_fee_shares(context.extension, debt_asset, context.debt_asset_fee_shares);
-
             // verify invariants:
             self.assert_delta_invariants(collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta);
             self.assert_floor_invariant(context);
@@ -511,21 +498,21 @@ mod SingletonV2 {
         /// # Returns
         /// * `asset_config` - asset configuration
         /// * `fee_shares` - accrued fee shares minted to the fee recipient
-        fn asset_config(self: @ContractState, asset: ContractAddress) -> (AssetConfig, u256) {
+        fn asset_config(self: @ContractState, asset: ContractAddress) -> AssetConfig {
             let extension = self.extension.read();
             assert!(extension.is_non_zero(), "unknown-pool");
 
-            let mut asset_config = self.asset_configs.read((asset));
-            let mut fee_shares = 0;
+            let mut asset_config = self.asset_configs.read(asset);
 
             if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
                 let new_asset_config = rate_accumulator(extension, asset, asset_config);
-                fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
+                let fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
                 asset_config = new_asset_config;
                 asset_config.total_collateral_shares += fee_shares;
+                asset_config.fee_shares += fee_shares;
             }
 
-            (asset_config, fee_shares)
+            asset_config
         }
 
         /// Returns the loan-to-value configuration between two assets (pair)
@@ -580,7 +567,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `rate_accumulator` - computed rate accumulator [SCALE]
         fn rate_accumulator(self: @ContractState, asset: ContractAddress) -> u256 {
-            let (asset_config, _) = self.asset_config(asset);
+            let asset_config = self.asset_config(asset);
             asset_config.last_rate_accumulator
         }
 
@@ -590,7 +577,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `utilization` - computed utilization [SCALE]
         fn utilization(self: @ContractState, asset: ContractAddress) -> u256 {
-            let (asset_config, _) = self.asset_config(asset);
+            let asset_config = self.asset_config(asset);
             utilization(asset_config)
         }
 
@@ -633,7 +620,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `collateral_shares` - computed collateral shares [SCALE]
         fn calculate_collateral_shares(self: @ContractState, asset: ContractAddress, collateral: i257) -> u256 {
-            let (asset_config, _) = self.asset_config(asset);
+            let asset_config = self.asset_config(asset);
             calculate_collateral_shares(collateral.abs(), asset_config, collateral.is_negative())
         }
 
@@ -644,7 +631,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `collateral` - computed collateral [asset scale]
         fn calculate_collateral(self: @ContractState, asset: ContractAddress, collateral_shares: i257) -> u256 {
-            let (asset_config, _) = self.asset_config(asset);
+            let asset_config = self.asset_config(asset);
             calculate_collateral(collateral_shares.abs(), asset_config, !collateral_shares.is_negative())
         }
 
@@ -708,8 +695,8 @@ mod SingletonV2 {
             let extension = IExtensionDispatcher { contract_address: self.extension.read() };
             assert!(extension.contract_address.is_non_zero(), "unknown-pool");
 
-            let (collateral_asset_config, collateral_asset_fee_shares) = self.asset_config(collateral_asset);
-            let (debt_asset_config, debt_asset_fee_shares) = self.asset_config(debt_asset);
+            let collateral_asset_config = self.asset_config(collateral_asset);
+            let debt_asset_config = self.asset_config(debt_asset);
 
             Context {
                 extension: extension.contract_address,
@@ -727,8 +714,6 @@ mod SingletonV2 {
                 } else {
                     extension.price(debt_asset)
                 },
-                collateral_asset_fee_shares,
-                debt_asset_fee_shares,
                 max_ltv: self.ltv_configs.read((collateral_asset, debt_asset)).max_ltv,
                 user,
                 position: self.positions.read((collateral_asset, debt_asset, user)),
@@ -936,10 +921,8 @@ mod SingletonV2 {
         /// * `asset` - address of the asset
         /// * `amount` - amount to donate [asset scale]
         fn donate_to_reserve(ref self: ContractState, asset: ContractAddress, amount: u256) {
-            let (mut asset_config, fee_shares) = self.asset_config(asset);
+            let mut asset_config = self.asset_config(asset);
             assert_asset_config_exists(asset_config);
-            // attribute the accrued fee shares to the pool's extension
-            self.attribute_fee_shares(self.extension.read(), asset, fee_shares);
             // donate amount to the reserve
             asset_config.reserve += amount;
             self.asset_configs.write(asset, asset_config);
@@ -987,6 +970,7 @@ mod SingletonV2 {
                 last_rate_accumulator: params.initial_rate_accumulator,
                 last_full_utilization_rate: params.initial_full_utilization_rate,
                 fee_rate: params.fee_rate,
+                fee_shares: 0,
             };
 
             assert_asset_config(asset_config);
@@ -1004,9 +988,7 @@ mod SingletonV2 {
         fn set_asset_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256) {
             assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
 
-            let (mut asset_config, fee_shares) = self.asset_config(asset);
-            // attribute the accrued fee shares to the pool's extension
-            self.attribute_fee_shares(self.extension.read(), asset, fee_shares);
+            let mut asset_config = self.asset_config(asset);
 
             if parameter == 'max_utilization' {
                 asset_config.max_utilization = value;
@@ -1028,10 +1010,42 @@ mod SingletonV2 {
         /// Attributes the outstanding fee shares to the extension
         /// # Arguments
         /// * `asset` - address of the asset
-        fn claim_fee_shares(ref self: ContractState, asset: ContractAddress) {
-            let (asset_config, fee_shares) = self.asset_config(asset);
-            self.attribute_fee_shares(self.extension.read(), asset, fee_shares);
+        fn update_fee_shares(ref self: ContractState, asset: ContractAddress) {
+            let asset_config = self.asset_config(asset);
             self.asset_configs.write(asset, asset_config);
+        }
+
+        /// Claims the fees accrued in the extension for a given asset and sends them to the fee recipient
+        /// # Arguments
+        /// * `asset` - address of the asset
+        fn claim_fees(ref self: ContractState, asset: ContractAddress) {
+            let mut asset_config = self.asset_config(asset);
+            let fee_shares = asset_config.fee_shares;
+
+            // Zero out the stored fee shares for the asset.
+            asset_config.fee_shares = 0;
+
+            // Write the updated asset config back to storage.
+            self.asset_configs.write(asset, asset_config);
+
+            // Convert shares to amount (round down).
+            let amount = calculate_collateral(fee_shares, asset_config, false);
+            let fee_config = IDefaultExtensionPOV2Dispatcher { contract_address: self.extension.read() }.fee_config();
+
+            IERC20Dispatcher { contract_address: asset }.transfer(fee_config.fee_recipient, amount);
+
+            self.emit(ClaimFees { asset, recipient: fee_config.fee_recipient, amount });
+        }
+
+        /// Returns the number of unclaimed fee shares and the corresponding amount.
+        fn get_fees(self: @ContractState, asset: ContractAddress) -> (u256, u256) {
+            let asset_config = self.asset_config(asset);
+            let fee_shares = asset_config.fee_shares;
+
+            // Convert shares to amount (round down).
+            let amount = calculate_collateral(fee_shares, asset_config, false);
+
+            (fee_shares, amount)
         }
 
         /// Returns the name of the contract

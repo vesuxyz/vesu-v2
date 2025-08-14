@@ -35,6 +35,7 @@ mod MockSingleton {
                     last_rate_accumulator: SCALE,
                     last_full_utilization_rate: SCALE,
                     fee_rate: SCALE,
+                    fee_shares: 0,
                 },
                 0,
             )

@@ -165,7 +165,7 @@ pub mod interest_rate_model_component {
             let mut interest_rate_config: InterestRateConfig = self.interest_rate_configs.read(asset);
             assert!(interest_rate_config.max_target_utilization != 0, "interest-rate-config-not-set");
 
-            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }.claim_fee_shares(asset);
+            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }.update_fee_shares(asset);
 
             if parameter == 'min_target_utilization' {
                 interest_rate_config.min_target_utilization = value;
