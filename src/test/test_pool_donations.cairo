@@ -4,8 +4,8 @@ mod TestPoolDonation {
     use core::num::traits::Zero;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{
-        ContractClass, ContractClassTrait, get_class_hash, start_cheat_block_timestamp_global,
-        start_cheat_caller_address, stop_cheat_caller_address,
+        CheatSpan, ContractClass, ContractClassTrait, cheat_caller_address, get_class_hash,
+        start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
     };
     use starknet::get_block_timestamp;
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
@@ -86,9 +86,12 @@ mod TestPoolDonation {
             .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
+        cheat_caller_address(debt_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
+        debt_asset.transfer(users.owner, amount_to_donate_to_reserve);
+        cheat_caller_address(debt_asset.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        debt_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(debt_asset.contract_address, amount_to_donate_to_reserve);
-        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(debt_asset.contract_address, Zero::zero(), extension.contract_address);
@@ -139,8 +142,11 @@ mod TestPoolDonation {
 
         let amount_to_donate_to_reserve = 2 * fake_asset_scale;
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
+        cheat_caller_address(fake_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
+        fake_asset.transfer(users.owner, amount_to_donate_to_reserve);
+        cheat_caller_address(fake_asset.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        fake_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(fake_asset.contract_address, amount_to_donate_to_reserve);
-        stop_cheat_caller_address(singleton.contract_address);
     }
 }

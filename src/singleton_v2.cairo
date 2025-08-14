@@ -936,6 +936,7 @@ mod SingletonV2 {
         /// * `asset` - address of the asset
         /// * `amount` - amount to donate [asset scale]
         fn donate_to_reserve(ref self: ContractState, asset: ContractAddress, amount: u256) {
+            self.ownable.assert_only_owner();
             let (mut asset_config, fee_shares) = self.asset_config(asset);
             assert_asset_config_exists(asset_config);
             // attribute the accrued fee shares to the pool's extension
