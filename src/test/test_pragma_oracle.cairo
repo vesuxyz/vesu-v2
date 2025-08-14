@@ -100,7 +100,7 @@ mod TestPragmaOracle {
         let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
 
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.create_pool('DefaultExtensionPO', owner);
+        extension.create_pool(owner);
 
         // Add assets.
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));

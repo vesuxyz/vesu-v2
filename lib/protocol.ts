@@ -32,7 +32,6 @@ export class Protocol implements ProtocolContracts {
 
     extensionPO.connect(deployer.owner);
     const response = await extensionPO.create_pool(
-      params.pool_name,
       params.asset_params,
       params.ltv_params,
       params.interest_rate_configs,
