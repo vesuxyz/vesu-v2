@@ -8,8 +8,8 @@ mod TestPragmaOracle {
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
     use vesu::extension::default_extension_po_v2::{
-        FeeParams, IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams,
-        PragmaOracleParams, ShutdownParams,
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, PragmaOracleParams,
+        ShutdownParams,
     };
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::singleton_v2::ISingletonV2Dispatcher;
@@ -108,10 +108,9 @@ mod TestPragmaOracle {
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params,
         };
-        let fee_params = FeeParams { fee_recipient: owner };
 
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.create_pool('DefaultExtensionPO', fee_params, owner);
+        extension.create_pool('DefaultExtensionPO', owner);
 
         // Add assets.
         cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));

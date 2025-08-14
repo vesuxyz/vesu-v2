@@ -10,7 +10,6 @@ pub mod extension {
     pub mod default_extension_po_v2;
     pub mod interface;
     pub mod components {
-        pub mod fee_model;
         pub mod interest_rate_model;
         pub mod position_hooks;
         pub mod pragma_oracle;

@@ -1,6 +1,5 @@
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{AssetParams, LTVConfig, LTVParams};
-use vesu::extension::components::fee_model::FeeConfig;
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{
     LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus,
@@ -50,7 +49,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
     fn pragma_summary(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
-    fn fee_config(self: @TContractState) -> FeeConfig;
     fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
     fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
@@ -64,7 +62,7 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownStatus;
     fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
-    fn create_pool(ref self: TContractState, name: felt252, fee_params: FeeParams, owner: ContractAddress);
+    fn create_pool(ref self: TContractState, name: felt252, owner: ContractAddress);
     fn add_asset(
         ref self: TContractState,
         asset_params: AssetParams,
@@ -98,7 +96,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     fn update_shutdown_status(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownMode;
-    fn set_fee_config(ref self: TContractState, fee_config: FeeConfig);
 
     // Upgrade
     fn upgrade_name(self: @TContractState) -> felt252;
@@ -119,8 +116,6 @@ mod DefaultExtensionPOV2 {
     use vesu::data_model::{
         Amount, AmountDenomination, AssetParams, AssetPrice, Context, LTVConfig, ModifyPositionParams,
     };
-    use vesu::extension::components::fee_model::fee_model_component::FeeModelTrait;
-    use vesu::extension::components::fee_model::{FeeConfig, fee_model_component};
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::extension::components::position_hooks::position_hooks_component::PositionHooksTrait;
@@ -130,7 +125,7 @@ mod DefaultExtensionPOV2 {
     use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
     use vesu::extension::default_extension_po_v2::{
-        FeeParams, IDefaultExtensionCallback, IDefaultExtensionPOV2, IDefaultExtensionPOV2Dispatcher,
+        IDefaultExtensionCallback, IDefaultExtensionPOV2, IDefaultExtensionPOV2Dispatcher,
         IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams,
     };
     use vesu::extension::interface::IExtension;
@@ -140,8 +135,6 @@ mod DefaultExtensionPOV2 {
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
     component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
-    component!(path: fee_model_component, storage: fee_model, event: FeeModelEvents);
-
 
     #[storage]
     struct Storage {
@@ -160,9 +153,6 @@ mod DefaultExtensionPOV2 {
         // storage for the pragma oracle component
         #[substorage(v0)]
         pragma_oracle: pragma_oracle_component::Storage,
-        // storage for the fee model component
-        #[substorage(v0)]
-        fee_model: fee_model_component::Storage,
         // tracks the address that can transition the shutdown mode
         shutdown_mode_agent: ContractAddress,
     }
@@ -184,7 +174,6 @@ mod DefaultExtensionPOV2 {
         PositionHooksEvents: position_hooks_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
-        FeeModelEvents: fee_model_component::Event,
         SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
     }
@@ -305,13 +294,6 @@ mod DefaultExtensionPOV2 {
             self.pragma_oracle.oracle_configs.read(asset)
         }
 
-        /// Returns the fee configuration
-        /// # Returns
-        /// * `fee_config` - fee configuration
-        fn fee_config(self: @ContractState) -> FeeConfig {
-            self.fee_model.fee_config.read()
-        }
-
         /// Returns the debt cap for a given asset
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
@@ -385,7 +367,7 @@ mod DefaultExtensionPOV2 {
         /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
-        fn create_pool(ref self: ContractState, name: felt252, fee_params: FeeParams, owner: ContractAddress) {
+        fn create_pool(ref self: ContractState, name: felt252, owner: ContractAddress) {
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
             singleton.create_pool(extension: get_contract_address());
@@ -395,9 +377,6 @@ mod DefaultExtensionPOV2 {
 
             // set the pool owner
             self.owner.write(owner);
-
-            // set the fee config
-            self.fee_model.set_fee_config(FeeConfig { fee_recipient: fee_params.fee_recipient });
         }
 
         /// Adds an asset
@@ -597,14 +576,6 @@ mod DefaultExtensionPOV2 {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
             let mut context = singleton.context(collateral_asset, debt_asset, Zero::zero());
             self.position_hooks.update_shutdown_status(ref context)
-        }
-
-        /// Sets the fee configuration
-        /// # Arguments
-        /// * `fee_config` - new fee configuration parameters
-        fn set_fee_config(ref self: ContractState, fee_config: FeeConfig) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            self.fee_model.set_fee_config(fee_config);
         }
 
         /// Returns the name of the contract
