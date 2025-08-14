@@ -113,7 +113,9 @@ mod SingletonV2 {
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::{library_call_syscall, replace_class_syscall};
-    use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
+    use starknet::{
+        ClassHash, ContractAddress, SyscallResultTrait, get_block_timestamp, get_caller_address, get_contract_address,
+    };
     use vesu::common::{
         apply_position_update_to_context, calculate_collateral, calculate_collateral_and_debt_value,
         calculate_collateral_shares, calculate_debt, calculate_fee_shares, calculate_nominal_debt,
@@ -1266,6 +1268,8 @@ mod SingletonV2 {
         /// Upgrades the contract to a new implementation
         /// # Arguments
         /// * `new_implementation` - the new implementation class hash
+        /// * `eic_implementation` - the eic implementation class hash
+        /// * `eic_data` - the data to pass to the eic `initialize` function
         fn upgrade(
             ref self: ContractState,
             new_implementation: ClassHash,
@@ -1278,10 +1282,12 @@ mod SingletonV2 {
                 let mut eic_data_serialized: Array<felt252> = ArrayTrait::new();
                 eic_data.serialize(ref eic_data_serialized);
 
-                let res = library_call_syscall(
-                    class_hash: eic_implementation, function_selector: selector!("initialize"), calldata: eic_data_serialized.span(),
-                );
-                assert!(res.is_ok(), "eic-initialize-failed");
+                library_call_syscall(
+                    class_hash: eic_implementation,
+                    function_selector: selector!("initialize"),
+                    calldata: eic_data_serialized.span(),
+                )
+                    .unwrap_syscall();
             } else {
                 assert!(eic_data.len() == 0, "eic-data-not-empty");
             }
