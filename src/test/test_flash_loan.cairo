@@ -81,7 +81,6 @@ mod FlashLoan {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -151,7 +150,6 @@ mod FlashLoan {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -216,7 +214,6 @@ mod FlashLoan {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);

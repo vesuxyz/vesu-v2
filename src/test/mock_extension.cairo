@@ -66,14 +66,17 @@ mod MockExtension {
             collateral_shares_delta: i257,
             debt_delta: i257,
             nominal_debt_delta: i257,
-            data: Span<felt252>,
             caller: ContractAddress,
         ) -> bool {
             true
         }
 
         fn before_liquidate_position(
-            ref self: ContractState, context: Context, data: Span<felt252>, caller: ContractAddress,
+            ref self: ContractState,
+            context: Context,
+            min_collateral_to_receive: u256,
+            debt_to_repay: u256,
+            caller: ContractAddress,
         ) -> (u256, u256, u256) {
             (Default::default(), Default::default(), Default::default())
         }
@@ -86,7 +89,6 @@ mod MockExtension {
             debt_delta: i257,
             nominal_debt_delta: i257,
             bad_debt: u256,
-            data: Span<felt252>,
             caller: ContractAddress,
         ) -> bool {
             true

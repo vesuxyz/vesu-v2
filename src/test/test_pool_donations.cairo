@@ -39,7 +39,6 @@ mod TestPoolDonation {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -72,7 +71,6 @@ mod TestPoolDonation {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
