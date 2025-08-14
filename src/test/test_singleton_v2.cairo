@@ -525,7 +525,7 @@ mod TestSingletonV2 {
         let Env { singleton, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
         start_cheat_caller_address(singleton.contract_address, contract_address_const::<'not_owner'>());
-        singleton.upgrade(new_classhash);
+        singleton.upgrade(new_classhash, Zero::zero(), array![].span());
     }
 
     #[test]
@@ -533,7 +533,7 @@ mod TestSingletonV2 {
         let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
         cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
-        singleton.upgrade(new_classhash);
+        singleton.upgrade(new_classhash, Zero::zero(), array![].span());
         let tag = IMockSingletonUpgradeDispatcher { contract_address: singleton.contract_address }.tag();
         assert!(tag == 'MockSingletonUpgrade', "Invalid tag");
     }
@@ -544,7 +544,7 @@ mod TestSingletonV2 {
         let Env { singleton, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgradeWrongName").unwrap().contract_class().class_hash;
         cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
-        singleton.upgrade(new_classhash);
+        singleton.upgrade(new_classhash, Zero::zero(), array![].span());
     }
 
     #[test]
