@@ -90,7 +90,7 @@ mod TestPoolDonation {
         debt_asset.transfer(users.owner, amount_to_donate_to_reserve);
         cheat_caller_address(debt_asset.contract_address, users.owner, CheatSpan::TargetCalls(1));
         debt_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
-        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(debt_asset.contract_address, amount_to_donate_to_reserve);
 
         let (fee_shares_after, _) = singleton.get_fees(debt_asset.contract_address);
@@ -145,7 +145,7 @@ mod TestPoolDonation {
         fake_asset.transfer(users.owner, amount_to_donate_to_reserve);
         cheat_caller_address(fake_asset.contract_address, users.owner, CheatSpan::TargetCalls(1));
         fake_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
-        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(fake_asset.contract_address, amount_to_donate_to_reserve);
     }
 }

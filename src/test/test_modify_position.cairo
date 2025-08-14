@@ -632,7 +632,7 @@ mod TestModifyPosition {
         collateral_asset.transfer(users.owner, pool_donation);
         cheat_caller_address(collateral_asset.contract_address, users.owner, CheatSpan::TargetCalls(1));
         collateral_asset.approve(singleton.contract_address, pool_donation);
-        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(collateral_asset.contract_address, pool_donation);
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
