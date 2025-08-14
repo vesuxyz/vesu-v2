@@ -2,7 +2,10 @@
 mod TestModifyPosition {
     use core::num::traits::Zero;
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
-    use snforge_std::{start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address};
+    use snforge_std::{
+        CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, start_cheat_caller_address,
+        stop_cheat_caller_address,
+    };
     #[feature("deprecated-starknet-consts")]
     use starknet::{get_block_timestamp, get_caller_address};
     use vesu::data_model::{Amount, AmountDenomination, AssetConfig, Context, ModifyPositionParams, Position};
@@ -699,9 +702,17 @@ mod TestModifyPosition {
         assert(
             asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching',
         );
+        stop_cheat_caller_address(singleton.contract_address);
 
-        singleton.donate_to_reserve(collateral_asset.contract_address, collateral_to_deposit / 2);
+        let pool_donation = collateral_to_deposit / 2;
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
+        collateral_asset.transfer(users.owner, pool_donation);
+        cheat_caller_address(collateral_asset.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        collateral_asset.approve(singleton.contract_address, pool_donation);
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        singleton.donate_to_reserve(collateral_asset.contract_address, pool_donation);
 
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         let asset_config = singleton.asset_config(collateral_asset.contract_address);
         let (position, _, _) = singleton
             .position(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
