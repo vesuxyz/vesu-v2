@@ -28,6 +28,7 @@ pub const THIRD_PRAGMA_KEY: felt252 = 18669995996566340;
 #[derive(Copy, Drop, Serde)]
 pub struct Users {
     pub owner: ContractAddress,
+    pub extension_owner: ContractAddress,
     pub lender: ContractAddress,
     pub borrower: ContractAddress,
     pub seeder: ContractAddress,
@@ -113,16 +114,17 @@ pub fn setup_env(
 ) -> Env {
     let users = Users {
         owner: contract_address_const::<'owner'>(),
+        extension_owner: contract_address_const::<'extension_owner'>(),
         lender: contract_address_const::<'lender'>(),
         borrower: contract_address_const::<'borrower'>(),
         seeder: contract_address_const::<'seeder'>(),
     };
 
     let singleton = ISingletonV2Dispatcher {
-        contract_address: deploy_with_args("SingletonV2", array![users.owner.into()]),
+        contract_address: deploy_with_args("SingletonV2", array![users.owner.into(), users.extension_owner.into()]),
     };
 
-    cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+    cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
     singleton.set_fee_config(FeeConfig { fee_recipient: users.owner });
 
     start_cheat_block_timestamp_global(get_block_timestamp() + 1);
