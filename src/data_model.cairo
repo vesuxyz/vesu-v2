@@ -126,6 +126,11 @@ pub struct UpdatePositionResponse {
     pub bad_debt: u256 // [asset scale]
 }
 
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
+pub struct FeeConfig {
+    pub fee_recipient: ContractAddress,
+}
+
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Context {
     pub extension: ContractAddress,

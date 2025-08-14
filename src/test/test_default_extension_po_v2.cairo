@@ -8,8 +8,7 @@ mod TestDefaultExtensionPOV2 {
     };
     #[feature("deprecated-starknet-consts")]
     use starknet::contract_address_const;
-    use vesu::data_model::{AssetParams, LTVConfig};
-    use vesu::extension::components::fee_model::FeeConfig;
+    use vesu::data_model::{AssetParams, FeeConfig, LTVConfig};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig, ShutdownMode};
     use vesu::extension::default_extension_po_v2::{IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams};
@@ -623,27 +622,31 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_extension_set_fee_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+    fn test_set_fee_config() {
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_fee_config(FeeConfig { fee_recipient: users.lender });
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_fee_config(FeeConfig { fee_recipient: users.lender });
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let fee_config = extension.fee_config();
+        let fee_config = singleton.fee_config();
         assert(fee_config.fee_recipient == users.lender, 'Fee config not set');
     }
 
     #[test]
     #[should_panic(expected: "caller-not-owner")]
-    fn test_extension_set_fee_config_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+    fn test_set_fee_config_caller_not_owner() {
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(extension, config, users.owner, Option::None);
 
-        extension.set_fee_config(FeeConfig { fee_recipient: users.lender });
+        singleton.set_fee_config(FeeConfig { fee_recipient: users.lender });
     }
 
     #[test]
