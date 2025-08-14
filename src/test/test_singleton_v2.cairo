@@ -30,7 +30,7 @@ mod TestSingletonV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, users.extension_owner, Option::None);
 
         let dummy_address = contract_address_const::<'dummy'>();
         singleton.asset_config(dummy_address);
@@ -53,37 +53,12 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        // create ltv config for collateral and borrow assets
-        let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-        let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         singleton.set_asset_config(params: collateral_asset_params);
         singleton.set_asset_config(params: collateral_asset_params);
-
-        // store all loan-to-value configurations for each asset pair
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
-            );
-
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
-            );
-
-        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -132,7 +107,7 @@ mod TestSingletonV2 {
         stop_cheat_caller_address(singleton.contract_address);
 
         // store all loan-to-value configurations for each asset pair
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_ltv_config(
                 collateral_asset_params.asset,
@@ -166,37 +141,11 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        // create ltv config for collateral and borrow assets
-        let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-        let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         singleton.set_asset_config(params: collateral_asset_params);
-        singleton.set_asset_config(params: collateral_asset_params);
-
-        // store all loan-to-value configurations for each asset pair
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
-            );
-
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
-            );
-
-        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -216,37 +165,11 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        // create ltv config for collateral and borrow assets
-        let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-        let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         singleton.set_asset_config(params: collateral_asset_params);
-        singleton.set_asset_config(params: collateral_asset_params);
-
-        // store all loan-to-value configurations for each asset pair
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
-            );
-
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
-            );
-
-        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -266,37 +189,11 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        // create ltv config for collateral and borrow assets
-        let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-        let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         singleton.set_asset_config(params: collateral_asset_params);
-        singleton.set_asset_config(params: collateral_asset_params);
-
-        // store all loan-to-value configurations for each asset pair
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
-            );
-
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
-            );
-
-        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -316,37 +213,11 @@ mod TestSingletonV2 {
             fee_rate: SCALE + 1,
         };
 
-        // create ltv config for collateral and borrow assets
-        let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-        let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         singleton.set_asset_config(params: collateral_asset_params);
-        singleton.set_asset_config(params: collateral_asset_params);
-
-        // store all loan-to-value configurations for each asset pair
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
-            );
-
-        singleton
-            .set_ltv_config(
-                collateral_asset_params.asset,
-                collateral_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
-            );
-
-        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -356,7 +227,7 @@ mod TestSingletonV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, users.extension_owner, Option::None);
 
         let asset = deploy_asset(users.owner);
 
@@ -379,7 +250,7 @@ mod TestSingletonV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, users.extension_owner, Option::None);
 
         let asset = deploy_asset(users.owner);
 
@@ -410,7 +281,7 @@ mod TestSingletonV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, users.extension_owner, Option::None);
 
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
     }
@@ -421,7 +292,7 @@ mod TestSingletonV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, users.extension_owner, Option::None);
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
@@ -508,9 +379,9 @@ mod TestSingletonV2 {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_ltv_config(
                 config.collateral_asset.contract_address,

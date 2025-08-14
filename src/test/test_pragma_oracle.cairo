@@ -25,6 +25,7 @@ mod TestPragmaOracle {
     fn create_custom_pool(
         extension: IDefaultExtensionPOV2Dispatcher,
         owner: ContractAddress,
+        extension_owner: ContractAddress,
         singleton: ISingletonV2Dispatcher,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
@@ -164,7 +165,7 @@ mod TestPragmaOracle {
         let collateral_asset = debt_asset_params.asset;
         let debt_asset = collateral_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
         singleton
             .set_ltv_config(
                 :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
@@ -173,7 +174,7 @@ mod TestPragmaOracle {
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
         singleton
             .set_ltv_config(
                 :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
@@ -242,6 +243,7 @@ mod TestPragmaOracle {
         create_custom_pool(
             extension,
             users.owner,
+            users.extension_owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -278,6 +280,7 @@ mod TestPragmaOracle {
         create_custom_pool(
             extension,
             users.owner,
+            users.extension_owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -308,6 +311,7 @@ mod TestPragmaOracle {
         create_custom_pool(
             extension,
             users.owner,
+            users.extension_owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -344,6 +348,7 @@ mod TestPragmaOracle {
         create_custom_pool(
             extension,
             users.owner,
+            users.extension_owner,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
