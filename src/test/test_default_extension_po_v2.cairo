@@ -374,65 +374,6 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_extension_set_shutdown_ltv_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(extension, config, users.owner, Option::None);
-
-        let max_ltv = SCALE / 2;
-
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
-            .set_shutdown_ltv_config(
-                config.collateral_asset.contract_address,
-                config.debt_asset.contract_address,
-                LTVConfig { max_ltv: max_ltv.try_into().unwrap() },
-            );
-        stop_cheat_caller_address(extension.contract_address);
-
-        let shutdown_ltv_config = extension
-            .shutdown_ltv_config(config.collateral_asset.contract_address, config.debt_asset.contract_address);
-
-        assert(shutdown_ltv_config.max_ltv == max_ltv.try_into().unwrap(), 'max ltv not set');
-    }
-
-    #[test]
-    #[should_panic(expected: "caller-not-owner")]
-    fn test_extension_set_shutdown_ltv_config_caller_not_owner() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(extension, config, users.owner, Option::None);
-
-        let max_ltv = SCALE / 2;
-
-        extension
-            .set_shutdown_ltv_config(
-                config.collateral_asset.contract_address,
-                config.debt_asset.contract_address,
-                LTVConfig { max_ltv: max_ltv.try_into().unwrap() },
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "invalid-ltv-config")]
-    fn test_extension_set_shutdown_ltv_config_invalid_ltv_config() {
-        let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(extension, config, users.owner, Option::None);
-
-        let max_ltv = SCALE + 1;
-
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
-            .set_shutdown_ltv_config(
-                config.collateral_asset.contract_address,
-                config.debt_asset.contract_address,
-                LTVConfig { max_ltv: max_ltv.try_into().unwrap() },
-            );
-        stop_cheat_caller_address(extension.contract_address);
-    }
-
-    #[test]
     fn test_extension_set_oracle_parameter() {
         let Env { extension, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
