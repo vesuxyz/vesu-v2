@@ -608,7 +608,7 @@ mod TestDefaultExtensionPOV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_fee_config(FeeConfig { fee_recipient: users.lender });
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -617,7 +617,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-owner")]
+    #[should_panic(expected: "caller-not-extension-owner")]
     fn test_set_fee_config_caller_not_owner() {
         let Env {
             singleton, extension, config, users, ..,

@@ -274,10 +274,9 @@ mod SingletonV2 {
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
+    fn constructor(ref self: ContractState, owner: ContractAddress, extension_owner: ContractAddress) {
         self.ownable.initializer(owner);
-        // TODO: Support a different owner for the extension.
-        self.extension_owner.write(owner);
+        self.extension_owner.write(extension_owner);
     }
 
     /// Computes the new rate accumulator and the interest rate at full utilization for a given asset
@@ -905,7 +904,7 @@ mod SingletonV2 {
         /// * `asset` - address of the asset
         /// * `amount` - amount to donate [asset scale]
         fn donate_to_reserve(ref self: ContractState, asset: ContractAddress, amount: u256) {
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            self.ownable.assert_only_owner();
             let mut asset_config = self.asset_config(asset);
             assert_asset_config_exists(asset_config);
             // donate amount to the reserve
@@ -1044,7 +1043,7 @@ mod SingletonV2 {
         /// # Arguments
         /// * `fee_config` - new fee configuration parameters
         fn set_fee_config(ref self: ContractState, fee_config: FeeConfig) {
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-owner");
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.fee_config.write(fee_config);
             self.emit(SetFeeConfig { fee_config });
         }

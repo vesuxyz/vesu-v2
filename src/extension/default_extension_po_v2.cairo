@@ -331,14 +331,7 @@ mod DefaultExtensionPOV2 {
         /// Creates a new pool
         /// # Arguments
         /// * `name` - name of the pool
-        /// * `asset_params` - asset parameters
-        /// * `ltv_params` - loan-to-value parameters
-        /// * `interest_rate_params` - interest rate model parameters
-        /// * `pragma_oracle_params` - pragma oracle parameters
-        /// * `liquidation_params` - liquidation parameters
-        /// * `debt_caps` - debt caps
-        /// * `shutdown_params` - shutdown parameters
-        /// * `fee_params` - fee model parameters
+        /// * `owner` - address of the owner
         fn create_pool(ref self: ContractState, name: felt252, owner: ContractAddress) {
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
