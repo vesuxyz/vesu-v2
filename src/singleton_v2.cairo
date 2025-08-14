@@ -120,7 +120,9 @@ pub trait ISingletonV2<TContractState> {
     ) -> ShutdownMode;
 
     fn upgrade_name(self: @TContractState) -> felt252;
-    fn upgrade(ref self: TContractState, new_implementation: ClassHash);
+    fn upgrade(
+        ref self: TContractState, new_implementation: ClassHash, eic_implementation: ClassHash, eic_data: Span<felt252>,
+    );
 }
 
 #[starknet::contract]
@@ -134,7 +136,7 @@ mod SingletonV2 {
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
-    use starknet::syscalls::replace_class_syscall;
+    use starknet::syscalls::{library_call_syscall, replace_class_syscall};
     use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
     use vesu::common::{
         apply_position_update_to_context, calculate_collateral, calculate_collateral_and_debt_value,
@@ -1344,8 +1346,26 @@ mod SingletonV2 {
         /// Upgrades the contract to a new implementation
         /// # Arguments
         /// * `new_implementation` - the new implementation class hash
-        fn upgrade(ref self: ContractState, new_implementation: ClassHash) {
+        fn upgrade(
+            ref self: ContractState,
+            new_implementation: ClassHash,
+            eic_implementation: ClassHash,
+            eic_data: Span<felt252>,
+        ) {
             self.ownable.assert_only_owner();
+
+            if eic_implementation != Zero::zero() {
+                let mut eic_data_serialized: Array<felt252> = ArrayTrait::new();
+                eic_data.serialize(ref eic_data_serialized);
+
+                let res = library_call_syscall(
+                    class_hash: eic_implementation, function_selector: selector!("initialize"), calldata: eic_data_serialized.span(),
+                );
+                assert!(res.is_ok(), "eic-initialize-failed");
+            } else {
+                assert!(eic_data.len() == 0, "eic-data-not-empty");
+            }
+
             replace_class_syscall(new_implementation).unwrap();
             // Check to prevent mistakes when upgrading the contract
             let new_name = ISingletonV2Dispatcher { contract_address: get_contract_address() }.upgrade_name();
