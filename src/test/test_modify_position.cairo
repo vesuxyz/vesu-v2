@@ -15,54 +15,6 @@ mod TestModifyPosition {
 
     #[test]
     #[should_panic(expected: "caller-not-singleton")]
-    fn test_before_modify_position_caller_not_singleton() {
-        let (_, extension, _, _, _) = setup();
-
-        let asset_scale = 100_000_000;
-
-        let config = AssetConfig {
-            total_collateral_shares: SCALE,
-            total_nominal_debt: SCALE / 2,
-            reserve: 100 * asset_scale,
-            max_utilization: SCALE,
-            floor: SCALE,
-            scale: asset_scale,
-            is_legacy: false,
-            last_updated: 0,
-            last_rate_accumulator: SCALE,
-            last_full_utilization_rate: 6517893350,
-            fee_rate: 0,
-        };
-
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
-
-        let context = Context {
-            extension: Zero::zero(),
-            collateral_asset: Zero::zero(),
-            debt_asset: Zero::zero(),
-            collateral_asset_config: config,
-            debt_asset_config: config,
-            collateral_asset_price: Default::default(),
-            debt_asset_price: Default::default(),
-            collateral_asset_fee_shares: 0,
-            debt_asset_fee_shares: 0,
-            max_ltv: 2,
-            user: Zero::zero(),
-            position: position,
-        };
-
-        IExtensionDispatcher { contract_address: extension.contract_address }
-            .before_modify_position(
-                context,
-                Default::default(),
-                Default::default(),
-                data: ArrayTrait::new().span(),
-                caller: get_caller_address(),
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "caller-not-singleton")]
     fn test_after_modify_position_caller_not_singleton() {
         let (_, extension, _, _, _) = setup();
 

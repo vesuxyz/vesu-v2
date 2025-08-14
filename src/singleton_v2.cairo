@@ -774,14 +774,6 @@ mod SingletonV2 {
         fn modify_position(ref self: ContractState, params: ModifyPositionParams) -> UpdatePositionResponse {
             let ModifyPositionParams { collateral_asset, debt_asset, user, collateral, debt, data } = params;
 
-            let context = self.context(collateral_asset, debt_asset, user);
-
-            // call before-hook of the extension
-            let extension = IExtensionDispatcher { contract_address: context.extension };
-            let (collateral, debt) = extension
-                .before_modify_position(context, collateral, debt, data, get_caller_address());
-
-            // reload context since the storage might have changed by a reentered call
             let mut context = self.context(collateral_asset, debt_asset, user);
 
             // update the position
@@ -794,6 +786,7 @@ mod SingletonV2 {
             self.assert_position_invariants(context, collateral_delta, debt_delta);
 
             // call after-hook of the extension (assets are not settled yet, only the internal state has been updated)
+            let extension = IExtensionDispatcher { contract_address: context.extension };
             assert!(
                 extension
                     .after_modify_position(
