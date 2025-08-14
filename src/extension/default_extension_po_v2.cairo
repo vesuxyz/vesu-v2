@@ -1,5 +1,5 @@
 use starknet::{ClassHash, ContractAddress};
-use vesu::data_model::{AssetParams, LTVConfig, LTVParams};
+use vesu::data_model::{AssetParams, LTVConfig};
 use vesu::extension::components::fee_model::FeeConfig;
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{
@@ -21,8 +21,7 @@ pub struct PragmaOracleParams {
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct ShutdownParams {
     pub recovery_period: u64, // [seconds]
-    pub subscription_period: u64, // [seconds]
-    pub ltv_params: Span<LTVParams>,
+    pub subscription_period: u64 // [seconds]
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -57,9 +56,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> LiquidationConfig;
     fn shutdown_config(self: @TContractState) -> ShutdownConfig;
-    fn shutdown_ltv_config(
-        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> LTVConfig;
     fn shutdown_status(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownStatus;
@@ -87,12 +83,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
     );
     fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
-    fn set_shutdown_ltv_config(
-        ref self: TContractState,
-        collateral_asset: ContractAddress,
-        debt_asset: ContractAddress,
-        shutdown_ltv_config: LTVConfig,
-    );
     fn set_shutdown_mode(ref self: TContractState, shutdown_mode: ShutdownMode);
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
     fn update_shutdown_status(
@@ -352,18 +342,6 @@ mod DefaultExtensionPOV2 {
             self.position_hooks.shutdown_config.read()
         }
 
-        /// Returns the shutdown LTV configuration for a given pair
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// # Returns
-        /// * `shutdown_ltv_config` - shutdown LTV configuration
-        fn shutdown_ltv_config(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> LTVConfig {
-            self.position_hooks.shutdown_ltv_configs.read((collateral_asset, debt_asset))
-        }
-
         /// Returns the total (sum of all positions) collateral shares and nominal debt balances for a given pair
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
@@ -525,21 +503,6 @@ mod DefaultExtensionPOV2 {
         fn set_shutdown_config(ref self: ContractState, shutdown_config: ShutdownConfig) {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             self.position_hooks.set_shutdown_config(shutdown_config);
-        }
-
-        /// Sets the shutdown LTV config for a given pair
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `shutdown_ltv_config` - shutdown LTV config
-        fn set_shutdown_ltv_config(
-            ref self: ContractState,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            shutdown_ltv_config: LTVConfig,
-        ) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            self.position_hooks.set_shutdown_ltv_config(collateral_asset, debt_asset, shutdown_ltv_config);
         }
 
         /// Sets the shutdown mode agent
