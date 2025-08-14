@@ -8,7 +8,7 @@ mod TestLiquidatePosition {
     use vesu::data_model::{
         Amount, AmountDenomination, AssetConfig, Context, LiquidatePositionParams, ModifyPositionParams, Position,
     };
-    use vesu::extension::components::position_hooks::{LiquidationConfig, LiquidationData};
+    use vesu::extension::components::position_hooks::LiquidationConfig;
     use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
@@ -55,10 +55,10 @@ mod TestLiquidatePosition {
         };
 
         IExtensionDispatcher { contract_address: extension.contract_address }
-            .before_liquidate_position(context, data: ArrayTrait::new().span(), caller: get_caller_address());
+            .before_liquidate_position(
+                context, min_collateral_to_receive: 0, debt_to_repay: 0, caller: get_caller_address(),
+            );
     }
-
-    // before_liquidate_position: invalid-liquidation-data
 
     #[test]
     #[should_panic(expected: "caller-not-singleton")]
@@ -105,7 +105,6 @@ mod TestLiquidatePosition {
                 Default::default(),
                 Default::default(),
                 Default::default(),
-                data: ArrayTrait::new().span(),
                 caller: get_caller_address(),
             );
     }
@@ -126,7 +125,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -141,7 +139,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -157,15 +154,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(collateralized, "Not collateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt / 2,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -189,7 +184,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -204,7 +198,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -221,15 +214,13 @@ mod TestLiquidatePosition {
         let (_, _, debt) = singleton
             .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt / 2,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -253,7 +244,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -268,7 +258,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -285,93 +274,18 @@ mod TestLiquidatePosition {
         let (_, _, debt) = singleton
             .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt / 2,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
         stop_cheat_caller_address(singleton.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: 'invalid-liquidation-data')]
-    fn test_liquidate_position_invalid_liquidation_data() {
-        let (singleton, extension, config, users, terms) = setup();
-        let TestConfig { collateral_asset, debt_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
-
-        // LENDER
-
-        // deposit collateral which is later borrowed by the borrower
-        let params = ModifyPositionParams {
-            collateral_asset: debt_asset.contract_address,
-            debt_asset: collateral_asset.contract_address,
-            user: users.lender,
-            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
-            debt: Default::default(),
-            data: ArrayTrait::new().span(),
-        };
-
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
-
-        // BORROWER
-
-        let params = ModifyPositionParams {
-            collateral_asset: collateral_asset.contract_address,
-            debt_asset: debt_asset.contract_address,
-            user: users.borrower,
-            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
-            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
-        };
-
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
-
-        // LIQUIDATOR
-
-        // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
-        mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
-
-        let (position_before, _, debt) = singleton
-            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
-
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
-
-        let params = LiquidatePositionParams {
-            collateral_asset: collateral_asset.contract_address,
-            debt_asset: debt_asset.contract_address,
-            user: users.borrower,
-            receive_as_shares: false,
-            data: ArrayTrait::new().span(),
-        };
-
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.liquidate_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
-
-        let (position, _, _) = singleton
-            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
-        assert(position.collateral_shares == position_before.collateral_shares / 2, 'not half of collateral shares');
-        assert(position.nominal_debt == position_before.nominal_debt / 2, 'not half of nominal debt');
-
-        let (position, _, _) = singleton
-            .position(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
-
-        assert(position.collateral_shares == 0, 'should not have shares');
     }
 
     #[test]
@@ -389,7 +303,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -404,7 +317,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -424,15 +336,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt / 2,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -738,7 +648,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -756,7 +665,6 @@ mod TestLiquidatePosition {
                 denomination: AmountDenomination::Native,
                 value: (nominal_debt_to_draw + nominal_debt_to_draw / 10).into(),
             },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -779,9 +687,6 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt / 2 }.serialize(ref liquidation_data);
-
         // print debt asset balance of liquidator
         let balance_before = IERC20Dispatcher { contract_address: debt_asset.contract_address }
             .balance_of(users.lender);
@@ -791,7 +696,8 @@ mod TestLiquidatePosition {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt / 2,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -830,7 +736,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -845,7 +750,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -865,16 +769,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: collateral_to_deposit.into(), debt_to_repay: debt / 2 }
-            .serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: collateral_to_deposit.into(),
+            debt_to_repay: debt / 2,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -902,7 +803,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -920,7 +820,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -940,15 +839,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -979,7 +876,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -997,7 +893,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1017,15 +912,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1056,7 +949,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1074,7 +966,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1094,15 +985,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive: 0, debt_to_repay: debt }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive: 0,
+            debt_to_repay: debt,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1158,7 +1047,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1173,7 +1061,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
             debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
@@ -1200,15 +1087,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive,
+            debt_to_repay,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1268,7 +1153,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1283,7 +1167,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
             debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
@@ -1310,15 +1193,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive,
+            debt_to_repay,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1378,7 +1259,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1393,7 +1273,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
             debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
@@ -1420,15 +1299,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive,
+            debt_to_repay,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1488,7 +1365,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1503,7 +1379,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
             debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
@@ -1530,15 +1405,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive,
+            debt_to_repay,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1601,7 +1474,6 @@ mod TestLiquidatePosition {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1616,7 +1488,6 @@ mod TestLiquidatePosition {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral.into() },
             debt: Amount { denomination: AmountDenomination::Assets, value: debt.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
@@ -1643,15 +1514,13 @@ mod TestLiquidatePosition {
             .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
         assert!(!collateralized, "Not undercollateralized");
 
-        let mut liquidation_data: Array<felt252> = ArrayTrait::new();
-        LiquidationData { min_collateral_to_receive, debt_to_repay }.serialize(ref liquidation_data);
-
         let params = LiquidatePositionParams {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             receive_as_shares: false,
-            data: liquidation_data.span(),
+            min_collateral_to_receive,
+            debt_to_repay,
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);

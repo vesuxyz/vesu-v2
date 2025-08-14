@@ -52,7 +52,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -67,7 +66,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -86,7 +84,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit / 10).into() },
             debt: Amount { denomination: AmountDenomination::Native, value: (SCALE / 5_000).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -109,7 +106,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -124,7 +120,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -145,7 +140,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -169,7 +163,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -184,7 +177,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -205,7 +197,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit / 10).into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -220,7 +211,6 @@ mod TestShutdown {
                 denomination: AmountDenomination::Assets, value: -(collateral_to_deposit / 1000).into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -244,7 +234,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -259,7 +248,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -280,7 +268,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit / 10).into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -293,7 +280,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 100).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -316,7 +302,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -331,7 +316,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -370,7 +354,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: -1_u256.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -394,7 +377,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -409,7 +391,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -448,7 +429,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Native, value: SCALE.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -472,7 +452,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -487,7 +466,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -528,7 +506,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Native, value: -1000_0000000000.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -552,7 +529,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -567,7 +543,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -608,7 +583,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 10).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -631,7 +605,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -646,7 +619,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -688,7 +660,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -713,7 +684,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -737,7 +707,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -752,7 +721,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -795,7 +763,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -824,7 +791,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Native, value: SCALE.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -848,7 +814,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -863,7 +828,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -909,7 +873,6 @@ mod TestShutdown {
                 denomination: AmountDenomination::Native,
                 value: -(nominal_debt_to_draw - nominal_debt_to_draw / 10).into(),
             },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -937,7 +900,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: -(nominal_debt_to_draw / 10).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -961,7 +923,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -976,7 +937,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1019,7 +979,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1047,7 +1006,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 10).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1073,7 +1031,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1088,7 +1045,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1137,7 +1093,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Native, value: -1000_0000000000.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1177,7 +1132,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1192,7 +1146,6 @@ mod TestShutdown {
             user: borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 2).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, borrower);
@@ -1207,7 +1160,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit / 11).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1250,7 +1202,6 @@ mod TestShutdown {
             user: borrower,
             collateral: Default::default(),
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, borrower);
@@ -1286,7 +1237,6 @@ mod TestShutdown {
             user: borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: -(asset_config.reserve).into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, borrower);
@@ -1315,7 +1265,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (liquidity_to_deposit).into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1328,7 +1277,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (liquidity_to_deposit_third).into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1343,7 +1291,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1356,7 +1303,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1441,7 +1387,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1456,7 +1401,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1508,7 +1452,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (liquidity_to_deposit).into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1521,7 +1464,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (liquidity_to_deposit_third).into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1536,7 +1478,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit).into() },
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1549,7 +1490,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit).into() },
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw).into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
@@ -1588,7 +1528,6 @@ mod TestShutdown {
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
             debt: Default::default(),
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1603,7 +1542,6 @@ mod TestShutdown {
             user: users.borrower,
             collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
-            data: ArrayTrait::new().span(),
         };
 
         start_cheat_caller_address(singleton.contract_address, users.borrower);
