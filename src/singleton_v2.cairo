@@ -904,6 +904,7 @@ mod SingletonV2 {
         /// * `asset` - address of the asset
         /// * `amount` - amount to donate [asset scale]
         fn donate_to_reserve(ref self: ContractState, asset: ContractAddress, amount: u256) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             let mut asset_config = self.asset_config(asset);
             assert_asset_config_exists(asset_config);
             // donate amount to the reserve
