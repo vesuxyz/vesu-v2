@@ -5,6 +5,9 @@ use vesu::data_model::{
     ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse,
 };
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
+use vesu::extension::components::position_hooks::{
+    LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus,
+};
 use vesu::extension::components::pragma_oracle::OracleConfig;
 
 #[starknet::interface]
@@ -17,7 +20,7 @@ pub trait IFlashLoanReceiver<TContractState> {
 #[starknet::interface]
 pub trait ISingletonV2<TContractState> {
     fn pool_name(self: @TContractState) -> felt252;
-    fn extension(self: @TContractState) -> ContractAddress;
+    fn extension_class_hash(self: @TContractState) -> ClassHash;
     fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
     fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
     fn position(
@@ -50,7 +53,6 @@ pub trait ISingletonV2<TContractState> {
     fn context(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     ) -> Context;
-    fn create_pool(ref self: TContractState, extension: ContractAddress);
     fn modify_position(ref self: TContractState, params: ModifyPositionParams) -> UpdatePositionResponse;
     fn liquidate_position(ref self: TContractState, params: LiquidatePositionParams) -> UpdatePositionResponse;
     fn flash_loan(
@@ -95,6 +97,30 @@ pub trait ISingletonV2<TContractState> {
     fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
 
+    fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
+    fn liquidation_config(
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+    ) -> LiquidationConfig;
+    fn shutdown_config(self: @TContractState) -> ShutdownConfig;
+    fn shutdown_status(
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+    ) -> ShutdownStatus;
+    fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
+    fn set_debt_cap(
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
+    );
+    fn set_liquidation_config(
+        ref self: TContractState,
+        collateral_asset: ContractAddress,
+        debt_asset: ContractAddress,
+        liquidation_config: LiquidationConfig,
+    );
+    fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
+    fn set_shutdown_mode(ref self: TContractState, shutdown_mode: ShutdownMode);
+    fn update_shutdown_status(
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+    ) -> ShutdownMode;
+
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
 }
@@ -123,9 +149,13 @@ mod SingletonV2 {
     };
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
+    use vesu::extension::components::position_hooks::position_hooks_component::PositionHooksTrait;
+    use vesu::extension::components::position_hooks::{
+        LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus, position_hooks_component,
+    };
     use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
-    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
+    use vesu::extension::interface::{IExtensionDispatcherTrait, IExtensionLibraryDispatcher};
     use vesu::math::pow_10;
     use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
     use vesu::singleton_v2::{
@@ -138,8 +168,8 @@ mod SingletonV2 {
     struct Storage {
         // tracks the name
         pool_name: felt252,
-        // The address of the extension contract
-        extension: ContractAddress,
+        // The class hash of the extension contract
+        extension_class_hash: ClassHash,
         // The owner of the extension
         extension_owner: ContractAddress,
         // tracks the configuration / state of each asset
@@ -166,6 +196,9 @@ mod SingletonV2 {
         // storage for the interest rate model component
         #[substorage(v0)]
         interest_rate_model: interest_rate_model_component::Storage,
+        // storage for the position hooks component
+        #[substorage(v0)]
+        position_hooks: position_hooks_component::Storage,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -300,6 +333,7 @@ mod SingletonV2 {
         OwnableEvent: OwnableComponent::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
+        PositionHooksEvents: position_hooks_component::Event,
         ModifyPosition: ModifyPosition,
         LiquidatePosition: LiquidatePosition,
         UpdateContext: UpdateContext,
@@ -319,6 +353,7 @@ mod SingletonV2 {
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
+    component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -327,11 +362,13 @@ mod SingletonV2 {
     fn constructor(
         ref self: ContractState,
         name: felt252,
+        extension_class_hash: ClassHash,
         owner: ContractAddress,
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
     ) {
         self.pool_name.write(name);
+        self.extension_class_hash.write(extension_class_hash);
         self.ownable.initializer(owner);
         // TODO: Support a different owner for the extension.
         self.extension_owner.write(owner);
@@ -374,12 +411,9 @@ mod SingletonV2 {
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
         /// Asserts that the delegatee has the delegate of the delegator
-        fn assert_ownership(ref self: ContractState, extension: ContractAddress, delegator: ContractAddress) {
+        fn assert_ownership(ref self: ContractState, delegator: ContractAddress) {
             let has_delegation = self.delegations.read((delegator, get_caller_address()));
-            assert!(
-                delegator == get_caller_address() || extension == get_caller_address() || has_delegation,
-                "no-delegation",
-            );
+            assert!(delegator == get_caller_address() || has_delegation, "no-delegation");
         }
 
         /// Asserts that the current utilization of an asset is below the max. allowed utilization
@@ -405,7 +439,7 @@ mod SingletonV2 {
                 );
                 self.assert_collateralization(collateral_value, debt_value, context.max_ltv.into());
                 // caller owns the position or has a delegate for modifying it
-                self.assert_ownership(context.extension, context.user);
+                self.assert_ownership(context.user);
                 if collateral_delta < Zero::zero() {
                     // max. utilization of the collateral is not exceed
                     self.assert_max_utilization(context.collateral_asset_config);
@@ -446,13 +480,6 @@ mod SingletonV2 {
 
             // value of the outstanding debt is either zero or above the floor
             assert!(debt_value == 0 || debt_value > context.debt_asset_config.floor, "dusty-debt-balance");
-        }
-
-        /// Sets the pool's extension address.
-        fn _set_extension(ref self: ContractState, extension: ContractAddress) {
-            assert!(extension.is_non_zero(), "extension-is-zero");
-            self.extension.write(extension);
-            self.emit(SetExtension { extension });
         }
 
         /// Settles all intermediate outstanding collateral and debt deltas for a position / user
@@ -557,11 +584,11 @@ mod SingletonV2 {
             self.pool_name.read()
         }
 
-        /// Returns the extension address
+        /// Returns the extension class hash
         /// # Returns
-        /// * `extension` - address of the extension contract
-        fn extension(self: @ContractState) -> ContractAddress {
-            self.extension.read()
+        /// * `extension_class_hash` - class hash of the extension contract
+        fn extension_class_hash(self: @ContractState) -> ClassHash {
+            self.extension_class_hash.read()
         }
 
         /// Returns the configuration / state of an asset
@@ -572,9 +599,6 @@ mod SingletonV2 {
         /// # Returns
         /// * `asset_config` - asset configuration
         fn asset_config(self: @ContractState, asset: ContractAddress) -> AssetConfig {
-            let extension = self.extension.read();
-            assert!(extension.is_non_zero(), "unknown-pool");
-
             let mut asset_config = self.asset_configs.read(asset);
             if asset.is_non_zero() {
                 // Check that the asset is registered.
@@ -769,14 +793,10 @@ mod SingletonV2 {
         ) -> Context {
             assert!(collateral_asset != debt_asset, "identical-assets");
 
-            let extension = IExtensionDispatcher { contract_address: self.extension.read() };
-            assert!(extension.contract_address.is_non_zero(), "unknown-pool");
-
             let collateral_asset_config = self.asset_config(collateral_asset);
             let debt_asset_config = self.asset_config(debt_asset);
 
             Context {
-                extension: extension.contract_address,
                 collateral_asset,
                 debt_asset,
                 collateral_asset_config,
@@ -795,17 +815,6 @@ mod SingletonV2 {
                 user,
                 position: self.positions.read((collateral_asset, debt_asset, user)),
             }
-        }
-
-        /// Creates a new pool
-        /// # Arguments
-        /// * `asset_params` - array of asset parameters
-        /// * `ltv_params` - array of loan-to-value parameters
-        /// * `extension` - address of the extension contract
-        // TODO: Move this to the constructor (o.w the functions is not sound).
-        fn create_pool(ref self: ContractState, extension: ContractAddress) {
-            // link the extension to the pool
-            self._set_extension(extension);
         }
 
         /// Adjusts a positions collateral and debt balances
@@ -828,7 +837,7 @@ mod SingletonV2 {
             self.assert_position_invariants(context, collateral_delta, debt_delta);
 
             // call after-hook of the extension (assets are not settled yet, only the internal state has been updated)
-            let extension = IExtensionDispatcher { contract_address: context.extension };
+            let extension = IExtensionLibraryDispatcher { class_hash: self.extension_class_hash.read() };
             assert!(
                 extension
                     .after_modify_position(
@@ -874,7 +883,7 @@ mod SingletonV2 {
             let context = self.context(collateral_asset, debt_asset, user);
 
             // call before-hook of the extension
-            let extension = IExtensionDispatcher { contract_address: context.extension };
+            let extension = IExtensionLibraryDispatcher { class_hash: self.extension_class_hash.read() };
             let (collateral, debt, bad_debt) = extension
                 .before_liquidate_position(context, min_collateral_to_receive, debt_to_repay, get_caller_address());
 
@@ -1076,7 +1085,11 @@ mod SingletonV2 {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_asset_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256) {
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            let caller_address = get_caller_address();
+            assert!(
+                caller_address == self.extension_owner.read() || caller_address == get_contract_address(),
+                "caller-not-extension-owner",
+            );
 
             let mut asset_config = self.asset_config(asset);
 
@@ -1149,7 +1162,7 @@ mod SingletonV2 {
         /// # Arguments
         /// * `fee_config` - new fee configuration parameters
         fn set_fee_config(ref self: ContractState, fee_config: FeeConfig) {
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-owner");
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.fee_config.write(fee_config);
             self.emit(SetFeeConfig { fee_config });
         }
@@ -1254,6 +1267,132 @@ mod SingletonV2 {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.shutdown_mode_agent.write(shutdown_mode_agent);
             self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
+        }
+
+        /// Returns the debt cap for a given asset
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `debt_cap` - debt cap
+        fn debt_caps(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256 {
+            self.position_hooks.debt_caps.read((collateral_asset, debt_asset))
+        }
+
+        /// Returns the liquidation configuration for a given pairing of assets
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `liquidation_config` - liquidation configuration
+        fn liquidation_config(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ) -> LiquidationConfig {
+            self.position_hooks.liquidation_configs.read((collateral_asset, debt_asset))
+        }
+
+        /// Returns the shutdown configuration
+        /// # Returns
+        /// * `recovery_period` - recovery period
+        /// * `subscription_period` - subscription period
+        fn shutdown_config(self: @ContractState) -> ShutdownConfig {
+            self.position_hooks.shutdown_config.read()
+        }
+
+        /// Returns the total (sum of all positions) collateral shares and nominal debt balances for a given pair
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `total_collateral_shares` - total collateral shares
+        /// * `total_nominal_debt` - total nominal debt
+        fn pairs(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair {
+            self.position_hooks.pairs.read((collateral_asset, debt_asset))
+        }
+
+        /// Sets the debt cap for a given asset
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// * `debt_cap` - debt cap
+        fn set_debt_cap(
+            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
+        ) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            self.position_hooks.set_debt_cap(collateral_asset, debt_asset, debt_cap);
+        }
+
+        /// Sets the liquidation config for a given pair
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// * `liquidation_config` - liquidation config
+        fn set_liquidation_config(
+            ref self: ContractState,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            liquidation_config: LiquidationConfig,
+        ) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            self.position_hooks.set_liquidation_config(collateral_asset, debt_asset, liquidation_config);
+        }
+
+        /// Sets the shutdown config
+        /// # Arguments
+        /// * `shutdown_config` - shutdown config
+        fn set_shutdown_config(ref self: ContractState, shutdown_config: ShutdownConfig) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            self.position_hooks.set_shutdown_config(shutdown_config);
+        }
+
+        /// Sets the shutdown mode and overwrites the inferred shutdown mode
+        /// # Arguments
+        /// * `shutdown_mode` - shutdown mode
+        fn set_shutdown_mode(ref self: ContractState, shutdown_mode: ShutdownMode) {
+            let shutdown_mode_agent = self.shutdown_mode_agent();
+            assert!(
+                get_caller_address() == self.extension_owner.read() || get_caller_address() == shutdown_mode_agent,
+                "caller-not-owner-or-agent",
+            );
+            assert!(
+                get_caller_address() != shutdown_mode_agent || shutdown_mode == ShutdownMode::Recovery,
+                "shutdown-mode-not-recovery",
+            );
+            self.position_hooks.set_shutdown_mode(shutdown_mode);
+        }
+
+        /// Returns the shutdown mode for a specific pair.
+        /// To check the shutdown status of the pool, the shutdown mode for all pairs must be checked.
+        /// See `shutdown_status` in `position_hooks.cairo`.
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `shutdown_mode` - shutdown mode
+        /// * `violation` - whether the pair currently violates any of the invariants (transitioned to recovery mode)
+        /// * `previous_violation_timestamp` - timestamp at which the pair previously violated the invariants
+        /// (transitioned to recovery mode)
+        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs violated the invariants at that
+        /// timestamp
+        fn shutdown_status(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ) -> ShutdownStatus {
+            let mut context = self.context(collateral_asset, debt_asset, Zero::zero());
+            self.position_hooks.shutdown_status(ref context)
+        }
+
+        /// Updates the shutdown mode for a specific pair.
+        /// See `update_shutdown_status` in `position_hooks.cairo`.
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `shutdown_mode` - shutdown mode
+        fn update_shutdown_status(
+            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ) -> ShutdownMode {
+            let mut context = self.context(collateral_asset, debt_asset, Zero::zero());
+            self.position_hooks.update_shutdown_status(ref context)
         }
 
         /// Returns the name of the contract

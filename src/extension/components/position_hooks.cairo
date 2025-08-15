@@ -77,7 +77,6 @@ pub mod position_hooks_component {
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus, assert_liquidation_config,
     };
-    use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
 
@@ -137,10 +136,7 @@ pub mod position_hooks_component {
 
     #[generate_trait]
     pub impl PositionHooksTrait<
-        TContractState,
-        +HasComponent<TContractState>,
-        +IDefaultExtensionCallback<TContractState>,
-        +Drop<TContractState>,
+        TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
     > of Trait<TContractState> {
         /// Sets the debt cap for an asset.
         /// # Arguments
@@ -239,7 +235,7 @@ pub mod position_hooks_component {
             if shutdown_mode == ShutdownMode::Redemption {
                 // set max_utilization to 100% if it's not already set
                 if collateral_asset_config.max_utilization != SCALE {
-                    ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
+                    ISingletonV2Dispatcher { contract_address: starknet::get_contract_address() }
                         .set_asset_parameter(collateral_asset, 'max_utilization', SCALE);
                 }
             }

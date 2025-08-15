@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod TestPoolDonation {
     use alexandria_math::i257::I257Trait;
-    use core::num::traits::Zero;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{
         CheatSpan, ContractClass, ContractClassTrait, cheat_caller_address, get_class_hash,
@@ -16,15 +15,13 @@ mod TestPoolDonation {
 
     #[test]
     fn test_donate_to_reserve_pool() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
 
-        assert!(singleton.extension().is_non_zero(), "Pool not created");
-
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -118,7 +115,7 @@ mod TestPoolDonation {
     #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_donate_to_reserve_pool_incorrect_asset() {
-        let (singleton, _, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { debt_asset, .. } = config;
 
         let mock_asset_class = ContractClass { class_hash: get_class_hash(debt_asset.contract_address) };
@@ -136,8 +133,6 @@ mod TestPoolDonation {
         start_cheat_caller_address(singleton.contract_address, users.lender);
         fake_asset.approve(singleton.contract_address, supply);
         stop_cheat_caller_address(singleton.contract_address);
-
-        assert!(singleton.extension().is_non_zero(), "Pool not created");
 
         let amount_to_donate_to_reserve = 2 * fake_asset_scale;
 
