@@ -39,7 +39,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     ) -> ShutdownStatus;
     fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
     fn create_pool(ref self: TContractState, owner: ContractAddress);
-    fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn set_debt_cap(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
     );
@@ -243,17 +242,6 @@ mod DefaultExtensionPOV2 {
         ) {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             self.position_hooks.set_liquidation_config(collateral_asset, debt_asset, liquidation_config);
-        }
-
-        /// Sets a parameter of an asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// * `parameter` - parameter name
-        /// * `value` - value of the parameter
-        fn set_asset_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            ISingletonV2Dispatcher { contract_address: self.singleton.read() }
-                .set_asset_parameter(asset, parameter, value);
         }
 
         /// Sets the shutdown config

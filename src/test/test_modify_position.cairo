@@ -122,9 +122,9 @@ mod TestModifyPosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         // set max utilization
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_asset_parameter(third_asset.contract_address, 'max_utilization', SCALE / 10);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_asset_parameter(third_asset.contract_address, 'max_utilization', SCALE / 10);
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Borrow
 
@@ -245,15 +245,15 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "dusty-collateral-balance")]
     fn test_modify_position_dusty_collateral_balance() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         // set floor to 0
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_asset_parameter(collateral_asset.contract_address, 'floor', 100_000_000_000); // (* price)
-        extension.set_asset_parameter(debt_asset.contract_address, 'floor', 0);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_asset_parameter(collateral_asset.contract_address, 'floor', 100_000_000_000); // (* price)
+        singleton.set_asset_parameter(debt_asset.contract_address, 'floor', 0);
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Supply
 
@@ -287,15 +287,15 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "dusty-debt-balance")]
     fn test_modify_position_dusty_debt_balance() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, .. } = terms;
 
         // set floor to 0
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_asset_parameter(collateral_asset.contract_address, 'floor', 0);
-        extension.set_asset_parameter(debt_asset.contract_address, 'floor', 1_000_000); // (* price)
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_asset_parameter(collateral_asset.contract_address, 'floor', 0);
+        singleton.set_asset_parameter(debt_asset.contract_address, 'floor', 1_000_000); // (* price)
+        stop_cheat_caller_address(singleton.contract_address);
 
         // Supply
 

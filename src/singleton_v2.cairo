@@ -1076,7 +1076,7 @@ mod SingletonV2 {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_asset_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256) {
-            assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
 
             let mut asset_config = self.asset_config(asset);
 
