@@ -27,6 +27,7 @@ pub const THIRD_PRAGMA_KEY: felt252 = 18669995996566340;
 #[derive(Copy, Drop, Serde)]
 pub struct Users {
     pub owner: ContractAddress,
+    pub extension_owner: ContractAddress,
     pub lender: ContractAddress,
     pub borrower: ContractAddress,
     pub seeder: ContractAddress,
@@ -112,6 +113,7 @@ pub fn setup_env(
 ) -> Env {
     let users = Users {
         owner: contract_address_const::<'owner'>(),
+        extension_owner: contract_address_const::<'owner'>(),
         lender: contract_address_const::<'lender'>(),
         borrower: contract_address_const::<'borrower'>(),
         seeder: contract_address_const::<'seeder'>(),
@@ -164,24 +166,27 @@ pub fn setup_env(
 
     // transfer 2x INFLATION_FEE to owner
     start_cheat_caller_address(collateral_asset.contract_address, users.lender);
-    collateral_asset.transfer(users.owner, INFLATION_FEE * 2);
+    collateral_asset.transfer(users.extension_owner, INFLATION_FEE * 2);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(debt_asset.contract_address, users.lender);
-    debt_asset.transfer(users.owner, INFLATION_FEE * 2);
+    debt_asset.transfer(users.extension_owner, INFLATION_FEE * 2);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.lender);
-    third_asset.transfer(users.owner, INFLATION_FEE * 2);
+    third_asset.transfer(users.extension_owner, INFLATION_FEE * 2);
     stop_cheat_caller_address(third_asset.contract_address);
 
     // approve Extension and ExtensionV2 to transfer assets on behalf of owner
     start_cheat_caller_address(collateral_asset.contract_address, users.owner);
     collateral_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(debt_asset.contract_address, users.owner);
     debt_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.owner);
     third_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
     // approve Singleton to transfer assets on behalf of lender
@@ -334,25 +339,21 @@ pub fn create_pool(
     extension.create_pool(owner);
 
     // Add assets.
-    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension
+    cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+    singleton
         .add_asset(
-            asset_params: collateral_asset_params,
+            params: collateral_asset_params,
             :interest_rate_config,
             pragma_oracle_params: collateral_asset_oracle_params,
         );
 
-    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension
-        .add_asset(
-            asset_params: debt_asset_params, :interest_rate_config, pragma_oracle_params: debt_asset_oracle_params,
-        );
+    cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+    singleton
+        .add_asset(params: debt_asset_params, :interest_rate_config, pragma_oracle_params: debt_asset_oracle_params);
 
-    cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-    extension
-        .add_asset(
-            asset_params: third_asset_params, :interest_rate_config, pragma_oracle_params: third_asset_oracle_params,
-        );
+    cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+    singleton
+        .add_asset(params: third_asset_params, :interest_rate_config, pragma_oracle_params: third_asset_oracle_params);
 
     // Set liquidation config.
     let collateral_asset = collateral_asset_params.asset;
