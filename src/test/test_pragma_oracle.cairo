@@ -4,14 +4,12 @@ mod TestPragmaOracle {
     use snforge_std::{CheatSpan, cheat_caller_address, map_entry_address, start_cheat_block_timestamp_global, store};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::is_collateralized;
-    use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams};
+    use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams, PragmaOracleParams};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
     use vesu::extension::default_extension_po_v2::{
-        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, PragmaOracleParams,
-        ShutdownParams,
+        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, ShutdownParams,
     };
-    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
@@ -188,13 +186,11 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_get_default_price() {
-        let (_, default_extension_po, config, _, _) = setup();
+        let (singleton, _, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
-
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
-        let debt_asset_price = extension_dispatcher.price(debt_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
+        let debt_asset_price = singleton.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == SCALE, "Debt asset price not correctly set");
@@ -204,12 +200,10 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_get_price_high() {
-        let (_, default_extension_po, config, _, _) = setup();
+        let (singleton, _, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
-
-        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: default_extension_po.pragma_oracle() };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
 
         let max: u128 = Bounded::<u128>::MAX;
         // set collateral asset price
@@ -217,8 +211,8 @@ mod TestPragmaOracle {
         // set debt asset price
         pragma_oracle.set_price(DEBT_PRAGMA_KEY, max);
 
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
-        let debt_asset_price = extension_dispatcher.price(debt_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
+        let debt_asset_price = singleton.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");
@@ -249,19 +243,18 @@ mod TestPragmaOracle {
             2,
         );
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
-        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         pragma_oracle.set_last_updated_timestamp(COLL_PRAGMA_KEY, get_block_timestamp());
 
         // called at timeout
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout);
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
 
         // called at timeout - 1
         start_cheat_block_timestamp_global(get_block_timestamp() - 1);
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
     }
@@ -285,13 +278,12 @@ mod TestPragmaOracle {
             2,
         );
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
-        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         pragma_oracle.set_last_updated_timestamp(COLL_PRAGMA_KEY, get_block_timestamp());
 
         // called at timeout + 1
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout + 1);
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         // stale price
         assert!(!collateral_asset_price.is_valid, "Collateral asset validity should be false");
@@ -315,20 +307,19 @@ mod TestPragmaOracle {
             min_number_of_sources,
         );
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
-        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
 
         // number of sources == min_number_of_sources + 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
 
         // number of sources == min_number_of_sources
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
     }
@@ -351,37 +342,35 @@ mod TestPragmaOracle {
             min_number_of_sources,
         );
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
-        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
 
         // number of sources == min_number_of_sources - 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources - 1);
 
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
 
         assert!(!collateral_asset_price.is_valid, "Debt asset validity should be false");
     }
 
     #[test]
     fn test_price_twap() {
-        let (_, default_extension_po, config, _, _) = setup();
+        let (singleton, _, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         store(
-            default_extension_po.contract_address,
+            singleton.contract_address,
             map_entry_address(selector!("oracle_configs"), array![collateral_asset.contract_address.into()].span()),
             array![COLL_PRAGMA_KEY, 0, 2, 1, 1, 1].span(),
         );
 
         store(
-            default_extension_po.contract_address,
+            singleton.contract_address,
             map_entry_address(selector!("oracle_configs"), array![debt_asset.contract_address.into()].span()),
             array![DEBT_PRAGMA_KEY, 0, 2, 1, 1, 1].span(),
         );
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
-        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: default_extension_po.pragma_oracle() };
-        let pragma_summary = IMockPragmaSummaryDispatcher { contract_address: default_extension_po.pragma_summary() };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let pragma_summary = IMockPragmaSummaryDispatcher { contract_address: singleton.pragma_summary() };
 
         let max: u128 = Bounded::<u128>::MAX;
         // set collateral asset price
@@ -391,8 +380,8 @@ mod TestPragmaOracle {
         pragma_oracle.set_price(DEBT_PRAGMA_KEY, 0);
         pragma_summary.set_twap(DEBT_PRAGMA_KEY, max, 18);
 
-        let collateral_asset_price = extension_dispatcher.price(collateral_asset.contract_address);
-        let debt_asset_price = extension_dispatcher.price(debt_asset.contract_address);
+        let collateral_asset_price = singleton.price(collateral_asset.contract_address);
+        let debt_asset_price = singleton.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");
