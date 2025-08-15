@@ -240,36 +240,36 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-owner")]
-    fn test_extension_set_asset_parameter_not_owner() {
+    #[should_panic(expected: "caller-not-extension-owner")]
+    fn test_set_asset_parameter_not_owner() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, extension, config, users.owner, Option::None);
+        create_pool(singleton, extension, config, users.extension_owner, Option::None);
 
-        extension.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
+        singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
     }
 
     #[test]
-    fn test_extension_set_asset_parameter() {
+    fn test_set_asset_parameter() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_asset_parameter(config.collateral_asset.contract_address, 'floor', SCALE);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.set_asset_parameter(config.collateral_asset.contract_address, 'floor', SCALE);
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_asset_parameter(config.collateral_asset.contract_address, 'fee_rate', SCALE);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.set_asset_parameter(config.collateral_asset.contract_address, 'fee_rate', SCALE);
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]

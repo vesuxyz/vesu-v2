@@ -513,11 +513,11 @@ pub fn setup_pool(
         stop_cheat_caller_address(collateral_asset.contract_address);
     }
 
-    start_cheat_caller_address(extension.contract_address, users.owner);
-    extension.set_asset_parameter(collateral_asset.contract_address, 'floor', SCALE / 10_000);
-    extension.set_asset_parameter(debt_asset.contract_address, 'floor', SCALE / 10_000);
-    extension.set_asset_parameter(third_asset.contract_address, 'floor', SCALE / 10_000);
-    stop_cheat_caller_address(extension.contract_address);
+    start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+    singleton.set_asset_parameter(collateral_asset.contract_address, 'floor', SCALE / 10_000);
+    singleton.set_asset_parameter(debt_asset.contract_address, 'floor', SCALE / 10_000);
+    singleton.set_asset_parameter(third_asset.contract_address, 'floor', SCALE / 10_000);
+    stop_cheat_caller_address(singleton.contract_address);
     start_cheat_caller_address(singleton.contract_address, users.owner);
     singleton.set_shutdown_mode_agent(get_contract_address());
     stop_cheat_caller_address(singleton.contract_address);

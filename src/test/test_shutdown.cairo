@@ -1123,7 +1123,7 @@ mod TestShutdown {
         debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
         stop_cheat_caller_address(debt_asset.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 2);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1216,7 +1216,7 @@ mod TestShutdown {
 
         // third user has to borrow from same pair to increase utilization
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 100);
         stop_cheat_caller_address(singleton.contract_address);
 

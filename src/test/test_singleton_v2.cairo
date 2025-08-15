@@ -334,18 +334,6 @@ mod TestSingletonV2 {
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-extension")]
-    fn test_set_asset_parameter_not_extension() {
-        let Env {
-            singleton, extension, config, users, ..,
-        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(singleton, extension, config, users.owner, Option::None);
-
-        singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
-    }
-
-    #[test]
     fn test_set_asset_parameter() {
         let Env {
             singleton, extension, config, users, ..,
@@ -353,15 +341,15 @@ mod TestSingletonV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
         stop_cheat_caller_address(singleton.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'floor', SCALE);
         stop_cheat_caller_address(singleton.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'fee_rate', SCALE);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -373,13 +361,13 @@ mod TestSingletonV2 {
 
     #[test]
     fn test_set_asset_parameter_fee_shares() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         assert!(singleton.extension().is_non_zero(), "Pool not created");
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -421,7 +409,7 @@ mod TestSingletonV2 {
 
         let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', SCALE);
         stop_cheat_caller_address(singleton.contract_address);
 
