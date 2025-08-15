@@ -5,21 +5,6 @@ use vesu::data_model::Context;
 #[starknet::interface]
 pub trait IExtension<TContractState> {
     fn singleton(self: @TContractState) -> ContractAddress;
-    fn interest_rate(
-        self: @TContractState,
-        asset: ContractAddress,
-        utilization: u256,
-        last_updated: u64,
-        last_full_utilization_rate: u256,
-    ) -> u256;
-    fn rate_accumulator(
-        self: @TContractState,
-        asset: ContractAddress,
-        utilization: u256,
-        last_updated: u64,
-        last_rate_accumulator: u256,
-        last_full_utilization_rate: u256,
-    ) -> (u256, u256);
     fn after_modify_position(
         ref self: TContractState,
         context: Context,
