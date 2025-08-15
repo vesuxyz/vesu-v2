@@ -101,18 +101,18 @@ mod TestPragmaOracle {
         extension.create_pool(owner);
 
         // Add assets.
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton
             .add_asset(
-                asset_params: collateral_asset_params,
+                params: collateral_asset_params,
                 interest_rate_config: interest_rate_config,
                 pragma_oracle_params: collateral_asset_oracle_params,
             );
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton
             .add_asset(
-                asset_params: debt_asset_params,
+                params: debt_asset_params,
                 interest_rate_config: interest_rate_config,
                 pragma_oracle_params: debt_asset_oracle_params,
             );

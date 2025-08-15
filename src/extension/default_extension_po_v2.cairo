@@ -1,6 +1,4 @@
 use starknet::{ClassHash, ContractAddress};
-use vesu::data_model::{AssetParams, PragmaOracleParams};
-use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{
     LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus,
 };
@@ -41,12 +39,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     ) -> ShutdownStatus;
     fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
     fn create_pool(ref self: TContractState, owner: ContractAddress);
-    fn add_asset(
-        ref self: TContractState,
-        asset_params: AssetParams,
-        interest_rate_config: InterestRateConfig,
-        pragma_oracle_params: PragmaOracleParams,
-    );
     fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn set_debt_cap(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
@@ -70,7 +62,7 @@ pub trait IDefaultExtensionPOV2<TContractState> {
 
 #[starknet::contract]
 mod DefaultExtensionPOV2 {
-    use alexandria_math::i257::{I257Trait, i257};
+    use alexandria_math::i257::i257;
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
@@ -78,9 +70,8 @@ mod DefaultExtensionPOV2 {
     use starknet::storage::{StorageMapReadAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::syscalls::replace_class_syscall;
     #[feature("deprecated-starknet-consts")]
-    use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, AssetParams, Context, ModifyPositionParams, PragmaOracleParams};
-    use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use starknet::{ClassHash, ContractAddress, get_caller_address, get_contract_address};
+    use vesu::data_model::Context;
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::extension::components::position_hooks::position_hooks_component::PositionHooksTrait;
     use vesu::extension::components::position_hooks::{
@@ -92,7 +83,6 @@ mod DefaultExtensionPOV2 {
     };
     use vesu::extension::interface::IExtension;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
-    use vesu::units::INFLATION_FEE;
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
 
@@ -149,29 +139,6 @@ mod DefaultExtensionPOV2 {
         fn assert_singleton_owner(ref self: ContractState) {
             let owner = IOwnableDispatcher { contract_address: self.singleton.read() }.owner();
             assert!(get_caller_address() == owner, "caller-not-singleton-owner");
-        }
-
-        fn burn_inflation_fee(ref self: ContractState, asset: ContractAddress, is_legacy: bool) {
-            let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-
-            // burn inflation fee
-            let asset = IERC20Dispatcher { contract_address: asset };
-            transfer_asset(
-                asset.contract_address, get_caller_address(), get_contract_address(), INFLATION_FEE, is_legacy,
-            );
-            assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
-            singleton
-                .modify_position(
-                    ModifyPositionParams {
-                        collateral_asset: asset.contract_address,
-                        debt_asset: Zero::zero(),
-                        user: contract_address_const::<'ZERO'>(),
-                        collateral: Amount {
-                            denomination: AmountDenomination::Assets, value: I257Trait::new(INFLATION_FEE, false),
-                        },
-                        debt: Default::default(),
-                    },
-                );
         }
     }
 
@@ -249,27 +216,6 @@ mod DefaultExtensionPOV2 {
 
             // set the pool owner
             self.owner.write(owner);
-        }
-
-        /// Adds an asset
-        /// # Arguments
-        /// * `asset_params` - asset parameters
-        /// * `interest_rate_model` - interest rate model
-        /// * `pragma_oracle_params` - pragma oracle parameters
-        fn add_asset(
-            ref self: ContractState,
-            asset_params: AssetParams,
-            interest_rate_config: InterestRateConfig,
-            pragma_oracle_params: PragmaOracleParams,
-        ) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            let asset = asset_params.asset;
-
-            let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            singleton.set_asset_config(asset_params, interest_rate_config, pragma_oracle_params);
-
-            // burn inflation fee
-            self.burn_inflation_fee(asset, asset_params.is_legacy);
         }
 
         /// Sets the debt cap for a given asset
