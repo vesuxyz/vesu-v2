@@ -1,21 +1,9 @@
 use starknet::{ClassHash, ContractAddress};
-use vesu::data_model::AssetParams;
+use vesu::data_model::{AssetParams, PragmaOracleParams};
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{
     LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus,
 };
-use vesu::extension::components::pragma_oracle::OracleConfig;
-use vesu::vendor::pragma::AggregationMode;
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct PragmaOracleParams {
-    pub pragma_key: felt252,
-    pub timeout: u64, // [seconds]
-    pub number_of_sources: u32,
-    pub start_time_offset: u64, // [seconds]
-    pub time_window: u64, // [seconds]
-    pub aggregation_mode: AggregationMode,
-}
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct ShutdownParams {
@@ -44,9 +32,6 @@ pub trait IDefaultExtensionCallback<TContractState> {
 pub trait IDefaultExtensionPOV2<TContractState> {
     fn pool_owner(self: @TContractState) -> ContractAddress;
     fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
-    fn pragma_oracle(self: @TContractState) -> ContractAddress;
-    fn pragma_summary(self: @TContractState) -> ContractAddress;
-    fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
     fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
     fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
@@ -69,7 +54,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
     );
     fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
-    fn set_oracle_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: felt252);
     fn set_liquidation_config(
         ref self: TContractState,
         collateral_asset: ContractAddress,
@@ -99,18 +83,16 @@ mod DefaultExtensionPOV2 {
     use starknet::syscalls::replace_class_syscall;
     #[feature("deprecated-starknet-consts")]
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, AssetParams, AssetPrice, Context, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, AssetParams, Context, ModifyPositionParams, PragmaOracleParams};
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::extension::components::position_hooks::position_hooks_component::PositionHooksTrait;
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus, position_hooks_component,
     };
-    use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
-    use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
     use vesu::extension::default_extension_po_v2::{
         IDefaultExtensionCallback, IDefaultExtensionPOV2, IDefaultExtensionPOV2Dispatcher,
-        IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams,
+        IDefaultExtensionPOV2DispatcherTrait,
     };
     use vesu::extension::interface::IExtension;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
@@ -118,7 +100,6 @@ mod DefaultExtensionPOV2 {
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
-    component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
 
     #[storage]
     struct Storage {
@@ -132,9 +113,6 @@ mod DefaultExtensionPOV2 {
         // storage for the interest rate model component
         #[substorage(v0)]
         interest_rate_model: interest_rate_model_component::Storage,
-        // storage for the pragma oracle component
-        #[substorage(v0)]
-        pragma_oracle: pragma_oracle_component::Storage,
         // tracks the address that can transition the shutdown mode
         shutdown_mode_agent: ContractAddress,
     }
@@ -155,21 +133,13 @@ mod DefaultExtensionPOV2 {
     enum Event {
         PositionHooksEvents: position_hooks_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
-        PragmaOracleEvents: pragma_oracle_component::Event,
         SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-        singleton: ContractAddress,
-        oracle_address: ContractAddress,
-        summary_address: ContractAddress,
-    ) {
+    fn constructor(ref self: ContractState, singleton: ContractAddress) {
         self.singleton.write(singleton);
-        self.pragma_oracle.set_oracle(oracle_address);
-        self.pragma_oracle.set_summary_address(summary_address);
     }
 
     /// Helper method for transferring an amount of an asset from one address to another. Reverts if the transfer fails.
@@ -243,29 +213,6 @@ mod DefaultExtensionPOV2 {
         /// * `shutdown_mode_agent` - address of the shutdown mode agent
         fn shutdown_mode_agent(self: @ContractState) -> ContractAddress {
             self.shutdown_mode_agent.read()
-        }
-
-        /// Returns the address of the pragma oracle contract
-        /// # Returns
-        /// * `oracle_address` - address of the pragma oracle contract
-        fn pragma_oracle(self: @ContractState) -> ContractAddress {
-            self.pragma_oracle.oracle_address()
-        }
-
-        /// Returns the address of the pragma summary contract
-        /// # Returns
-        /// * `summary_address` - address of the pragma summary contract
-        fn pragma_summary(self: @ContractState) -> ContractAddress {
-            self.pragma_oracle.summary_address()
-        }
-
-        /// Returns the oracle configuration for a given asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `oracle_config` - oracle configuration
-        fn oracle_config(self: @ContractState, asset: ContractAddress) -> OracleConfig {
-            self.pragma_oracle.oracle_configs.read(asset)
         }
 
         /// Returns the debt cap for a given asset
@@ -352,26 +299,11 @@ mod DefaultExtensionPOV2 {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             let asset = asset_params.asset;
 
-            // set the oracle config
-            self
-                .pragma_oracle
-                .set_oracle_config(
-                    asset,
-                    OracleConfig {
-                        pragma_key: pragma_oracle_params.pragma_key,
-                        timeout: pragma_oracle_params.timeout,
-                        number_of_sources: pragma_oracle_params.number_of_sources,
-                        start_time_offset: pragma_oracle_params.start_time_offset,
-                        time_window: pragma_oracle_params.time_window,
-                        aggregation_mode: pragma_oracle_params.aggregation_mode,
-                    },
-                );
-
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(asset, interest_rate_config);
 
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            singleton.set_asset_config(asset_params);
+            singleton.set_asset_config(asset_params, pragma_oracle_params);
 
             // burn inflation fee
             self.burn_inflation_fee(asset, asset_params.is_legacy);
@@ -399,16 +331,6 @@ mod DefaultExtensionPOV2 {
         ) {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
-        }
-
-        /// Sets a parameter for a given oracle configuration of an asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// * `parameter` - parameter name
-        /// * `value` - value of the parameter
-        fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            self.pragma_oracle.set_oracle_parameter(asset, parameter, value);
         }
 
         /// Sets the liquidation config for a given pair
@@ -533,16 +455,6 @@ mod DefaultExtensionPOV2 {
         /// * `singleton` - address of the singleton contract
         fn singleton(self: @ContractState) -> ContractAddress {
             self.singleton.read()
-        }
-
-        /// Returns the price for a given asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `AssetPrice` - latest price of the asset and its validity
-        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
-            let (value, is_valid) = self.pragma_oracle.price(asset);
-            AssetPrice { value, is_valid }
         }
 
         /// Returns the current interest rate for a given asset, given it's utilization

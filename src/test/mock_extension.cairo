@@ -4,7 +4,7 @@ mod MockExtension {
     use core::num::traits::Zero;
     use starknet::ContractAddress;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
-    use vesu::data_model::{AssetPrice, Context};
+    use vesu::data_model::Context;
     use vesu::extension::interface::IExtension;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
@@ -27,12 +27,6 @@ mod MockExtension {
     impl MockExtensionImpl of IExtension<ContractState> {
         fn singleton(self: @ContractState) -> ContractAddress {
             self.singleton.read()
-        }
-
-        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
-            ISingletonV2Dispatcher { contract_address: self.singleton.read() }
-                .context(asset, Zero::zero(), Zero::zero());
-            AssetPrice { value: SCALE, is_valid: true }
         }
 
         fn interest_rate(

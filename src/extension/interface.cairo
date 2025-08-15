@@ -1,11 +1,10 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
-use vesu::data_model::{AssetPrice, Context};
+use vesu::data_model::Context;
 
 #[starknet::interface]
 pub trait IExtension<TContractState> {
     fn singleton(self: @TContractState) -> ContractAddress;
-    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
     fn interest_rate(
         self: @TContractState,
         asset: ContractAddress,

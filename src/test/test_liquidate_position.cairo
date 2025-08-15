@@ -171,7 +171,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_1() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -207,7 +207,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
 
@@ -231,7 +231,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_2() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -267,7 +267,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
         mock_pragma_oracle.set_num_sources_aggregated(DEBT_PRAGMA_KEY, 1);
 
@@ -290,7 +290,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_no_bad_debt() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -326,7 +326,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (position_before, _, debt) = singleton
@@ -416,7 +416,7 @@ mod TestLiquidatePosition {
     //     // LIQUIDATOR
 
     //     // reduce oracle price
-    //     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+    //     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
     //     mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
     //     let (_, _, debt) = singleton
@@ -511,7 +511,7 @@ mod TestLiquidatePosition {
     //     // LIQUIDATOR
 
     //     // reduce oracle price
-    //     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+    //     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
     //     mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
     //     let (position_before, _, debt) = singleton
@@ -595,7 +595,7 @@ mod TestLiquidatePosition {
     //     // LIQUIDATOR
 
     //     // reduce oracle price
-    //     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+    //     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
     //     mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
     //     let (position_before, _, debt) = singleton
@@ -635,7 +635,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_bad_debt_2() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -677,7 +677,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (position_before, _, debt) = singleton
@@ -723,7 +723,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "less-than-min-collateral")]
     fn test_liquidate_position_partial_insufficient_collateral_released() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -759,7 +759,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (position_before, _, debt) = singleton
@@ -790,7 +790,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_bad_debt() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -829,7 +829,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (_, _, debt) = singleton
@@ -863,7 +863,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_full_bad_debt() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -902,7 +902,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 4);
 
         let (_, _, debt) = singleton
@@ -936,7 +936,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_full_no_bad_debt() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -975,7 +975,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1 / 2);
 
         let (_, _, debt) = singleton
@@ -1080,7 +1080,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
@@ -1186,7 +1186,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
@@ -1292,7 +1292,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
@@ -1398,7 +1398,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton
@@ -1507,7 +1507,7 @@ mod TestLiquidatePosition {
         // LIQUIDATOR
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, debt_price.try_into().unwrap());
 
         let (collateralized, _, _) = singleton

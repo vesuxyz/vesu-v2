@@ -8,10 +8,10 @@ mod TestDefaultExtensionPOV2 {
     };
     #[feature("deprecated-starknet-consts")]
     use starknet::contract_address_const;
-    use vesu::data_model::{AssetParams, FeeConfig, LTVConfig};
+    use vesu::data_model::{AssetParams, FeeConfig, LTVConfig, PragmaOracleParams};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig, ShutdownMode};
-    use vesu::extension::default_extension_po_v2::{IDefaultExtensionPOV2DispatcherTrait, PragmaOracleParams};
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait};
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env};
@@ -89,8 +89,8 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "oracle-config-already-set")]
-    fn test_add_asset_oracle_config_already_set() {
+    #[should_panic(expected: "interest-rate-config-already-set")]
+    fn test_add_asset_already_exists() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
@@ -400,51 +400,51 @@ mod TestDefaultExtensionPOV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let oracle_config = extension.oracle_config(config.collateral_asset.contract_address);
+        let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.timeout == 5_u64, 'timeout not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'number_of_sources', 11_u64.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'number_of_sources', 11_u64.into());
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let oracle_config = extension.oracle_config(config.collateral_asset.contract_address);
+        let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.number_of_sources == 11, 'number_of_sources not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'start_time_offset', 10_u64.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'start_time_offset', 10_u64.into());
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let oracle_config = extension.oracle_config(config.collateral_asset.contract_address);
+        let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.start_time_offset == 10, 'start_time_offset not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 10_u64.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 10_u64.into());
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let oracle_config = extension.oracle_config(config.collateral_asset.contract_address);
+        let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.time_window == 10, 'time_window not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'aggregation_mode', 'Mean'.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'aggregation_mode', 'Mean'.into());
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let oracle_config = extension.oracle_config(config.collateral_asset.contract_address);
+        let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.aggregation_mode == AggregationMode::Mean, 'aggregation_mode not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'pragma_key', '123'.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'pragma_key', '123'.into());
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let oracle_config = extension.oracle_config(config.collateral_asset.contract_address);
+        let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.pragma_key == '123', 'pragma_key not set');
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-owner")]
+    #[should_panic(expected: "caller-not-extension-owner")]
     fn test_extension_set_oracle_parameter_caller_not_owner() {
         let Env {
             singleton, extension, config, users, ..,
@@ -452,7 +452,7 @@ mod TestDefaultExtensionPOV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
     }
 
     #[test]
@@ -464,9 +464,9 @@ mod TestDefaultExtensionPOV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'a', 5_u64.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'a', 5_u64.into());
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -478,9 +478,9 @@ mod TestDefaultExtensionPOV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(Zero::zero(), 'timeout', 5_u64.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(Zero::zero(), 'timeout', 5_u64.into());
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -492,9 +492,9 @@ mod TestDefaultExtensionPOV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 1_u64.into());
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 1_u64.into());
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]

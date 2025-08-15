@@ -327,7 +327,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -402,7 +402,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -477,7 +477,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -554,7 +554,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -630,7 +630,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -732,7 +732,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -839,7 +839,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -948,7 +948,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -1056,7 +1056,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -1171,7 +1171,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -1317,7 +1317,7 @@ mod TestShutdown {
         // warp to non zero block timestamp first
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // oracle failure in pair 1 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
         // update shutdown mode
         extension.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
@@ -1327,7 +1327,7 @@ mod TestShutdown {
 
         // Pair 2: None -> Recovery
         // undercollateraliztion in pair 2 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
@@ -1339,7 +1339,7 @@ mod TestShutdown {
 
         // Pair 3: None -> Recovery
         // undercollateraliztion in pair 3 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(THIRD_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // update shutdown mode
         extension.update_shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
@@ -1504,7 +1504,7 @@ mod TestShutdown {
 
         // Pair 1 and Pair 2: None -> Recovery
         // undercollateraliztion in pair 1 and pair 2 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 2);
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
