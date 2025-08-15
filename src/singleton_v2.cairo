@@ -92,6 +92,8 @@ pub trait ISingletonV2<TContractState> {
     ) -> u256;
     fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
     fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
+    fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
+    fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -153,6 +155,8 @@ mod SingletonV2 {
         delegations: Map<(ContractAddress, ContractAddress), bool>,
         // fee configuration
         fee_config: FeeConfig,
+        // tracks the address that can transition the shutdown mode
+        shutdown_mode_agent: ContractAddress,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         // storage for the pragma oracle component
@@ -282,6 +286,12 @@ mod SingletonV2 {
         fee_config: FeeConfig,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct SetShutdownModeAgent {
+        #[key]
+        agent: ContractAddress,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -302,6 +312,7 @@ mod SingletonV2 {
         ContractUpgraded: ContractUpgraded,
         ClaimFees: ClaimFees,
         SetFeeConfig: SetFeeConfig,
+        SetShutdownModeAgent: SetShutdownModeAgent,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -1211,6 +1222,22 @@ mod SingletonV2 {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.update_fee_shares(asset);
             self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
+        }
+
+        /// Returns the address of the shutdown mode agent
+        /// # Returns
+        /// * `shutdown_mode_agent` - address of the shutdown mode agent
+        fn shutdown_mode_agent(self: @ContractState) -> ContractAddress {
+            self.shutdown_mode_agent.read()
+        }
+
+        /// Sets the shutdown mode agent
+        /// # Arguments
+        /// * `shutdown_mode_agent` - address of the shutdown mode agent
+        fn set_shutdown_mode_agent(ref self: ContractState, shutdown_mode_agent: ContractAddress) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            self.shutdown_mode_agent.write(shutdown_mode_agent);
+            self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
         }
 
         /// Returns the name of the contract

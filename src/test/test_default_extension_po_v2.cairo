@@ -662,31 +662,31 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_extension_set_shutdown_mode_agent() {
+    fn test_set_shutdown_mode_agent() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_shutdown_mode_agent(users.lender);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_shutdown_mode_agent(users.lender);
+        stop_cheat_caller_address(singleton.contract_address);
 
-        let shutdown_mode_agent = extension.shutdown_mode_agent();
+        let shutdown_mode_agent = singleton.shutdown_mode_agent();
         assert(shutdown_mode_agent == users.lender, 'Shutdown mode agent not set');
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-owner")]
-    fn test_extension_set_shutdown_mode_agent_caller_not_owner() {
+    #[should_panic(expected: "caller-not-extension-owner")]
+    fn test_set_shutdown_mode_agent_caller_not_owner() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        extension.set_shutdown_mode_agent(users.lender);
+        singleton.set_shutdown_mode_agent(users.lender);
     }
 
     #[test]
@@ -697,9 +697,9 @@ mod TestDefaultExtensionPOV2 {
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_shutdown_mode_agent(users.lender);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_shutdown_mode_agent(users.lender);
+        stop_cheat_caller_address(singleton.contract_address);
 
         start_cheat_caller_address(extension.contract_address, users.lender);
         extension.set_shutdown_mode(ShutdownMode::Recovery);
