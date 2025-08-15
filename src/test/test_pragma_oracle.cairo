@@ -7,9 +7,7 @@ mod TestPragmaOracle {
     use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams, PragmaOracleParams};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
-    use vesu::extension::default_extension_po_v2::{
-        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait, LiquidationParams, ShutdownParams,
-    };
+    use vesu::extension::default_extension_po_v2::{LiquidationParams, ShutdownParams};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
@@ -21,7 +19,6 @@ mod TestPragmaOracle {
 
 
     fn create_custom_pool(
-        extension: IDefaultExtensionPOV2Dispatcher,
         owner: ContractAddress,
         singleton: ISingletonV2Dispatcher,
         collateral_asset: ContractAddress,
@@ -97,9 +94,6 @@ mod TestPragmaOracle {
 
         let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.create_pool(owner);
-
         // Add assets.
         cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
         singleton
@@ -121,8 +115,8 @@ mod TestPragmaOracle {
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton
             .set_liquidation_config(
                 :collateral_asset,
                 :debt_asset,
@@ -134,8 +128,8 @@ mod TestPragmaOracle {
         let collateral_asset = debt_asset_params.asset;
         let debt_asset = collateral_asset_params.asset;
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton
             .set_liquidation_config(
                 :collateral_asset,
                 :debt_asset,
@@ -149,14 +143,14 @@ mod TestPragmaOracle {
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: collateral_asset_debt_cap_params.debt_cap);
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: collateral_asset_debt_cap_params.debt_cap);
 
         let collateral_asset = debt_asset_params.asset;
         let debt_asset = collateral_asset_params.asset;
 
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_asset_debt_cap_params.debt_cap);
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_asset_debt_cap_params.debt_cap);
 
         // Set lvt config.
         let collateral_asset = debt_asset_params.asset;
@@ -179,14 +173,14 @@ mod TestPragmaOracle {
 
         // set the shutdown config
         let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
-        cheat_caller_address(extension.contract_address, owner, CheatSpan::TargetCalls(1));
-        extension.set_shutdown_config(shutdown_config: ShutdownConfig { recovery_period, subscription_period });
+        cheat_caller_address(singleton.contract_address, owner, CheatSpan::TargetCalls(1));
+        singleton.set_shutdown_config(shutdown_config: ShutdownConfig { recovery_period, subscription_period });
         // No stop_cheat_caller_address needed for one-shot cheat_caller_address
     }
 
     #[test]
     fn test_get_default_price() {
-        let (singleton, _, config, _, _) = setup();
+        let (singleton, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let collateral_asset_price = singleton.price(collateral_asset.contract_address);
@@ -200,7 +194,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_get_price_high() {
-        let (singleton, _, config, _, _) = setup();
+        let (singleton, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
@@ -226,21 +220,13 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout() {
-        let Env {
-            singleton, extension, config, users, ..,
-        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let timeout = 10;
 
         create_custom_pool(
-            extension,
-            users.owner,
-            singleton,
-            collateral_asset.contract_address,
-            debt_asset.contract_address,
-            timeout,
-            2,
+            users.owner, singleton, collateral_asset.contract_address, debt_asset.contract_address, timeout, 2,
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
@@ -261,21 +247,13 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout_stale_price() {
-        let Env {
-            singleton, extension, config, users, ..,
-        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let timeout = 10;
 
         create_custom_pool(
-            extension,
-            users.owner,
-            singleton,
-            collateral_asset.contract_address,
-            debt_asset.contract_address,
-            timeout,
-            2,
+            users.owner, singleton, collateral_asset.contract_address, debt_asset.contract_address, timeout, 2,
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
@@ -291,14 +269,11 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_reached() {
-        let Env {
-            singleton, extension, config, users, ..,
-        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
         create_custom_pool(
-            extension,
             users.owner,
             singleton,
             collateral_asset.contract_address,
@@ -326,14 +301,11 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_not_reached() {
-        let Env {
-            singleton, extension, config, users, ..,
-        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
         create_custom_pool(
-            extension,
             users.owner,
             singleton,
             collateral_asset.contract_address,
@@ -354,7 +326,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_price_twap() {
-        let (singleton, _, config, _, _) = setup();
+        let (singleton, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         store(
