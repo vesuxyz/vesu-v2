@@ -272,7 +272,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
             collateral_asset_config: config,
@@ -322,7 +321,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
             collateral_asset_config: config,
@@ -466,7 +464,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
             collateral_asset_config: config,
@@ -577,7 +574,6 @@ mod TestCommon {
         };
 
         let mut context = Context {
-            extension: Zero::zero(),
             collateral_asset: Zero::zero(),
             debt_asset: Zero::zero(),
             collateral_asset_config: config,

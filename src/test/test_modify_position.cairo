@@ -7,69 +7,19 @@ mod TestModifyPosition {
         stop_cheat_caller_address,
     };
     #[feature("deprecated-starknet-consts")]
-    use starknet::{get_block_timestamp, get_caller_address};
-    use vesu::data_model::{Amount, AmountDenomination, AssetConfig, Context, ModifyPositionParams, Position};
-    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
-    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
+    use starknet::get_block_timestamp;
+    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
     use vesu::units::{DAY_IN_SECONDS, SCALE, YEAR_IN_SECONDS};
-
-    #[test]
-    #[should_panic(expected: "caller-not-singleton")]
-    fn test_after_modify_position_caller_not_singleton() {
-        let (_, extension, _, _, _) = setup();
-
-        let asset_scale = 100_000_000;
-
-        let config = AssetConfig {
-            total_collateral_shares: SCALE,
-            total_nominal_debt: SCALE / 2,
-            reserve: 100 * asset_scale,
-            max_utilization: SCALE,
-            floor: SCALE,
-            scale: asset_scale,
-            is_legacy: false,
-            last_updated: 0,
-            last_rate_accumulator: SCALE,
-            last_full_utilization_rate: 6517893350,
-            fee_rate: 0,
-            fee_shares: 0,
-        };
-
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
-
-        let context = Context {
-            extension: Zero::zero(),
-            collateral_asset: Zero::zero(),
-            debt_asset: Zero::zero(),
-            collateral_asset_config: config,
-            debt_asset_config: config,
-            collateral_asset_price: Default::default(),
-            debt_asset_price: Default::default(),
-            max_ltv: 2,
-            user: Zero::zero(),
-            position: position,
-        };
-
-        IExtensionDispatcher { contract_address: extension.contract_address }
-            .after_modify_position(
-                context,
-                Default::default(),
-                Default::default(),
-                Default::default(),
-                Default::default(),
-                caller: get_caller_address(),
-            );
-    }
 
     // identical-assets
 
     #[test]
     #[should_panic(expected: "no-delegation")]
     fn test_modify_position_no_delegation() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit_third, .. } = terms;
 
@@ -103,7 +53,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "utilization-exceeded")]
     fn test_modify_position_utilization_exceeded() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -144,7 +94,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "not-collateralized")]
     fn test_modify_position_not_collateralized() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -245,7 +195,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "dusty-collateral-balance")]
     fn test_modify_position_dusty_collateral_balance() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -287,7 +237,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "dusty-debt-balance")]
     fn test_modify_position_dusty_debt_balance() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, .. } = terms;
 
@@ -358,7 +308,7 @@ mod TestModifyPosition {
     #[test]
     #[fuzzer(runs: 256, seed: 100)]
     fn test_fuzz_modify_position_deposit_withdraw_collateral(seed: u128) {
-        let (singleton, _, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -472,7 +422,7 @@ mod TestModifyPosition {
     #[test]
     #[fuzzer(runs: 256, seed: 100)]
     fn test_fuzz_modify_position_borrow_repay_debt(seed: u128) {
-        let (singleton, _, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
 
         let amount: u256 = seed.into() / 10000000000000;
@@ -600,7 +550,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_collateral_amounts() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
@@ -739,7 +689,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_debt_amounts() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, debt_to_draw, .. } = terms;
 
@@ -863,7 +813,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_complex() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, debt_to_draw, nominal_debt_to_draw, ..,
@@ -1065,7 +1015,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_fees() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, third_scale, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -1100,7 +1050,7 @@ mod TestModifyPosition {
         let asset_config = singleton.asset_config(third_asset.contract_address);
         let total_collateral_shares = asset_config.total_collateral_shares;
 
-        let pair = extension.pairs(collateral_asset.contract_address, third_asset.contract_address);
+        let pair = singleton.pairs(collateral_asset.contract_address, third_asset.contract_address);
         assert(pair.total_collateral_shares > 0 && pair.total_nominal_debt > 0, 'Pair not initialized');
 
         start_cheat_block_timestamp_global(get_block_timestamp() + YEAR_IN_SECONDS.try_into().unwrap());
@@ -1139,7 +1089,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_accrue_interest() {
-        let (singleton, _extension, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, third_scale, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -1246,7 +1196,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_zero_asset() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -1268,7 +1218,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "zero-debt")]
     fn test_modify_position_zero_asset_borrow() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -1288,7 +1238,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "not-collateralized")]
     fn test_modify_position_no_pair() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 

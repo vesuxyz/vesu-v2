@@ -1,16 +1,10 @@
 #[cfg(test)]
 mod TestLiquidatePosition {
     use alexandria_math::i257::I257Trait;
-    use core::num::traits::Zero;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
-    use starknet::get_caller_address;
-    use vesu::data_model::{
-        Amount, AmountDenomination, AssetConfig, Context, LiquidatePositionParams, ModifyPositionParams, Position,
-    };
+    use vesu::data_model::{Amount, AmountDenomination, LiquidatePositionParams, ModifyPositionParams};
     use vesu::extension::components::position_hooks::LiquidationConfig;
-    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
-    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
@@ -18,101 +12,9 @@ mod TestLiquidatePosition {
     use vesu::units::{SCALE, SCALE_128};
 
     #[test]
-    #[should_panic(expected: "caller-not-singleton")]
-    fn test_before_liquidate_position_caller_not_singleton() {
-        let (_, extension, _, _, _) = setup();
-
-        let asset_scale = 100_000_000;
-
-        let config = AssetConfig {
-            total_collateral_shares: SCALE,
-            total_nominal_debt: SCALE / 2,
-            reserve: 100 * asset_scale,
-            max_utilization: SCALE,
-            floor: SCALE,
-            scale: asset_scale,
-            is_legacy: false,
-            last_updated: 0,
-            last_rate_accumulator: SCALE,
-            last_full_utilization_rate: 6517893350,
-            fee_rate: 0,
-            fee_shares: 0,
-        };
-
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
-
-        let context = Context {
-            extension: Zero::zero(),
-            collateral_asset: Zero::zero(),
-            debt_asset: Zero::zero(),
-            collateral_asset_config: config,
-            debt_asset_config: config,
-            collateral_asset_price: Default::default(),
-            debt_asset_price: Default::default(),
-            max_ltv: 2,
-            user: Zero::zero(),
-            position: position,
-        };
-
-        IExtensionDispatcher { contract_address: extension.contract_address }
-            .before_liquidate_position(
-                context, min_collateral_to_receive: 0, debt_to_repay: 0, caller: get_caller_address(),
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "caller-not-singleton")]
-    fn test_after_liquidate_position_caller_not_singleton() {
-        let (_, extension, _, _, _) = setup();
-
-        let asset_scale = 100_000_000;
-
-        let config = AssetConfig {
-            total_collateral_shares: SCALE,
-            total_nominal_debt: SCALE / 2,
-            reserve: 100 * asset_scale,
-            max_utilization: SCALE,
-            floor: SCALE,
-            scale: asset_scale,
-            is_legacy: false,
-            last_updated: 0,
-            last_rate_accumulator: SCALE,
-            last_full_utilization_rate: 6517893350,
-            fee_rate: 0,
-            fee_shares: 0,
-        };
-
-        let position = Position { collateral_shares: Default::default(), nominal_debt: Default::default() };
-
-        let context = Context {
-            extension: Zero::zero(),
-            collateral_asset: Zero::zero(),
-            debt_asset: Zero::zero(),
-            collateral_asset_config: config,
-            debt_asset_config: config,
-            collateral_asset_price: Default::default(),
-            debt_asset_price: Default::default(),
-            max_ltv: 2,
-            user: Zero::zero(),
-            position: position,
-        };
-
-        IExtensionDispatcher { contract_address: extension.contract_address }
-            .after_liquidate_position(
-                context,
-                Default::default(),
-                Default::default(),
-                Default::default(),
-                Default::default(),
-                Default::default(),
-                caller: get_caller_address(),
-            );
-    }
-
-    #[test]
     #[should_panic(expected: "not-undercollateralized")]
     fn test_liquidate_position_not_undercollateralized() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -171,7 +73,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_1() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -231,7 +133,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_2() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -290,7 +192,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_no_bad_debt() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -362,7 +264,7 @@ mod TestLiquidatePosition {
 
     // #[test]
     // fn test_liquidate_position_partial_floor() {
-    //     let (singleton, extension, config, users, terms) = setup();
+    //     let (singleton, config, users, terms) = setup();
     //     let TestConfig { collateral_asset, debt_asset, .. } = config;
     //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -456,7 +358,7 @@ mod TestLiquidatePosition {
 
     // #[test]
     // fn test_liquidate_position_partial_no_bad_debt_discounted() {
-    //     let (singleton, extension, config, users, terms) = setup();
+    //     let (singleton, config, users, terms) = setup();
     //     let TestConfig { collateral_asset, debt_asset, .. } = config;
     //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -545,7 +447,7 @@ mod TestLiquidatePosition {
 
     // #[test]
     // fn test_liquidate_position_partial_no_bad_debt_in_shares() {
-    //     let (singleton, extension, config, users, terms) = setup();
+    //     let (singleton, config, users, terms) = setup();
     //     let TestConfig { collateral_asset, debt_asset, .. } = config;
     //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -635,7 +537,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_bad_debt_2() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -723,7 +625,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "less-than-min-collateral")]
     fn test_liquidate_position_partial_insufficient_collateral_released() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -790,7 +692,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_bad_debt() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -863,7 +765,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_full_bad_debt() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -936,7 +838,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_full_no_bad_debt() {
-        let (singleton, _, config, users, terms) = setup();
+        let (singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1009,7 +911,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_1_full_liquidation() {
-        let (singleton, extension, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -1023,14 +925,14 @@ mod TestLiquidatePosition {
             * debt_scale
             / collateral_scale;
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
-        stop_cheat_caller_address(extension.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
 
         start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
@@ -1118,7 +1020,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_2_full_liquidation() {
-        let (singleton, extension, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -1129,14 +1031,14 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt;
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
-        stop_cheat_caller_address(extension.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
 
         start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
@@ -1224,7 +1126,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_3_full_liquidation() {
-        let (singleton, extension, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -1235,14 +1137,14 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 90 / 100;
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
-        stop_cheat_caller_address(extension.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
 
         start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
@@ -1330,7 +1232,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_4_full_liquidation() {
-        let (singleton, extension, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -1341,14 +1243,14 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 2;
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
-        stop_cheat_caller_address(extension.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
 
         start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
@@ -1436,7 +1338,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_5_partial_liquidation() {
-        let (singleton, extension, config, users, _) = setup();
+        let (singleton, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -1450,14 +1352,14 @@ mod TestLiquidatePosition {
             * debt_scale)
             / (debt_price * 2);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
             );
-        stop_cheat_caller_address(extension.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
 
         start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
