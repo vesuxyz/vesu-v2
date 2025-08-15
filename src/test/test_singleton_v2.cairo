@@ -11,6 +11,7 @@ mod TestSingletonV2 {
     use vesu::data_model::{
         Amount, AmountDenomination, AssetParams, LTVConfig, LTVParams, ModifyPositionParams, PragmaOracleParams,
     };
+    use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait};
     use vesu::test::setup_v2::{
@@ -27,6 +28,19 @@ mod TestSingletonV2 {
             start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(()),
+        }
+    }
+
+    fn dummy_interest_rate_config() -> InterestRateConfig {
+        InterestRateConfig {
+            min_target_utilization: 75_000,
+            max_target_utilization: 85_000,
+            target_utilization: 87_500,
+            min_full_utilization_rate: 1582470460,
+            max_full_utilization_rate: 32150205761,
+            zero_utilization_rate: 158247046,
+            rate_half_life: 172_800,
+            target_rate_percent: 20 * PERCENT,
         }
     }
 
@@ -72,8 +86,9 @@ mod TestSingletonV2 {
 
         // store all asset configurations
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :pragma_oracle_params);
-        singleton.set_asset_config(params: collateral_asset_params, :pragma_oracle_params);
+        let interest_rate_config = dummy_interest_rate_config();
+        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
+        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
 
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -120,8 +135,9 @@ mod TestSingletonV2 {
 
         // store all asset configurations
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :pragma_oracle_params);
-        singleton.set_asset_config(params: debt_asset_params, :pragma_oracle_params);
+        let interest_rate_config = dummy_interest_rate_config();
+        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
+        singleton.set_asset_config(params: debt_asset_params, :interest_rate_config, :pragma_oracle_params);
         stop_cheat_caller_address(singleton.contract_address);
 
         // store all loan-to-value configurations for each asset pair
@@ -163,8 +179,9 @@ mod TestSingletonV2 {
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
+        let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :pragma_oracle_params);
+        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
 
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -190,8 +207,9 @@ mod TestSingletonV2 {
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
+        let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :pragma_oracle_params);
+        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
 
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -217,8 +235,9 @@ mod TestSingletonV2 {
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
+        let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :pragma_oracle_params);
+        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
 
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -244,8 +263,9 @@ mod TestSingletonV2 {
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
+        let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :pragma_oracle_params);
+        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
 
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -272,7 +292,8 @@ mod TestSingletonV2 {
         };
 
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(asset_params, :pragma_oracle_params);
+        let interest_rate_config = dummy_interest_rate_config();
+        singleton.set_asset_config(asset_params, :interest_rate_config, :pragma_oracle_params);
     }
 
     #[test]
@@ -296,7 +317,8 @@ mod TestSingletonV2 {
         };
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(asset_params, :pragma_oracle_params);
+        let interest_rate_config = dummy_interest_rate_config();
+        singleton.set_asset_config(asset_params, :interest_rate_config, :pragma_oracle_params);
         stop_cheat_caller_address(singleton.contract_address);
 
         let asset_config = singleton.asset_config(config.collateral_asset.contract_address);

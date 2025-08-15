@@ -7,7 +7,6 @@ mod TestInterestRateModel {
     use vesu::data_model::{Amount, AmountDenomination, AssetConfig, ModifyPositionParams};
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::calculate_interest_rate;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, InterestRateConfigPacking};
-    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
     use vesu::math::pow_scale;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
@@ -319,9 +318,9 @@ mod TestInterestRateModel {
         let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
         assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (fee_shares_after, _) = singleton.get_fees(debt_asset.contract_address);
         assert!(fee_shares_after == fee_shares_before, "Fee shares mismatch");

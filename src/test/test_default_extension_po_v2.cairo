@@ -89,7 +89,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "interest-rate-config-already-set")]
+    #[should_panic(expected: "asset-config-already-exists")]
     fn test_add_asset_already_exists() {
         let Env {
             singleton, extension, config, users, ..,
@@ -498,106 +498,106 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_extension_set_interest_rate_parameter() {
+    fn test_set_interest_rate_parameter() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.min_target_utilization == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'max_target_utilization', 5);
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'max_target_utilization', 5);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.max_target_utilization == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'target_utilization', 5);
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'target_utilization', 5);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.target_utilization == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_interest_rate_parameter(
                 config.collateral_asset.contract_address, 'min_full_utilization_rate', 1582470461,
             );
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.min_full_utilization_rate == 1582470461, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton
             .set_interest_rate_parameter(
                 config.collateral_asset.contract_address, 'max_full_utilization_rate', SCALE * 3,
             );
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.max_full_utilization_rate == SCALE * 3, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'zero_utilization_rate', 1);
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'zero_utilization_rate', 1);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.zero_utilization_rate == 1, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'rate_half_life', 5);
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'rate_half_life', 5);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.rate_half_life == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'target_rate_percent', 5);
-        stop_cheat_caller_address(extension.contract_address);
-        let interest_rate_config = extension.interest_rate_config(config.collateral_asset.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'target_rate_percent', 5);
+        stop_cheat_caller_address(singleton.contract_address);
+        let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.target_rate_percent == 5, 'Interest rate parameter not set');
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-owner")]
-    fn test_extension_set_interest_rate_parameter_caller_not_owner() {
+    #[should_panic(expected: "caller-not-extension-owner")]
+    fn test_set_interest_rate_parameter_caller_not_owner() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
     }
 
     #[test]
     #[should_panic(expected: "invalid-interest-rate-parameter")]
-    fn test_extension_set_interest_rate_parameter_invalid_interest_rate_parameter() {
+    fn test_set_interest_rate_parameter_invalid_interest_rate_parameter() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(config.collateral_asset.contract_address, 'a', 5);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'a', 5);
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "interest-rate-config-not-set")]
-    fn test_extension_set_interest_rate_parameter_interest_rate_config_not_set() {
+    fn test_set_interest_rate_parameter_interest_rate_config_not_set() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, extension, config, users.owner, Option::None);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.set_interest_rate_parameter(Zero::zero(), 'min_target_utilization', 5);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_interest_rate_parameter(Zero::zero(), 'min_target_utilization', 5);
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
