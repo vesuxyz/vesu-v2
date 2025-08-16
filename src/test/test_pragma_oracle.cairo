@@ -4,10 +4,11 @@ mod TestPragmaOracle {
     use snforge_std::{CheatSpan, cheat_caller_address, map_entry_address, start_cheat_block_timestamp_global, store};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::is_collateralized;
-    use vesu::data_model::{AssetParams, DebtCapParams, LTVConfig, LTVParams, PragmaOracleParams};
+    use vesu::data_model::{
+        AssetParams, DebtCapParams, LTVConfig, LTVParams, LiquidationParams, PragmaOracleParams, ShutdownParams,
+    };
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
-    use vesu::extension::default_extension_po_v2::{LiquidationParams, ShutdownParams};
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,

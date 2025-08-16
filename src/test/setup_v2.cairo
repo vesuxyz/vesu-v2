@@ -6,10 +6,11 @@ use snforge_std::{
 };
 #[feature("deprecated-starknet-consts")]
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
-use vesu::data_model::{AssetParams, DebtCapParams, FeeConfig, LTVConfig, LTVParams, PragmaOracleParams};
+use vesu::data_model::{
+    AssetParams, DebtCapParams, FeeConfig, LTVConfig, LTVParams, LiquidationParams, PragmaOracleParams, ShutdownParams,
+};
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
-use vesu::extension::default_extension_po_v2::{LiquidationParams, ShutdownParams};
 use vesu::math::pow_10;
 use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
 use vesu::test::mock_oracle::{
@@ -126,14 +127,11 @@ pub fn setup_env(
 
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
-    let extension_class_hash = *declare("DefaultExtensionPOV2").unwrap().contract_class().class_hash;
-
     let singleton = ISingletonV2Dispatcher {
         contract_address: deploy_with_args(
             "SingletonV2",
             array![
                 'PoolName',
-                extension_class_hash.into(),
                 users.owner.into(),
                 mock_pragma_oracle.contract_address.into(),
                 mock_pragma_summary.contract_address.into(),

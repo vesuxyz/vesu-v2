@@ -20,7 +20,6 @@ pub trait IFlashLoanReceiver<TContractState> {
 #[starknet::interface]
 pub trait ISingletonV2<TContractState> {
     fn pool_name(self: @TContractState) -> felt252;
-    fn extension_class_hash(self: @TContractState) -> ClassHash;
     fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
     fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
     fn position(
@@ -156,7 +155,6 @@ mod SingletonV2 {
     };
     use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
-    use vesu::extension::interface::{IExtensionDispatcherTrait, IExtensionLibraryDispatcher};
     use vesu::math::pow_10;
     use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
     use vesu::singleton_v2::{
@@ -169,8 +167,6 @@ mod SingletonV2 {
     struct Storage {
         // tracks the name
         pool_name: felt252,
-        // The class hash of the extension contract
-        extension_class_hash: ClassHash,
         // The owner of the extension
         extension_owner: ContractAddress,
         // tracks the configuration / state of each asset
@@ -363,13 +359,11 @@ mod SingletonV2 {
     fn constructor(
         ref self: ContractState,
         name: felt252,
-        extension_class_hash: ClassHash,
         owner: ContractAddress,
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
     ) {
         self.pool_name.write(name);
-        self.extension_class_hash.write(extension_class_hash);
         self.ownable.initializer(owner);
         // TODO: Support a different owner for the extension.
         self.extension_owner.write(owner);
@@ -583,13 +577,6 @@ mod SingletonV2 {
         /// * `name` - name of the pool
         fn pool_name(self: @ContractState) -> felt252 {
             self.pool_name.read()
-        }
-
-        /// Returns the extension class hash
-        /// # Returns
-        /// * `extension_class_hash` - class hash of the extension contract
-        fn extension_class_hash(self: @ContractState) -> ClassHash {
-            self.extension_class_hash.read()
         }
 
         /// Returns the configuration / state of an asset
@@ -838,19 +825,11 @@ mod SingletonV2 {
             self.assert_position_invariants(context, collateral_delta, debt_delta);
 
             // call after-hook of the extension (assets are not settled yet, only the internal state has been updated)
-            let extension = IExtensionLibraryDispatcher { class_hash: self.extension_class_hash.read() };
-            assert!(
-                extension
-                    .after_modify_position(
-                        context,
-                        collateral_delta,
-                        collateral_shares_delta,
-                        debt_delta,
-                        nominal_debt_delta,
-                        get_caller_address(),
-                    ),
-                "after-modify-position-failed",
-            );
+            self
+                .position_hooks
+                .after_modify_position(
+                    context, collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta,
+                );
 
             self
                 .emit(
@@ -884,9 +863,9 @@ mod SingletonV2 {
             let context = self.context(collateral_asset, debt_asset, user);
 
             // call before-hook of the extension
-            let extension = IExtensionLibraryDispatcher { class_hash: self.extension_class_hash.read() };
-            let (collateral, debt, bad_debt) = extension
-                .before_liquidate_position(context, min_collateral_to_receive, debt_to_repay, get_caller_address());
+            let (collateral, debt, bad_debt) = self
+                .position_hooks
+                .before_liquidate_position(context, min_collateral_to_receive, debt_to_repay);
 
             // convert unsigned amounts to signed amounts
             let collateral = Amount {
@@ -910,19 +889,7 @@ mod SingletonV2 {
             } = response;
 
             // call after-hook of the extension (assets are not settled yet, only the internal state has been updated)
-            assert!(
-                extension
-                    .after_liquidate_position(
-                        context,
-                        collateral_delta,
-                        collateral_shares_delta,
-                        debt_delta,
-                        nominal_debt_delta,
-                        bad_debt,
-                        get_caller_address(),
-                    ),
-                "after-liquidate-position-failed",
-            );
+            self.position_hooks.after_liquidate_position(context, collateral_shares_delta, nominal_debt_delta);
 
             self
                 .emit(
