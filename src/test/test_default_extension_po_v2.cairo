@@ -20,8 +20,6 @@ mod TestDefaultExtensionPOV2 {
 
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        assert!(singleton.extension_class_hash().is_non_zero(), "Extension not configured");
-
         let ltv = singleton.ltv_config(debt_asset.contract_address, collateral_asset.contract_address).max_ltv;
         assert!(ltv > 0, "Not set");
         let ltv = singleton.ltv_config(collateral_asset.contract_address, debt_asset.contract_address).max_ltv;

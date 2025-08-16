@@ -143,6 +143,24 @@ pub struct PragmaOracleParams {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
+pub struct ShutdownParams {
+    pub recovery_period: u64, // [seconds]
+    pub subscription_period: u64 // [seconds]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct LiquidationParams {
+    pub collateral_asset_index: usize,
+    pub debt_asset_index: usize,
+    pub liquidation_factor: u64 // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct FeeParams {
+    pub fee_recipient: ContractAddress,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Context {
     pub collateral_asset: ContractAddress,
     pub debt_asset: ContractAddress,
