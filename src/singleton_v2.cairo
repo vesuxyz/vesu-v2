@@ -106,6 +106,7 @@ mod SingletonV2 {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
@@ -132,7 +133,7 @@ mod SingletonV2 {
         IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait, ISingletonV2, ISingletonV2Dispatcher,
         ISingletonV2DispatcherTrait,
     };
-    use vesu::units::INFLATION_FEE;
+    use vesu::units::{INFLATION_FEE, SCALE};
 
     #[storage]
     struct Storage {
@@ -1012,16 +1013,21 @@ mod SingletonV2 {
             interest_rate_config: InterestRateConfig,
             pragma_oracle_params: PragmaOracleParams,
         ) {
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            let caller = get_caller_address();
+            assert!(caller == self.extension_owner.read(), "caller-not-extension-owner");
             assert!(self.asset_configs.read((params.asset)).scale == 0, "asset-config-already-exists");
 
+            let asset = IERC20Dispatcher { contract_address: params.asset };
+            let scale = pow_10(asset.decimals().into());
+            let total_collateral_shares = u256_mul_div(INFLATION_FEE, SCALE, scale, Rounding::Floor);
+
             let asset_config = AssetConfig {
-                total_collateral_shares: 0,
+                total_collateral_shares,
                 total_nominal_debt: 0,
-                reserve: 0,
+                reserve: INFLATION_FEE,
                 max_utilization: params.max_utilization,
                 floor: params.floor,
-                scale: pow_10(IERC20Dispatcher { contract_address: params.asset }.decimals().into()),
+                scale,
                 is_legacy: params.is_legacy,
                 last_updated: get_block_timestamp(),
                 last_rate_accumulator: params.initial_rate_accumulator,
@@ -1053,19 +1059,7 @@ mod SingletonV2 {
                 );
 
             // Burn inflation fee.
-            let asset = IERC20Dispatcher { contract_address: params.asset };
-            self
-                .modify_position(
-                    ModifyPositionParams {
-                        collateral_asset: asset.contract_address,
-                        debt_asset: Zero::zero(),
-                        user: 0.try_into().unwrap(),
-                        collateral: Amount {
-                            denomination: AmountDenomination::Assets, value: I257Trait::new(INFLATION_FEE, false),
-                        },
-                        debt: Default::default(),
-                    },
-                );
+            transfer_asset(asset.contract_address, caller, get_contract_address(), INFLATION_FEE, params.is_legacy);
 
             self.emit(SetAssetConfig { asset: params.asset });
         }
