@@ -42,7 +42,6 @@ pub trait IDefaultExtensionCallback<TContractState> {
 
 #[starknet::interface]
 pub trait IDefaultExtensionPOV2<TContractState> {
-    fn pool_name(self: @TContractState) -> felt252;
     fn pool_owner(self: @TContractState) -> ContractAddress;
     fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
@@ -58,7 +57,7 @@ pub trait IDefaultExtensionPOV2<TContractState> {
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownStatus;
     fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
-    fn create_pool(ref self: TContractState, name: felt252, owner: ContractAddress);
+    fn create_pool(ref self: TContractState, owner: ContractAddress);
     fn add_asset(
         ref self: TContractState,
         asset_params: AssetParams,
@@ -127,8 +126,6 @@ mod DefaultExtensionPOV2 {
         singleton: ContractAddress,
         // tracks the owner
         owner: ContractAddress,
-        // tracks the name
-        pool_name: felt252,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
@@ -234,13 +231,6 @@ mod DefaultExtensionPOV2 {
 
     #[abi(embed_v0)]
     impl DefaultExtensionPOV2Impl of IDefaultExtensionPOV2<ContractState> {
-        /// Returns the name of a pool
-        /// # Returns
-        /// * `name` - name of the pool
-        fn pool_name(self: @ContractState) -> felt252 {
-            self.pool_name.read()
-        }
-
         /// Returns the owner of a pool
         /// # Returns
         /// * `owner` - address of the owner
@@ -339,13 +329,10 @@ mod DefaultExtensionPOV2 {
         /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
-        fn create_pool(ref self: ContractState, name: felt252, owner: ContractAddress) {
+        fn create_pool(ref self: ContractState, owner: ContractAddress) {
             // create the pool in the singleton
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
             singleton.create_pool(extension: get_contract_address());
-
-            // set the pool name
-            self.pool_name.write(name);
 
             // set the pool owner
             self.owner.write(owner);

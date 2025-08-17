@@ -91,7 +91,6 @@ export interface FeeParams {
 }
 
 export interface CreatePoolParams {
-  pool_name: string;
   asset_params: AssetParams[];
   ltv_params: LTVParams[];
   interest_rate_configs: InterestRateConfig[];
