@@ -106,6 +106,7 @@ mod SingletonV2 {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
@@ -132,6 +133,7 @@ mod SingletonV2 {
         IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait, ISingletonV2, ISingletonV2Dispatcher,
         ISingletonV2DispatcherTrait,
     };
+    use vesu::units::{INFLATION_FEE, SCALE};
 
     #[storage]
     struct Storage {
@@ -1014,13 +1016,16 @@ mod SingletonV2 {
             assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
             assert!(self.asset_configs.read((params.asset)).scale == 0, "asset-config-already-exists");
 
+            let scale = pow_10(IERC20Dispatcher { contract_address: params.asset }.decimals().into());
+            let total_collateral_shares = u256_mul_div(INFLATION_FEE, SCALE, scale, Rounding::Floor);
+
             let asset_config = AssetConfig {
-                total_collateral_shares: 0,
+                total_collateral_shares,
                 total_nominal_debt: 0,
-                reserve: 0,
+                reserve: INFLATION_FEE,
                 max_utilization: params.max_utilization,
                 floor: params.floor,
-                scale: pow_10(IERC20Dispatcher { contract_address: params.asset }.decimals().into()),
+                scale,
                 is_legacy: params.is_legacy,
                 last_updated: get_block_timestamp(),
                 last_rate_accumulator: params.initial_rate_accumulator,
