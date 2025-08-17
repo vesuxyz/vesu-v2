@@ -293,7 +293,7 @@ pub mod interest_rate_model_component {
             // target_rate + ((utilization - target_utilization) * slope) / UTILIZATION_SCALE
             target_rate
                 + ((utilization - target_utilization) * (next_full_utilization_rate - target_rate))
-                    / (SCALE - target_utilization)
+                    / (UTILIZATION_SCALE - target_utilization)
         };
 
         (new_rate_per_second, next_full_utilization_rate)

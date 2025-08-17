@@ -106,7 +106,7 @@ mod TestInterestRateModel {
         let (rate, next_full_utilization_rate) = calculate_interest_rate(
             interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
-        assert!(to_apr(rate) == 05_060, "invalid rate");
+        assert!(to_apr(rate) == 08_715, "invalid rate");
         assert!(to_apr(next_full_utilization_rate) == 23_333, "invalid next_full_utilization_rate");
     }
 
