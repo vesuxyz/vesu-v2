@@ -688,6 +688,47 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
+    fn test_set_extension_owner() {
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, extension, config, users.owner, Option::None);
+
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.set_extension_owner(users.lender);
+        stop_cheat_caller_address(singleton.contract_address);
+
+        let extension_owner = singleton.extension_owner();
+        assert(extension_owner == users.lender, 'Extension owner not set');
+    }
+
+    #[test]
+    #[should_panic(expected: ('Caller is not the owner',))]
+    fn test_set_extension_owner_caller_not_owner() {
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, extension, config, users.owner, Option::None);
+
+        singleton.set_extension_owner(users.lender);
+    }
+
+    #[test]
+    #[should_panic(expected: "extension-owner-non-zero")]
+    fn test_set_zero_extension_owner() {
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, extension, config, users.owner, Option::None);
+
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.set_extension_owner(Zero::zero());
+    }
+
+    #[test]
     fn test_extension_set_shutdown_mode() {
         let Env {
             singleton, extension, config, users, ..,

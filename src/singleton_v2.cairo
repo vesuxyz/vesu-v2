@@ -94,6 +94,8 @@ pub trait ISingletonV2<TContractState> {
     fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
+    fn extension_owner(self: @TContractState) -> ContractAddress;
+    fn set_extension_owner(ref self: TContractState, extension_owner: ContractAddress);
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -294,6 +296,12 @@ mod SingletonV2 {
         agent: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct SetExtensionOwner {
+        #[key]
+        extension_owner: ContractAddress,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -315,6 +323,7 @@ mod SingletonV2 {
         ClaimFees: ClaimFees,
         SetFeeConfig: SetFeeConfig,
         SetShutdownModeAgent: SetShutdownModeAgent,
+        SetExtensionOwner: SetExtensionOwner,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -1252,6 +1261,24 @@ mod SingletonV2 {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.shutdown_mode_agent.write(shutdown_mode_agent);
             self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
+        }
+
+        /// Returns the address of the extension owner
+        /// # Returns
+        /// * `extension_owner` - address of the extension owner
+        fn extension_owner(self: @ContractState) -> ContractAddress {
+            self.extension_owner.read()
+        }
+
+        /// Set the extension owner address.
+        /// # Arguments
+        /// * `extension_owner` - address of the new extension owner
+        fn set_extension_owner(ref self: ContractState, extension_owner: ContractAddress) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(extension_owner.is_non_zero(), "extension-owner-non-zero");
+
+            self.extension_owner.write(extension_owner);
+            self.emit(SetExtensionOwner { extension_owner });
         }
 
         /// Returns the name of the contract
