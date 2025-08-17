@@ -4,6 +4,7 @@ use vesu::data_model::{
     Amount, AssetConfig, AssetParams, AssetPrice, Context, FeeConfig, LTVConfig, LiquidatePositionParams,
     ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse,
 };
+use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::pragma_oracle::OracleConfig;
 
 #[starknet::interface]
@@ -62,7 +63,12 @@ pub trait ISingletonV2<TContractState> {
     );
     fn modify_delegation(ref self: TContractState, delegatee: ContractAddress, delegation: bool);
     fn donate_to_reserve(ref self: TContractState, asset: ContractAddress, amount: u256);
-    fn set_asset_config(ref self: TContractState, params: AssetParams, pragma_oracle_params: PragmaOracleParams);
+    fn set_asset_config(
+        ref self: TContractState,
+        params: AssetParams,
+        interest_rate_config: InterestRateConfig,
+        pragma_oracle_params: PragmaOracleParams,
+    );
     fn set_ltv_config(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
     );
@@ -77,6 +83,15 @@ pub trait ISingletonV2<TContractState> {
     fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
     fn set_oracle_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: felt252);
     fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
+    fn interest_rate(
+        self: @TContractState,
+        asset: ContractAddress,
+        utilization: u256,
+        last_updated: u64,
+        last_full_utilization_rate: u256,
+    ) -> u256;
+    fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
+    fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -104,6 +119,8 @@ mod SingletonV2 {
         LiquidatePositionParams, ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse,
         assert_asset_config, assert_asset_config_exists, assert_ltv_config,
     };
+    use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
+    use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
@@ -141,6 +158,9 @@ mod SingletonV2 {
         // storage for the pragma oracle component
         #[substorage(v0)]
         pragma_oracle: pragma_oracle_component::Storage,
+        // storage for the interest rate model component
+        #[substorage(v0)]
+        interest_rate_model: interest_rate_model_component::Storage,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -268,6 +288,7 @@ mod SingletonV2 {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
+        InterestRateModelEvents: interest_rate_model_component::Event,
         ModifyPosition: ModifyPosition,
         LiquidatePosition: LiquidatePosition,
         UpdateContext: UpdateContext,
@@ -285,6 +306,7 @@ mod SingletonV2 {
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
+    component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -303,31 +325,6 @@ mod SingletonV2 {
         self.extension_owner.write(owner);
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
-    }
-
-    /// Computes the new rate accumulator and the interest rate at full utilization for a given asset
-    /// # Arguments
-    /// * `extension` - address of the extension contract
-    /// * `asset` - address of the asset
-    /// # Returns
-    /// * `asset_config` - asset config containing the updated last rate accumulator and full utilization rate
-    fn rate_accumulator(
-        extension: ContractAddress, asset: ContractAddress, mut asset_config: AssetConfig,
-    ) -> AssetConfig {
-        let AssetConfig { total_nominal_debt, scale, .. } = asset_config;
-        let AssetConfig { last_rate_accumulator, last_full_utilization_rate, last_updated, .. } = asset_config;
-        let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, false);
-        // calculate utilization based on previous rate accumulator
-        let utilization = calculate_utilization(asset_config.reserve, total_debt);
-        // calculate the new rate accumulator
-        let (rate_accumulator, full_utilization_rate) = IExtensionDispatcher { contract_address: extension }
-            .rate_accumulator(asset, utilization, last_updated, last_rate_accumulator, last_full_utilization_rate);
-
-        asset_config.last_rate_accumulator = rate_accumulator;
-        asset_config.last_full_utilization_rate = full_utilization_rate;
-        asset_config.last_updated = get_block_timestamp();
-
-        asset_config
     }
 
     /// Computes the current utilization of an asset in a pool
@@ -511,6 +508,32 @@ mod SingletonV2 {
                 collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta, bad_debt,
             }
         }
+
+        /// Computes the new rate accumulator and the interest rate at full utilization for a given asset
+        /// # Arguments
+        /// * `extension` - address of the extension contract
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `asset_config` - asset config containing the updated last rate accumulator and full utilization rate
+        fn new_rate_accumulator(
+            self: @ContractState, asset: ContractAddress, mut asset_config: AssetConfig,
+        ) -> AssetConfig {
+            let AssetConfig { total_nominal_debt, scale, .. } = asset_config;
+            let AssetConfig { last_rate_accumulator, last_full_utilization_rate, last_updated, .. } = asset_config;
+            let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, false);
+            // calculate utilization based on previous rate accumulator
+            let utilization = calculate_utilization(asset_config.reserve, total_debt);
+            // calculate the new rate accumulator
+            let (rate_accumulator, full_utilization_rate) = self
+                .interest_rate_model
+                .rate_accumulator(asset, utilization, last_updated, last_rate_accumulator, last_full_utilization_rate);
+
+            asset_config.last_rate_accumulator = rate_accumulator;
+            asset_config.last_full_utilization_rate = full_utilization_rate;
+            asset_config.last_updated = get_block_timestamp();
+
+            asset_config
+        }
     }
 
     #[abi(embed_v0)]
@@ -547,7 +570,7 @@ mod SingletonV2 {
             }
 
             if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
-                let new_asset_config = rate_accumulator(extension, asset, asset_config);
+                let new_asset_config = self.new_rate_accumulator(asset, asset_config);
                 let fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
                 asset_config = new_asset_config;
                 asset_config.total_collateral_shares += fee_shares;
@@ -971,7 +994,12 @@ mod SingletonV2 {
         /// Sets the configuration / initial state of an asset
         /// # Arguments
         /// * `params` - see AssetParams
-        fn set_asset_config(ref self: ContractState, params: AssetParams, pragma_oracle_params: PragmaOracleParams) {
+        fn set_asset_config(
+            ref self: ContractState,
+            params: AssetParams,
+            interest_rate_config: InterestRateConfig,
+            pragma_oracle_params: PragmaOracleParams,
+        ) {
             assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
             assert!(self.asset_configs.read((params.asset)).scale == 0, "asset-config-already-exists");
 
@@ -993,6 +1021,9 @@ mod SingletonV2 {
             assert_asset_config(asset_config);
             assert_storable_asset_config(asset_config);
             self.asset_configs.write(params.asset, asset_config);
+
+            // set the interest rate model configuration
+            self.interest_rate_model.set_interest_rate_config(params.asset, interest_rate_config);
 
             // set the oracle config
             self
@@ -1137,6 +1168,49 @@ mod SingletonV2 {
         fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
             let (value, is_valid) = self.pragma_oracle.price(asset);
             AssetPrice { value, is_valid }
+        }
+
+        /// Returns the current interest rate for a given asset, given it's utilization
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// * `utilization` - utilization of the asset
+        /// * `last_updated` - last time the interest rate was updated
+        /// * `last_full_utilization_rate` - The interest value when utilization is 100% [SCALE]
+        /// # Returns
+        /// * `interest_rate` - current interest rate
+        fn interest_rate(
+            self: @ContractState,
+            asset: ContractAddress,
+            utilization: u256,
+            last_updated: u64,
+            last_full_utilization_rate: u256,
+        ) -> u256 {
+            let (interest_rate, _) = self
+                .interest_rate_model
+                .interest_rate(asset, utilization, last_updated, last_full_utilization_rate);
+            interest_rate
+        }
+
+        /// Returns the interest rate configuration for a given asset
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `interest_rate_config` - interest rate configuration
+        fn interest_rate_config(self: @ContractState, asset: ContractAddress) -> InterestRateConfig {
+            self.interest_rate_model.interest_rate_configs.read(asset)
+        }
+
+        /// Sets a parameter for a given interest rate configuration for an asset
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// * `parameter` - parameter name
+        /// * `value` - value of the parameter
+        fn set_interest_rate_parameter(
+            ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256,
+        ) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            self.update_fee_shares(asset);
+            self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
         }
 
         /// Returns the name of the contract

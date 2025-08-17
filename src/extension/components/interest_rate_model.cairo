@@ -112,8 +112,6 @@ pub mod interest_rate_model_component {
     use vesu::extension::components::interest_rate_model::{
         InterestRateConfig, UTILIZATION_SCALE, UTILIZATION_SCALE_TO_SCALE, assert_interest_rate_config,
     };
-    use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
-    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
 
     #[storage]
@@ -135,9 +133,7 @@ pub mod interest_rate_model_component {
     }
 
     #[generate_trait]
-    pub impl InterestRateModelTrait<
-        TContractState, +HasComponent<TContractState>, +IDefaultExtensionCallback<TContractState>,
-    > of Trait<TContractState> {
+    pub impl InterestRateModelTrait<TContractState, +HasComponent<TContractState>> of Trait<TContractState> {
         /// Sets the interest rate configuration for a specific pool and asset
         /// # Arguments
         /// * `asset` - address of the asset
@@ -164,8 +160,6 @@ pub mod interest_rate_model_component {
         ) {
             let mut interest_rate_config: InterestRateConfig = self.interest_rate_configs.read(asset);
             assert!(interest_rate_config.max_target_utilization != 0, "interest-rate-config-not-set");
-
-            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }.update_fee_shares(asset);
 
             if parameter == 'min_target_utilization' {
                 interest_rate_config.min_target_utilization = value;

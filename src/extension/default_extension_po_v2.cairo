@@ -33,7 +33,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     fn pool_owner(self: @TContractState) -> ContractAddress;
     fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
-    fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> LiquidationConfig;
@@ -53,7 +52,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     fn set_debt_cap(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
     );
-    fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn set_liquidation_config(
         ref self: TContractState,
         collateral_asset: ContractAddress,
@@ -84,8 +82,8 @@ mod DefaultExtensionPOV2 {
     #[feature("deprecated-starknet-consts")]
     use starknet::{ClassHash, ContractAddress, contract_address_const, get_caller_address, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, AssetParams, Context, ModifyPositionParams, PragmaOracleParams};
+    use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
-    use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::extension::components::position_hooks::position_hooks_component::PositionHooksTrait;
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus, position_hooks_component,
@@ -99,7 +97,6 @@ mod DefaultExtensionPOV2 {
     use vesu::units::INFLATION_FEE;
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
-    component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
 
     #[storage]
     struct Storage {
@@ -110,9 +107,6 @@ mod DefaultExtensionPOV2 {
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
-        // storage for the interest rate model component
-        #[substorage(v0)]
-        interest_rate_model: interest_rate_model_component::Storage,
         // tracks the address that can transition the shutdown mode
         shutdown_mode_agent: ContractAddress,
     }
@@ -132,7 +126,6 @@ mod DefaultExtensionPOV2 {
     #[derive(Drop, starknet::Event)]
     enum Event {
         PositionHooksEvents: position_hooks_component::Event,
-        InterestRateModelEvents: interest_rate_model_component::Event,
         SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
     }
@@ -225,15 +218,6 @@ mod DefaultExtensionPOV2 {
             self.position_hooks.debt_caps.read((collateral_asset, debt_asset))
         }
 
-        /// Returns the interest rate configuration for a given asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `interest_rate_config` - interest rate configuration
-        fn interest_rate_config(self: @ContractState, asset: ContractAddress) -> InterestRateConfig {
-            self.interest_rate_model.interest_rate_configs.read(asset)
-        }
-
         /// Returns the liquidation configuration for a given pairing of assets
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
@@ -299,11 +283,8 @@ mod DefaultExtensionPOV2 {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             let asset = asset_params.asset;
 
-            // set the interest rate model configuration
-            self.interest_rate_model.set_interest_rate_config(asset, interest_rate_config);
-
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            singleton.set_asset_config(asset_params, pragma_oracle_params);
+            singleton.set_asset_config(asset_params, interest_rate_config, pragma_oracle_params);
 
             // burn inflation fee
             self.burn_inflation_fee(asset, asset_params.is_legacy);
@@ -319,18 +300,6 @@ mod DefaultExtensionPOV2 {
         ) {
             assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
             self.position_hooks.set_debt_cap(collateral_asset, debt_asset, debt_cap);
-        }
-
-        /// Sets a parameter for a given interest rate configuration for an asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// * `parameter` - parameter name
-        /// * `value` - value of the parameter
-        fn set_interest_rate_parameter(
-            ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256,
-        ) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
         }
 
         /// Sets the liquidation config for a given pair
@@ -455,50 +424,6 @@ mod DefaultExtensionPOV2 {
         /// * `singleton` - address of the singleton contract
         fn singleton(self: @ContractState) -> ContractAddress {
             self.singleton.read()
-        }
-
-        /// Returns the current interest rate for a given asset, given it's utilization
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// * `utilization` - utilization of the asset
-        /// * `last_updated` - last time the interest rate was updated
-        /// * `last_full_utilization_rate` - The interest value when utilization is 100% [SCALE]
-        /// # Returns
-        /// * `interest_rate` - current interest rate
-        fn interest_rate(
-            self: @ContractState,
-            asset: ContractAddress,
-            utilization: u256,
-            last_updated: u64,
-            last_full_utilization_rate: u256,
-        ) -> u256 {
-            let (interest_rate, _) = self
-                .interest_rate_model
-                .interest_rate(asset, utilization, last_updated, last_full_utilization_rate);
-            interest_rate
-        }
-
-        /// Returns the current rate accumulator for a given asset, given it's utilization
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// * `utilization` - utilization of the asset
-        /// * `last_updated` - last time the interest rate was updated
-        /// * `last_rate_accumulator` - last rate accumulator
-        /// * `last_full_utilization_rate` - the interest value when utilization is 100% [SCALE]
-        /// # Returns
-        /// * `rate_accumulator` - current rate accumulator
-        /// * `last_full_utilization_rate` - the interest value when utilization is 100% [SCALE]
-        fn rate_accumulator(
-            self: @ContractState,
-            asset: ContractAddress,
-            utilization: u256,
-            last_updated: u64,
-            last_rate_accumulator: u256,
-            last_full_utilization_rate: u256,
-        ) -> (u256, u256) {
-            self
-                .interest_rate_model
-                .rate_accumulator(asset, utilization, last_updated, last_rate_accumulator, last_full_utilization_rate)
         }
 
         /// Modify position callback. Called by the Singleton contract after updating the position.
