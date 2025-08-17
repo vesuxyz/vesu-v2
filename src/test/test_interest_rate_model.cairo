@@ -269,13 +269,13 @@ mod TestInterestRateModel {
 
     #[test]
     fn test_set_interest_rate_model_fee_shares() {
-        let (singleton, extension, config, users, terms) = setup();
+        let (singleton, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         assert!(singleton.extension().is_non_zero(), "Pool not created");
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_cheat_caller_address(singleton.contract_address);
 
