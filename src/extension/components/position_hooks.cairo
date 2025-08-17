@@ -316,11 +316,6 @@ pub mod position_hooks_component {
             collateral_shares_delta: i257,
             nominal_debt_delta: i257,
         ) {
-            // skip updating the pairs if the debt asset is zero as the pair's ltv is always 100%
-            if context.debt_asset == Zero::zero() {
-                return;
-            }
-
             // update the balances of the pair of the modified position
             let Pair {
                 mut total_collateral_shares, mut total_nominal_debt,
