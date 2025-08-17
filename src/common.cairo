@@ -65,9 +65,6 @@ pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, 
     } = asset_config;
     let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, !round_up);
     if total_assets == 0 || total_collateral_shares == 0 {
-        if scale == 0 {
-            return 0;
-        }
         return u256_mul_div(collateral, SCALE, scale, if round_up {
             Rounding::Ceil
         } else {
@@ -264,16 +261,10 @@ pub fn calculate_collateral_and_debt_value(context: Context, position: Position)
         position.nominal_debt, debt_asset_config.last_rate_accumulator, debt_asset_config.scale, true,
     );
 
-    let collateral_value = if collateral_asset_config.scale == 0 {
-        0
-    } else {
-        u256_mul_div(collateral, context.collateral_asset_price.value, collateral_asset_config.scale, Rounding::Floor)
-    };
-    let debt_value = if debt_asset_config.scale == 0 {
-        0
-    } else {
-        u256_mul_div(debt, context.debt_asset_price.value, debt_asset_config.scale, Rounding::Ceil)
-    };
+    let collateral_value = u256_mul_div(
+        collateral, context.collateral_asset_price.value, collateral_asset_config.scale, Rounding::Floor,
+    );
+    let debt_value = u256_mul_div(debt, context.debt_asset_price.value, debt_asset_config.scale, Rounding::Ceil);
 
     (collateral, collateral_value, debt, debt_value)
 }
