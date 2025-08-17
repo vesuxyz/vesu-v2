@@ -63,7 +63,7 @@ pub trait ISingletonV2<TContractState> {
     );
     fn modify_delegation(ref self: TContractState, delegatee: ContractAddress, delegation: bool);
     fn donate_to_reserve(ref self: TContractState, asset: ContractAddress, amount: u256);
-    fn set_asset_config(
+    fn add_asset(
         ref self: TContractState,
         params: AssetParams,
         interest_rate_config: InterestRateConfig,
@@ -132,6 +132,7 @@ mod SingletonV2 {
         IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait, ISingletonV2, ISingletonV2Dispatcher,
         ISingletonV2DispatcherTrait,
     };
+    use vesu::units::INFLATION_FEE;
 
     #[storage]
     struct Storage {
@@ -1002,16 +1003,16 @@ mod SingletonV2 {
             self.emit(SetLTVConfig { collateral_asset, debt_asset, ltv_config });
         }
 
-        /// Sets the configuration / initial state of an asset
+        /// Adds a new asset to the pool
         /// # Arguments
         /// * `params` - see AssetParams
-        fn set_asset_config(
+        fn add_asset(
             ref self: ContractState,
             params: AssetParams,
             interest_rate_config: InterestRateConfig,
             pragma_oracle_params: PragmaOracleParams,
         ) {
-            assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             assert!(self.asset_configs.read((params.asset)).scale == 0, "asset-config-already-exists");
 
             let asset_config = AssetConfig {
@@ -1048,6 +1049,21 @@ mod SingletonV2 {
                         start_time_offset: pragma_oracle_params.start_time_offset,
                         time_window: pragma_oracle_params.time_window,
                         aggregation_mode: pragma_oracle_params.aggregation_mode,
+                    },
+                );
+
+            // Burn inflation fee.
+            let asset = IERC20Dispatcher { contract_address: params.asset };
+            self
+                .modify_position(
+                    ModifyPositionParams {
+                        collateral_asset: asset.contract_address,
+                        debt_asset: Zero::zero(),
+                        user: 0.try_into().unwrap(),
+                        collateral: Amount {
+                            denomination: AmountDenomination::Assets, value: I257Trait::new(INFLATION_FEE, false),
+                        },
+                        debt: Default::default(),
                     },
                 );
 

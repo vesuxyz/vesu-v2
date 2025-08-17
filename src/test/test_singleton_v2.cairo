@@ -2,6 +2,7 @@
 mod TestSingletonV2 {
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::interface::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         CheatSpan, DeclareResultTrait, cheat_caller_address, declare, start_cheat_block_timestamp_global,
         start_cheat_caller_address, stop_cheat_caller_address,
@@ -17,7 +18,7 @@ mod TestSingletonV2 {
     use vesu::test::setup_v2::{
         Env, LendingTerms, TestConfig, create_pool, deploy_asset, deploy_asset_with_decimals, setup, setup_env,
     };
-    use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE};
+    use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
     use vesu::vendor::pragma::AggregationMode;
 
     fn dummy_pragma_oracle_params() -> PragmaOracleParams {
@@ -68,7 +69,7 @@ mod TestSingletonV2 {
     #[should_panic(expected: "asset-config-already-exists")]
     fn test_create_pool_duplicate_asset() {
         let Env {
-            singleton, extension, config, ..,
+            singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
@@ -81,15 +82,15 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        cheat_caller_address(singleton.contract_address, extension.contract_address, CheatSpan::TargetCalls(1));
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         let pragma_oracle_params = dummy_pragma_oracle_params();
         let interest_rate_config = dummy_interest_rate_config();
-        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
-        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
-
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.add_asset(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
+        singleton.add_asset(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
         stop_cheat_caller_address(singleton.contract_address);
     }
 
@@ -98,7 +99,7 @@ mod TestSingletonV2 {
     fn test_create_pool_assert_ltv_config_invalid_ltv_config() {
         let Env { singleton, extension, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        let collateral_asset = deploy_asset(get_contract_address());
+        let collateral_asset = deploy_asset(users.extension_owner);
 
         let collateral_asset_params = AssetParams {
             asset: collateral_asset.contract_address,
@@ -110,7 +111,7 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        let debt_asset = deploy_asset(get_contract_address());
+        let debt_asset = deploy_asset(users.extension_owner);
 
         let debt_asset_params = AssetParams {
             asset: debt_asset.contract_address,
@@ -130,14 +131,20 @@ mod TestSingletonV2 {
             collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        cheat_caller_address(singleton.contract_address, extension.contract_address, CheatSpan::TargetCalls(1));
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         let pragma_oracle_params = dummy_pragma_oracle_params();
         let interest_rate_config = dummy_interest_rate_config();
-        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
-        singleton.set_asset_config(params: debt_asset_params, :interest_rate_config, :pragma_oracle_params);
+        cheat_caller_address(collateral_asset.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        collateral_asset.approve(singleton.contract_address, INFLATION_FEE);
+        cheat_caller_address(debt_asset.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        debt_asset.approve(singleton.contract_address, INFLATION_FEE);
+
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.add_asset(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
+        singleton.add_asset(params: debt_asset_params, :interest_rate_config, :pragma_oracle_params);
         stop_cheat_caller_address(singleton.contract_address);
 
         // store all loan-to-value configurations for each asset pair
@@ -161,7 +168,7 @@ mod TestSingletonV2 {
     #[test]
     #[should_panic(expected: "scale-exceeded")]
     fn test_create_pool_assert_asset_config_scale_exceeded() {
-        let Env { singleton, extension, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { singleton, extension, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let asset = deploy_asset_with_decimals(get_contract_address(), 19);
 
@@ -175,22 +182,21 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        cheat_caller_address(singleton.contract_address, extension.contract_address, CheatSpan::TargetCalls(1));
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
-
-        stop_cheat_caller_address(singleton.contract_address);
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton.add_asset(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
     }
 
     #[test]
     #[should_panic(expected: "max-utilization-exceeded")]
     fn test_create_pool_assert_asset_config_max_utilization_exceeded() {
         let Env {
-            singleton, extension, config, ..,
+            singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
@@ -203,22 +209,21 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        cheat_caller_address(singleton.contract_address, extension.contract_address, CheatSpan::TargetCalls(1));
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
-
-        stop_cheat_caller_address(singleton.contract_address);
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton.add_asset(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
     }
 
     #[test]
     #[should_panic(expected: "rate-accumulator-too-low")]
     fn test_create_pool_assert_asset_config_rate_accumulator_too_low() {
         let Env {
-            singleton, extension, config, ..,
+            singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
@@ -231,22 +236,21 @@ mod TestSingletonV2 {
             fee_rate: 0,
         };
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        cheat_caller_address(singleton.contract_address, extension.contract_address, CheatSpan::TargetCalls(1));
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
-
-        stop_cheat_caller_address(singleton.contract_address);
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton.add_asset(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
     }
 
     #[test]
     #[should_panic(expected: "fee-rate-exceeded")]
     fn test_create_pool_assert_asset_config_fee_rate_exceeded() {
         let Env {
-            singleton, extension, config, ..,
+            singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
@@ -259,20 +263,19 @@ mod TestSingletonV2 {
             fee_rate: SCALE + 1,
         };
 
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        cheat_caller_address(singleton.contract_address, extension.contract_address, CheatSpan::TargetCalls(1));
         singleton.create_pool(extension.contract_address);
 
         // store all asset configurations
         let interest_rate_config = dummy_interest_rate_config();
         let pragma_oracle_params = dummy_pragma_oracle_params();
-        singleton.set_asset_config(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
-
-        stop_cheat_caller_address(singleton.contract_address);
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton.add_asset(params: collateral_asset_params, :interest_rate_config, :pragma_oracle_params);
     }
 
     #[test]
     #[should_panic(expected: "caller-not-extension")]
-    fn test_set_asset_config_not_extension() {
+    fn test_add_asset_not_extension() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
@@ -293,11 +296,11 @@ mod TestSingletonV2 {
 
         let pragma_oracle_params = dummy_pragma_oracle_params();
         let interest_rate_config = dummy_interest_rate_config();
-        singleton.set_asset_config(asset_params, :interest_rate_config, :pragma_oracle_params);
+        singleton.add_asset(asset_params, :interest_rate_config, :pragma_oracle_params);
     }
 
     #[test]
-    fn test_set_asset_config() {
+    fn test_add_asset() {
         let Env {
             singleton, extension, config, users, ..,
         } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
@@ -315,11 +318,13 @@ mod TestSingletonV2 {
             is_legacy: false,
             fee_rate: 0,
         };
-        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
+        cheat_caller_address(asset.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        asset.approve(singleton.contract_address, INFLATION_FEE);
+
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
         let pragma_oracle_params = dummy_pragma_oracle_params();
         let interest_rate_config = dummy_interest_rate_config();
-        singleton.set_asset_config(asset_params, :interest_rate_config, :pragma_oracle_params);
-        stop_cheat_caller_address(singleton.contract_address);
+        singleton.add_asset(asset_params, :interest_rate_config, :pragma_oracle_params);
 
         let asset_config = singleton.asset_config(config.collateral_asset.contract_address);
         assert!(asset_config.floor != 0, "Asset config not set");

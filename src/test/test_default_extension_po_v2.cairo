@@ -45,7 +45,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-owner")]
+    #[should_panic(expected: "caller-not-extension-owner")]
     fn test_add_asset_not_owner() {
         let Env {
             singleton, extension, config, users, ..,
@@ -85,7 +85,7 @@ mod TestDefaultExtensionPOV2 {
             aggregation_mode: AggregationMode::Median(()),
         };
 
-        extension.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
+        singleton.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
     }
 
     #[test]
@@ -127,13 +127,13 @@ mod TestDefaultExtensionPOV2 {
             aggregation_mode: AggregationMode::Median(()),
         };
 
-        start_cheat_caller_address(config.collateral_asset.contract_address, users.owner);
-        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
+        start_cheat_caller_address(config.collateral_asset.contract_address, users.extension_owner);
+        config.collateral_asset.approve(singleton.contract_address, INFLATION_FEE);
         stop_cheat_caller_address(config.collateral_asset.contract_address);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -177,13 +177,13 @@ mod TestDefaultExtensionPOV2 {
             aggregation_mode: AggregationMode::Median(()),
         };
 
-        start_cheat_caller_address(asset.contract_address, users.owner);
-        asset.approve(extension.contract_address, INFLATION_FEE);
+        start_cheat_caller_address(asset.contract_address, users.extension_owner);
+        asset.approve(singleton.contract_address, INFLATION_FEE);
         stop_cheat_caller_address(asset.contract_address);
 
-        start_cheat_caller_address(extension.contract_address, users.owner);
-        extension.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
-        stop_cheat_caller_address(extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -226,13 +226,11 @@ mod TestDefaultExtensionPOV2 {
             aggregation_mode: AggregationMode::Median(()),
         };
 
-        start_cheat_caller_address(asset.contract_address, users.owner);
-        asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_cheat_caller_address(asset.contract_address);
+        cheat_caller_address(asset.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        asset.approve(singleton.contract_address, INFLATION_FEE);
 
-        cheat_caller_address(extension.contract_address, users.owner, CheatSpan::TargetCalls(1));
-        extension.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
-        stop_cheat_caller_address(extension.contract_address);
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton.add_asset(asset_params, interest_rate_config, pragma_oracle_params);
 
         let asset_config = singleton.asset_config(config.collateral_asset.contract_address);
         assert!(asset_config.floor != 0, "Asset config not set");
