@@ -500,8 +500,8 @@ mod DefaultExtensionPOV2 {
             self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownStatus {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            let mut context = singleton.context(collateral_asset, debt_asset, Zero::zero());
-            self.position_hooks.shutdown_status(ref context)
+            let context = singleton.context(collateral_asset, debt_asset, Zero::zero());
+            self.position_hooks.shutdown_status(context)
         }
 
         /// Updates the shutdown mode for a specific pair.
@@ -515,8 +515,8 @@ mod DefaultExtensionPOV2 {
             ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownMode {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
-            let mut context = singleton.context(collateral_asset, debt_asset, Zero::zero());
-            self.position_hooks.update_shutdown_status(ref context)
+            let context = singleton.context(collateral_asset, debt_asset, Zero::zero());
+            self.position_hooks.update_shutdown_status(context)
         }
 
         /// Returns the name of the contract

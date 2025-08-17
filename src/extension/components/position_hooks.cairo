@@ -202,7 +202,7 @@ pub mod position_hooks_component {
         /// * `context` - contextual state of the user (position owner)
         /// # Returns
         /// * `shutdown_status` - shutdown status of the pool
-        fn shutdown_status(self: @ComponentState<TContractState>, ref context: Context) -> ShutdownStatus {
+        fn shutdown_status(self: @ComponentState<TContractState>, context: Context) -> ShutdownStatus {
             // if pool is in either subscription period, redemption period, then return mode
             let ShutdownState { mut shutdown_mode, .. } = self.fixed_shutdown_mode.read();
 
@@ -230,7 +230,7 @@ pub mod position_hooks_component {
         /// * `context` - contextual state of the user (position owner)
         /// # Returns
         /// * `shutdown_mode` - the shutdown mode
-        fn update_shutdown_status(ref self: ComponentState<TContractState>, ref context: Context) -> ShutdownMode {
+        fn update_shutdown_status(ref self: ComponentState<TContractState>, context: Context) -> ShutdownMode {
             let Context { collateral_asset, collateral_asset_config, .. } = context;
 
             // check if the shutdown mode has been overwritten
@@ -249,7 +249,7 @@ pub mod position_hooks_component {
                 return shutdown_mode;
             }
 
-            let ShutdownStatus { shutdown_mode, violating } = self.shutdown_status(ref context);
+            let ShutdownStatus { shutdown_mode, violating } = self.shutdown_status(context);
 
             // if there is a current violation and no timestamp exists for the pair, then set the it (recovery)
             if violating {
@@ -316,7 +316,7 @@ pub mod position_hooks_component {
         /// * `nominal_debt_delta` - nominal debt balance delta of the position
         fn update_pair(
             ref self: ComponentState<TContractState>,
-            ref context: Context,
+            context: Context,
             collateral_shares_delta: i257,
             nominal_debt_delta: i257,
         ) {
@@ -374,16 +374,16 @@ pub mod position_hooks_component {
         /// * `bool` - true if it was successful, false otherwise
         fn after_modify_position(
             ref self: ComponentState<TContractState>,
-            mut context: Context,
+            context: Context,
             collateral_delta: i257,
             collateral_shares_delta: i257,
             debt_delta: i257,
             nominal_debt_delta: i257,
             caller: ContractAddress,
         ) -> bool {
-            self.update_pair(ref context, collateral_shares_delta, nominal_debt_delta);
+            self.update_pair(context, collateral_shares_delta, nominal_debt_delta);
 
-            let shutdown_mode = self.update_shutdown_status(ref context);
+            let shutdown_mode = self.update_shutdown_status(context);
 
             // check invariants for collateral and debt amounts
             if shutdown_mode == ShutdownMode::Recovery {
@@ -423,13 +423,13 @@ pub mod position_hooks_component {
         /// * `bad_debt` - amount of bad debt accrued during the liquidation
         fn before_liquidate_position(
             ref self: ComponentState<TContractState>,
-            mut context: Context,
+            context: Context,
             min_collateral_to_receive: u256,
             mut debt_to_repay: u256,
             caller: ContractAddress,
         ) -> (u256, u256, u256) {
             // don't allow for liquidations if the pool is not in normal or recovery mode
-            let shutdown_mode = self.update_shutdown_status(ref context);
+            let shutdown_mode = self.update_shutdown_status(context);
             assert!(
                 (shutdown_mode == ShutdownMode::None || shutdown_mode == ShutdownMode::Recovery)
                     && context.collateral_asset_price.is_valid
@@ -522,7 +522,7 @@ pub mod position_hooks_component {
         /// * `bool` - true if it was successful, false otherwise
         fn after_liquidate_position(
             ref self: ComponentState<TContractState>,
-            mut context: Context,
+            context: Context,
             collateral_delta: i257,
             collateral_shares_delta: i257,
             debt_delta: i257,
@@ -530,8 +530,8 @@ pub mod position_hooks_component {
             bad_debt: u256,
             caller: ContractAddress,
         ) -> bool {
-            self.update_pair(ref context, collateral_shares_delta, nominal_debt_delta);
-            self.update_shutdown_status(ref context);
+            self.update_pair(context, collateral_shares_delta, nominal_debt_delta);
+            self.update_shutdown_status(context);
             true
         }
     }
