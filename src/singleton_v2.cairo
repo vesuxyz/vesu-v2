@@ -74,7 +74,6 @@ pub trait ISingletonV2<TContractState> {
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
     );
     fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
-    fn update_fee_shares(ref self: TContractState, asset: ContractAddress);
     fn claim_fees(ref self: TContractState, asset: ContractAddress);
     fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
     fn fee_config(self: @TContractState) -> FeeConfig;
@@ -1071,14 +1070,6 @@ mod SingletonV2 {
             self.emit(SetAssetParameter { asset, parameter, value });
         }
 
-        /// Attributes the outstanding fee shares to the extension
-        /// # Arguments
-        /// * `asset` - address of the asset
-        fn update_fee_shares(ref self: ContractState, asset: ContractAddress) {
-            let asset_config = self.asset_config(asset);
-            self.asset_configs.write(asset, asset_config);
-        }
-
         /// Claims the fees accrued in the extension for a given asset and sends them to the fee recipient
         /// # Arguments
         /// * `asset` - address of the asset
@@ -1210,7 +1201,8 @@ mod SingletonV2 {
             ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256,
         ) {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
-            self.update_fee_shares(asset);
+            let asset_config = self.asset_config(asset);
+            self.asset_configs.write(asset, asset_config);
             self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
         }
 
