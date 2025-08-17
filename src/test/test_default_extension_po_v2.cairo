@@ -535,8 +535,8 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "interest-rate-config-not-set")]
-    fn test_set_interest_rate_parameter_interest_rate_config_not_set() {
+    #[should_panic(expected: "asset-config-nonexistent")]
+    fn test_set_interest_rate_parameter_non_existent_asset() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, Option::None);
