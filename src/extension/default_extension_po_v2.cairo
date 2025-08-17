@@ -31,7 +31,6 @@ pub trait IDefaultExtensionCallback<TContractState> {
 #[starknet::interface]
 pub trait IDefaultExtensionPOV2<TContractState> {
     fn pool_owner(self: @TContractState) -> ContractAddress;
-    fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
     fn liquidation_config(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
@@ -60,7 +59,6 @@ pub trait IDefaultExtensionPOV2<TContractState> {
     );
     fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
     fn set_shutdown_mode(ref self: TContractState, shutdown_mode: ShutdownMode);
-    fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
     fn update_shutdown_status(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownMode;
@@ -107,14 +105,6 @@ mod DefaultExtensionPOV2 {
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
-        // tracks the address that can transition the shutdown mode
-        shutdown_mode_agent: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct SetShutdownModeAgent {
-        #[key]
-        agent: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -126,7 +116,6 @@ mod DefaultExtensionPOV2 {
     #[derive(Drop, starknet::Event)]
     enum Event {
         PositionHooksEvents: position_hooks_component::Event,
-        SetShutdownModeAgent: SetShutdownModeAgent,
         ContractUpgraded: ContractUpgraded,
     }
 
@@ -199,13 +188,6 @@ mod DefaultExtensionPOV2 {
         /// * `owner` - address of the owner
         fn pool_owner(self: @ContractState) -> ContractAddress {
             self.owner.read()
-        }
-
-        /// Returns the address of the shutdown mode agent
-        /// # Returns
-        /// * `shutdown_mode_agent` - address of the shutdown mode agent
-        fn shutdown_mode_agent(self: @ContractState) -> ContractAddress {
-            self.shutdown_mode_agent.read()
         }
 
         /// Returns the debt cap for a given asset
@@ -336,20 +318,12 @@ mod DefaultExtensionPOV2 {
             self.position_hooks.set_shutdown_config(shutdown_config);
         }
 
-        /// Sets the shutdown mode agent
-        /// # Arguments
-        /// * `shutdown_mode_agent` - address of the shutdown mode agent
-        fn set_shutdown_mode_agent(ref self: ContractState, shutdown_mode_agent: ContractAddress) {
-            assert!(get_caller_address() == self.owner.read(), "caller-not-owner");
-            self.shutdown_mode_agent.write(shutdown_mode_agent);
-            self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
-        }
-
         /// Sets the shutdown mode and overwrites the inferred shutdown mode
         /// # Arguments
         /// * `shutdown_mode` - shutdown mode
         fn set_shutdown_mode(ref self: ContractState, shutdown_mode: ShutdownMode) {
-            let shutdown_mode_agent = self.shutdown_mode_agent.read();
+            let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
+            let shutdown_mode_agent = singleton.shutdown_mode_agent();
             assert!(
                 get_caller_address() == self.owner.read() || get_caller_address() == shutdown_mode_agent,
                 "caller-not-owner-or-agent",
