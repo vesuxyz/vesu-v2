@@ -2,6 +2,7 @@ use alexandria_math::i257::i257;
 use starknet::ContractAddress;
 use vesu::math::pow_10;
 use vesu::units::SCALE;
+use vesu::vendor::pragma::AggregationMode;
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Position {
@@ -129,6 +130,16 @@ pub struct UpdatePositionResponse {
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 pub struct FeeConfig {
     pub fee_recipient: ContractAddress,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct PragmaOracleParams {
+    pub pragma_key: felt252,
+    pub timeout: u64, // [seconds]
+    pub number_of_sources: u32,
+    pub start_time_offset: u64, // [seconds]
+    pub time_window: u64, // [seconds]
+    pub aggregation_mode: AggregationMode,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]

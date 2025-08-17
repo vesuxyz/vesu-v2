@@ -1,9 +1,10 @@
 use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
-    Amount, AssetConfig, AssetParams, Context, FeeConfig, LTVConfig, LiquidatePositionParams, ModifyPositionParams,
-    Position, UpdatePositionResponse,
+    Amount, AssetConfig, AssetParams, AssetPrice, Context, FeeConfig, LTVConfig, LiquidatePositionParams,
+    ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse,
 };
+use vesu::extension::components::pragma_oracle::OracleConfig;
 
 #[starknet::interface]
 pub trait IFlashLoanReceiver<TContractState> {
@@ -61,7 +62,7 @@ pub trait ISingletonV2<TContractState> {
     );
     fn modify_delegation(ref self: TContractState, delegatee: ContractAddress, delegation: bool);
     fn donate_to_reserve(ref self: TContractState, asset: ContractAddress, amount: u256);
-    fn set_asset_config(ref self: TContractState, params: AssetParams);
+    fn set_asset_config(ref self: TContractState, params: AssetParams, pragma_oracle_params: PragmaOracleParams);
     fn set_ltv_config(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
     );
@@ -71,6 +72,11 @@ pub trait ISingletonV2<TContractState> {
     fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
     fn fee_config(self: @TContractState) -> FeeConfig;
     fn set_fee_config(ref self: TContractState, fee_config: FeeConfig);
+    fn pragma_oracle(self: @TContractState) -> ContractAddress;
+    fn pragma_summary(self: @TContractState) -> ContractAddress;
+    fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
+    fn set_oracle_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: felt252);
+    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(ref self: TContractState, new_implementation: ClassHash);
@@ -95,9 +101,11 @@ mod SingletonV2 {
     };
     use vesu::data_model::{
         Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, FeeConfig, LTVConfig,
-        LiquidatePositionParams, ModifyPositionParams, Position, UpdatePositionResponse, assert_asset_config,
-        assert_asset_config_exists, assert_ltv_config,
+        LiquidatePositionParams, ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse,
+        assert_asset_config, assert_asset_config_exists, assert_ltv_config,
     };
+    use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
+    use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
     use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
     use vesu::math::pow_10;
     use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
@@ -130,6 +138,9 @@ mod SingletonV2 {
         fee_config: FeeConfig,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        // storage for the pragma oracle component
+        #[substorage(v0)]
+        pragma_oracle: pragma_oracle_component::Storage,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -256,6 +267,7 @@ mod SingletonV2 {
     enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        PragmaOracleEvents: pragma_oracle_component::Event,
         ModifyPosition: ModifyPosition,
         LiquidatePosition: LiquidatePosition,
         UpdateContext: UpdateContext,
@@ -272,16 +284,25 @@ mod SingletonV2 {
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
 
     #[constructor]
-    fn constructor(ref self: ContractState, name: felt252, owner: ContractAddress) {
+    fn constructor(
+        ref self: ContractState,
+        name: felt252,
+        owner: ContractAddress,
+        oracle_address: ContractAddress,
+        summary_address: ContractAddress,
+    ) {
         self.pool_name.write(name);
         self.ownable.initializer(owner);
         // TODO: Support a different owner for the extension.
         self.extension_owner.write(owner);
+        self.pragma_oracle.set_oracle(oracle_address);
+        self.pragma_oracle.set_summary_address(summary_address);
     }
 
     /// Computes the new rate accumulator and the interest rate at full utilization for a given asset
@@ -728,12 +749,12 @@ mod SingletonV2 {
                 collateral_asset_price: if collateral_asset == Zero::zero() {
                     AssetPrice { value: 0, is_valid: true }
                 } else {
-                    extension.price(collateral_asset)
+                    self.price(collateral_asset)
                 },
                 debt_asset_price: if debt_asset == Zero::zero() {
                     AssetPrice { value: 0, is_valid: true }
                 } else {
-                    extension.price(debt_asset)
+                    self.price(debt_asset)
                 },
                 max_ltv: self.ltv_configs.read((collateral_asset, debt_asset)).max_ltv,
                 user,
@@ -950,7 +971,7 @@ mod SingletonV2 {
         /// Sets the configuration / initial state of an asset
         /// # Arguments
         /// * `params` - see AssetParams
-        fn set_asset_config(ref self: ContractState, params: AssetParams) {
+        fn set_asset_config(ref self: ContractState, params: AssetParams, pragma_oracle_params: PragmaOracleParams) {
             assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
             assert!(self.asset_configs.read((params.asset)).scale == 0, "asset-config-already-exists");
 
@@ -972,6 +993,21 @@ mod SingletonV2 {
             assert_asset_config(asset_config);
             assert_storable_asset_config(asset_config);
             self.asset_configs.write(params.asset, asset_config);
+
+            // set the oracle config
+            self
+                .pragma_oracle
+                .set_oracle_config(
+                    params.asset,
+                    OracleConfig {
+                        pragma_key: pragma_oracle_params.pragma_key,
+                        timeout: pragma_oracle_params.timeout,
+                        number_of_sources: pragma_oracle_params.number_of_sources,
+                        start_time_offset: pragma_oracle_params.start_time_offset,
+                        time_window: pragma_oracle_params.time_window,
+                        aggregation_mode: pragma_oracle_params.aggregation_mode,
+                    },
+                );
 
             self.emit(SetAssetConfig { asset: params.asset });
         }
@@ -1058,6 +1094,49 @@ mod SingletonV2 {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-owner");
             self.fee_config.write(fee_config);
             self.emit(SetFeeConfig { fee_config });
+        }
+
+        /// Returns the address of the pragma oracle contract
+        /// # Returns
+        /// * `oracle_address` - address of the pragma oracle contract
+        fn pragma_oracle(self: @ContractState) -> ContractAddress {
+            self.pragma_oracle.oracle_address()
+        }
+
+        /// Returns the address of the pragma summary contract
+        /// # Returns
+        /// * `summary_address` - address of the pragma summary contract
+        fn pragma_summary(self: @ContractState) -> ContractAddress {
+            self.pragma_oracle.summary_address()
+        }
+
+        /// Returns the oracle configuration for a given asset
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `oracle_config` - oracle configuration
+        fn oracle_config(self: @ContractState, asset: ContractAddress) -> OracleConfig {
+            self.pragma_oracle.oracle_configs.read(asset)
+        }
+
+        /// Sets a parameter for a given oracle configuration of an asset
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// * `parameter` - parameter name
+        /// * `value` - value of the parameter
+        fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            self.pragma_oracle.set_oracle_parameter(asset, parameter, value);
+        }
+
+        /// Returns the price for a given asset
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `AssetPrice` - latest price of the asset and its validity
+        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
+            let (value, is_valid) = self.pragma_oracle.price(asset);
+            AssetPrice { value, is_valid }
         }
 
         /// Returns the name of the contract
