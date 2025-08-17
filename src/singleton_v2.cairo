@@ -94,6 +94,9 @@ pub trait ISingletonV2<TContractState> {
     fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
+    fn extension_owner(self: @TContractState) -> ContractAddress;
+    fn transfer_extension_ownership(ref self: TContractState, extension_owner: ContractAddress);
+    fn accept_extension_ownership(ref self: TContractState);
 
     fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
     fn liquidation_config(
@@ -168,6 +171,8 @@ mod SingletonV2 {
         pool_name: felt252,
         // The owner of the extension
         extension_owner: ContractAddress,
+        // The pending extension owner
+        pending_extension_owner: ContractAddress,
         // tracks the configuration / state of each asset
         // asset -> asset configuration
         asset_configs: Map<ContractAddress, AssetConfig>,
@@ -316,6 +321,18 @@ mod SingletonV2 {
         agent: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct SetExtensionOwner {
+        #[key]
+        extension_owner: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct TransferExtensionOwner {
+        #[key]
+        extension_owner: ContractAddress,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -337,6 +354,8 @@ mod SingletonV2 {
         ClaimFees: ClaimFees,
         SetFeeRecipient: SetFeeRecipient,
         SetShutdownModeAgent: SetShutdownModeAgent,
+        SetExtensionOwner: SetExtensionOwner,
+        TransferExtensionOwner: TransferExtensionOwner,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -360,6 +379,7 @@ mod SingletonV2 {
         self.ownable.initializer(owner);
         assert!(extension_owner.is_non_zero(), "invalid-zero-extension-owner");
         self.extension_owner.write(extension_owner);
+        self.pending_extension_owner.write(Zero::zero());
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
     }
@@ -1333,6 +1353,33 @@ mod SingletonV2 {
         ) -> ShutdownMode {
             let context = self.context(collateral_asset, debt_asset, Zero::zero());
             self.position_hooks.update_shutdown_status(context)
+        }
+        /// Returns the address of the extension owner
+        /// # Returns
+        /// * `extension_owner` - address of the extension owner
+        fn extension_owner(self: @ContractState) -> ContractAddress {
+            self.extension_owner.read()
+        }
+
+        /// Transfer the extension owner address.
+        /// # Arguments
+        /// * `extension_owner` - address of the new extension owner
+        fn transfer_extension_ownership(ref self: ContractState, extension_owner: ContractAddress) {
+            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+
+            self.pending_extension_owner.write(extension_owner);
+            self.emit(TransferExtensionOwner { extension_owner });
+        }
+
+        /// Accept the extension owner address.
+        fn accept_extension_ownership(ref self: ContractState) {
+            let new_extension_owner = self.pending_extension_owner.read();
+            assert!(get_caller_address() == new_extension_owner, "caller-not-new-extension-owner");
+            assert!(new_extension_owner.is_non_zero(), "invalid-zero-extension-owner-address");
+
+            self.pending_extension_owner.write(Zero::zero());
+            self.extension_owner.write(new_extension_owner);
+            self.emit(SetExtensionOwner { extension_owner: new_extension_owner });
         }
 
         /// Returns the name of the contract

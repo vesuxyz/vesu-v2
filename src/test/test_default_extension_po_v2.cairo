@@ -624,6 +624,46 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
+    fn test_set_extension_owner() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        singleton.transfer_extension_ownership(users.lender);
+        stop_cheat_caller_address(singleton.contract_address);
+
+        start_cheat_caller_address(singleton.contract_address, users.lender);
+        singleton.accept_extension_ownership();
+        stop_cheat_caller_address(singleton.contract_address);
+
+        let extension_owner = singleton.extension_owner();
+        assert(extension_owner == users.lender, 'Extension owner not set');
+    }
+
+    #[test]
+    #[should_panic(expected: "caller-not-extension-owner")]
+    fn test_transfer_extension_owner_caller_not_owner() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        singleton.transfer_extension_ownership(users.lender);
+    }
+
+    #[test]
+    #[should_panic(expected: "caller-not-new-extension-owner")]
+    fn test_accept_zero_extension_owner() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        start_cheat_caller_address(singleton.contract_address, users.lender);
+        singleton.accept_extension_ownership();
+        stop_cheat_caller_address(singleton.contract_address);
+    }
+
+    #[test]
     fn test_extension_set_shutdown_mode() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
