@@ -1,6 +1,8 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
+use starknet::storage_access::StorePacking;
 use vesu::math::pow_10;
+use vesu::packing::{SHIFT_128, into_u123, split_128};
 use vesu::units::SCALE;
 use vesu::vendor::pragma::AggregationMode;
 
@@ -153,6 +155,63 @@ pub struct LiquidationParams {
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct FeeParams {
     pub fee_recipient: ContractAddress,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
+pub struct ShutdownConfig {
+    pub recovery_period: u64, // [seconds]
+    pub subscription_period: u64 // [seconds]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
+pub struct LiquidationConfig {
+    pub liquidation_factor: u64 // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct Pair {
+    pub total_collateral_shares: u256, // packed as u128 [SCALE] 
+    pub total_nominal_debt: u256 // packed as u123 [SCALE]
+}
+
+impl PairPacking of StorePacking<Pair, felt252> {
+    fn pack(value: Pair) -> felt252 {
+        let total_collateral_shares: u128 = value
+            .total_collateral_shares
+            .try_into()
+            .expect('pack-total_collateral-shares');
+        let total_nominal_debt: u128 = value.total_nominal_debt.try_into().expect('pack-total_nominal-debt');
+        let total_nominal_debt = into_u123(total_nominal_debt, 'pack-total_nominal-debt-u123');
+        total_collateral_shares.into() + total_nominal_debt * SHIFT_128
+    }
+
+    fn unpack(value: felt252) -> Pair {
+        let (total_nominal_debt, total_collateral_shares) = split_128(value.into());
+        Pair { total_collateral_shares: total_collateral_shares.into(), total_nominal_debt: total_nominal_debt.into() }
+    }
+}
+
+#[derive(PartialEq, Copy, Drop, Serde, Default, starknet::Store)]
+pub enum ShutdownMode {
+    #[default]
+    None,
+    Recovery,
+    Subscription,
+    Redemption,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct ShutdownStatus {
+    pub shutdown_mode: ShutdownMode,
+    pub violating: bool,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
+pub struct ShutdownState {
+    // current set shutdown mode (overwrites the inferred shutdown mode)
+    pub shutdown_mode: ShutdownMode,
+    // timestamp at which the shutdown mode was last updated
+    pub last_updated: u64,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
