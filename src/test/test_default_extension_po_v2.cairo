@@ -659,4 +659,15 @@ mod TestDefaultExtensionPOV2 {
 
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
     }
+
+    #[test]
+    #[should_panic(expected: "caller-not-extension-owner-or-agent")]
+    fn test_update_shutdown_status_caller_not_extension_owner_or_agent() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        singleton.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+    }
 }
