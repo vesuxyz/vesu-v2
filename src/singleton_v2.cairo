@@ -715,7 +715,7 @@ mod SingletonV2 {
             // don't allow for liquidations if the pool is not in normal or recovery mode
             let shutdown_mode = self._update_shutdown_status(context);
             assert!(
-                (shutdown_mode == ShutdownMode::None || shutdown_mode == ShutdownMode::Recovery)
+                shutdown_mode == ShutdownMode::None
                     && context.collateral_asset_price.is_valid
                     && context.debt_asset_price.is_valid,
                 "emergency-mode",
@@ -1083,7 +1083,7 @@ mod SingletonV2 {
                 collateral_asset, debt_asset, user, min_collateral_to_receive, debt_to_repay, ..,
             } = params;
 
-            let context = self.context(collateral_asset, debt_asset, user);
+            let mut context = self.context(collateral_asset, debt_asset, user);
 
             let (collateral, debt, bad_debt) = self
                 .compute_liquidation_amounts(context, min_collateral_to_receive, debt_to_repay);
@@ -1093,9 +1093,6 @@ mod SingletonV2 {
                 denomination: AmountDenomination::Assets, value: I257Trait::new(collateral, true),
             };
             let debt = Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(debt, true) };
-
-            // reload context since it might have changed by a reentered call
-            let mut context = self.context(collateral_asset, debt_asset, user);
 
             // only allow for liquidation of undercollateralized positions
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
