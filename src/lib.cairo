@@ -9,7 +9,6 @@ pub mod units;
 pub mod extension {
     pub mod components {
         pub mod interest_rate_model;
-        pub mod position_hooks;
         pub mod pragma_oracle;
     }
 }

@@ -7,10 +7,10 @@ use snforge_std::{
 #[feature("deprecated-starknet-consts")]
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
 use vesu::data_model::{
-    AssetParams, DebtCapParams, FeeConfig, LTVConfig, LTVParams, LiquidationParams, PragmaOracleParams, ShutdownParams,
+    AssetParams, DebtCapParams, FeeConfig, LTVConfig, LTVParams, LiquidationConfig, LiquidationParams,
+    PragmaOracleParams, ShutdownConfig, ShutdownParams,
 };
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
-use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
 use vesu::math::pow_10;
 use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
 use vesu::test::mock_oracle::{

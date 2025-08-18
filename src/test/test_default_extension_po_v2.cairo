@@ -5,8 +5,8 @@ mod TestDefaultExtensionPOV2 {
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
     use vesu::data_model::{AssetParams, FeeConfig, LTVConfig, PragmaOracleParams};
+    use vesu::data_model::{LiquidationConfig, ShutdownConfig, ShutdownMode};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
-    use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig, ShutdownMode};
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env};
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
