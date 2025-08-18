@@ -1,8 +1,8 @@
 use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
-    Amount, AssetConfig, AssetParams, AssetPrice, Context, FeeConfig, LTVConfig, LiquidatePositionParams,
-    ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse,
+    Amount, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams, ModifyPositionParams,
+    Position, PragmaOracleParams, UpdatePositionResponse,
 };
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{
@@ -76,8 +76,8 @@ pub trait ISingletonV2<TContractState> {
     fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn claim_fees(ref self: TContractState, asset: ContractAddress);
     fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
-    fn fee_config(self: @TContractState) -> FeeConfig;
-    fn set_fee_config(ref self: TContractState, fee_config: FeeConfig);
+    fn fee_recipient(self: @TContractState) -> ContractAddress;
+    fn set_fee_recipient(ref self: TContractState, fee_recipient: ContractAddress);
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
     fn pragma_summary(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
@@ -142,9 +142,9 @@ mod SingletonV2 {
         calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
     };
     use vesu::data_model::{
-        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, FeeConfig, LTVConfig,
-        LiquidatePositionParams, ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse,
-        assert_asset_config, assert_asset_config_exists, assert_ltv_config,
+        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams,
+        ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse, assert_asset_config,
+        assert_asset_config_exists, assert_ltv_config,
     };
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
@@ -180,8 +180,8 @@ mod SingletonV2 {
         // tracks the delegation status for each delegator to a delegatee
         // (delegator, delegatee) -> delegation
         delegations: Map<(ContractAddress, ContractAddress), bool>,
-        // fee configuration
-        fee_config: FeeConfig,
+        // fee recipient
+        fee_recipient: ContractAddress,
         // tracks the address that can transition the shutdown mode
         shutdown_mode_agent: ContractAddress,
         #[substorage(v0)]
@@ -311,9 +311,9 @@ mod SingletonV2 {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct SetFeeConfig {
+    pub struct SetFeeRecipient {
         #[key]
-        fee_config: FeeConfig,
+        fee_recipient: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -342,7 +342,7 @@ mod SingletonV2 {
         SetExtension: SetExtension,
         ContractUpgraded: ContractUpgraded,
         ClaimFees: ClaimFees,
-        SetFeeConfig: SetFeeConfig,
+        SetFeeRecipient: SetFeeRecipient,
         SetShutdownModeAgent: SetShutdownModeAgent,
     }
 
@@ -1078,7 +1078,7 @@ mod SingletonV2 {
 
             // Convert shares to amount (round down).
             let amount = calculate_collateral(fee_shares, asset_config, false);
-            let fee_recipient = self.fee_config.read().fee_recipient;
+            let fee_recipient = self.fee_recipient.read();
 
             IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, amount);
 
@@ -1096,20 +1096,20 @@ mod SingletonV2 {
             (fee_shares, amount)
         }
 
-        /// Returns the fee configuration
+        /// Returns the fee address
         /// # Returns
-        /// * `fee_config` - fee configuration
-        fn fee_config(self: @ContractState) -> FeeConfig {
-            self.fee_config.read()
+        /// Returns the address to which fees are sent
+        fn fee_recipient(self: @ContractState) -> ContractAddress {
+            self.fee_recipient.read()
         }
 
-        /// Sets the fee configuration.
+        /// Sets the fee address.
         /// # Arguments
-        /// * `fee_config` - new fee configuration parameters
-        fn set_fee_config(ref self: ContractState, fee_config: FeeConfig) {
+        /// * `fee_recipient` - new fee address
+        fn set_fee_recipient(ref self: ContractState, fee_recipient: ContractAddress) {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
-            self.fee_config.write(fee_config);
-            self.emit(SetFeeConfig { fee_config });
+            self.fee_recipient.write(fee_recipient);
+            self.emit(SetFeeRecipient { fee_recipient });
         }
 
         /// Returns the address of the pragma oracle contract

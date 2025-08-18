@@ -6,7 +6,7 @@ use vesu::vendor::pragma::AggregationMode;
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Position {
-    pub collateral_shares: u256, // packed as u128 [SCALE] 
+    pub collateral_shares: u256, // packed as u128 [SCALE]
     pub nominal_debt: u256 // packed as u123 [SCALE]
 }
 
@@ -18,7 +18,7 @@ pub struct AssetConfig { //                                     | slot | packed 
     pub reserve: u256, //                       [asset scale]   | 2    | u128   |
     pub max_utilization: u256, //               [SCALE]         | 2    | u8     | constant percentage
     pub floor: u256, //                         [SCALE]         | 2    | u8     | constant decimals
-    pub scale: u256, //                         [SCALE]         | 2    | u8     | constant decimals 
+    pub scale: u256, //                         [SCALE]         | 2    | u8     | constant decimals
     pub is_legacy: bool, //                                     | 2    | u8     | constant
     pub last_updated: u64, //                   [seconds]       | 3    | u32    |
     pub last_rate_accumulator: u256, //         [SCALE]         | 3    | u64    |
@@ -125,11 +125,6 @@ pub struct UpdatePositionResponse {
     pub debt_delta: i257, // [asset scale]
     pub nominal_debt_delta: i257, // [SCALE]
     pub bad_debt: u256 // [asset scale]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct FeeConfig {
-    pub fee_recipient: ContractAddress,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
