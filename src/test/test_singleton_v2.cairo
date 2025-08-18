@@ -395,6 +395,88 @@ mod TestSingletonV2 {
 
     #[test]
     #[should_panic(expected: ('Caller is not the owner',))]
+    fn test_singleton_pause_only_owner() {
+        let Env { singleton, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        singleton.pause();
+    }
+
+    #[test]
+    #[should_panic(expected: "contract-already-paused")]
+    fn test_singleton_pause_paused_contract() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.pause();
+        singleton.pause();
+        stop_cheat_caller_address(singleton.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: ('Caller is not the owner',))]
+    fn test_singleton_unpause_only_owner() {
+        let Env { singleton, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        singleton.unpause();
+    }
+
+    #[test]
+    #[should_panic(expected: "contract-already-unpaused")]
+    fn test_singleton_unpause_unpaused_contract() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        singleton.unpause();
+    }
+
+    #[test]
+    #[should_panic(expected: "contract-paused")]
+    fn test_singleton_call_paused_contract() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        singleton.pause();
+        assert!(singleton.is_paused(), "Contract should be paused");
+
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton
+            .set_ltv_config(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() },
+            );
+    }
+
+    #[test]
+    fn test_singleton_pause_flow() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        start_cheat_caller_address(singleton.contract_address, users.owner);
+        singleton.pause();
+        assert!(singleton.is_paused(), "Contract should be paused");
+        singleton.unpause();
+        assert!(!singleton.is_paused(), "Contract should be unpaused");
+        stop_cheat_caller_address(singleton.contract_address);
+
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton
+            .set_ltv_config(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() },
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: ('Caller is not the owner',))]
     fn test_singleton_upgrade_only_owner() {
         let Env { singleton, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let new_classhash = *declare("MockSingletonUpgrade").unwrap().contract_class().class_hash;
