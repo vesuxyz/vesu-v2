@@ -1330,6 +1330,12 @@ mod SingletonV2 {
         fn update_shutdown_status(
             ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownMode {
+            let caller = get_caller_address();
+            assert!(
+                caller == self.extension_owner.read() || caller == self.shutdown_mode_agent.read(),
+                "caller-not-extension-owner-or-agent",
+            );
+
             let context = self.context(collateral_asset, debt_asset, Zero::zero());
             self.position_hooks.update_shutdown_status(context)
         }
