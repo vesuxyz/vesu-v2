@@ -412,6 +412,9 @@ mod SingletonV2 {
 
         /// Asserts that the current utilization of an asset is below the max. allowed utilization
         fn assert_max_utilization(ref self: ContractState, asset_config: AssetConfig) {
+            if self.position_hooks.fixed_shutdown_mode.read().shutdown_mode != ShutdownMode::None {
+                return;
+            }
             assert!(utilization(asset_config) <= asset_config.max_utilization, "utilization-exceeded")
         }
 
