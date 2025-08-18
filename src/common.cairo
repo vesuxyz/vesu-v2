@@ -64,13 +64,7 @@ pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, 
         reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, ..,
     } = asset_config;
     let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, !round_up);
-    if total_assets == 0 || total_collateral_shares == 0 {
-        return u256_mul_div(collateral, SCALE, scale, if round_up {
-            Rounding::Ceil
-        } else {
-            Rounding::Floor
-        });
-    }
+    assert!(total_assets > 0 && total_collateral_shares > 0, "unexpected-zero-assets");
     let (collateral_shares, remainder) = integer::u512_safe_div_rem_by_u256(
         WideMul::<u256>::wide_mul(collateral, total_collateral_shares), total_assets.try_into().unwrap(),
     );
@@ -93,13 +87,7 @@ pub fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, 
     let AssetConfig {
         reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, ..,
     } = asset_config;
-    if total_collateral_shares == 0 {
-        return u256_mul_div(collateral_shares, scale, SCALE, if round_up {
-            Rounding::Ceil
-        } else {
-            Rounding::Floor
-        });
-    }
+    assert!(total_collateral_shares > 0, "unexpected-zero-collateral-shares");
     let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, round_up);
     let (collateral, remainder) = integer::u512_safe_div_rem_by_u256(
         WideMul::<u256>::wide_mul(collateral_shares * total_assets, SCALE),
