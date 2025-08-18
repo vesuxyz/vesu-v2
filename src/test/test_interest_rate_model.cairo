@@ -16,7 +16,7 @@ mod TestInterestRateModel {
     fn interest_rate_config() -> InterestRateConfig {
         InterestRateConfig {
             min_target_utilization: 75_000,
-            max_target_utilization: 85_000,
+            max_target_utilization: 90_000,
             target_utilization: 87_500,
             min_full_utilization_rate: 1582470460,
             max_full_utilization_rate: 32150205761,
@@ -106,8 +106,8 @@ mod TestInterestRateModel {
         let (rate, next_full_utilization_rate) = calculate_interest_rate(
             interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
-        assert!(to_apr(rate) == 08_715, "invalid rate");
-        assert!(to_apr(next_full_utilization_rate) == 23_333, "invalid next_full_utilization_rate");
+        assert!(to_apr(rate) == 07_515, "invalid rate");
+        assert!(to_apr(next_full_utilization_rate) == 19_999, "invalid next_full_utilization_rate");
     }
 
     #[test]
