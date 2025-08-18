@@ -4,7 +4,7 @@ mod TestDefaultExtensionPOV2 {
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
-    use vesu::data_model::{AssetParams, FeeConfig, LTVConfig, PragmaOracleParams};
+    use vesu::data_model::{AssetParams, LTVConfig, PragmaOracleParams};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
     use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig, ShutdownMode};
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
@@ -547,27 +547,27 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_set_fee_config() {
+    fn test_set_fee_recipient() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, Option::None);
 
         start_cheat_caller_address(singleton.contract_address, users.owner);
-        singleton.set_fee_config(FeeConfig { fee_recipient: users.lender });
+        singleton.set_fee_recipient(users.lender);
         stop_cheat_caller_address(singleton.contract_address);
 
-        let fee_config = singleton.fee_config();
-        assert(fee_config.fee_recipient == users.lender, 'Fee config not set');
+        let fee_recipient = singleton.fee_recipient();
+        assert(fee_recipient == users.lender, 'Fee recipient not set');
     }
 
     #[test]
     #[should_panic(expected: "caller-not-extension-owner")]
-    fn test_set_fee_config_caller_not_owner() {
+    fn test_set_fee_recipient_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, Option::None);
 
-        singleton.set_fee_config(FeeConfig { fee_recipient: users.lender });
+        singleton.set_fee_recipient(users.lender);
     }
 
     #[test]

@@ -7,7 +7,7 @@ use snforge_std::{
 #[feature("deprecated-starknet-consts")]
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
 use vesu::data_model::{
-    AssetParams, DebtCapParams, FeeConfig, LTVConfig, LTVParams, LiquidationParams, PragmaOracleParams, ShutdownParams,
+    AssetParams, DebtCapParams, LTVConfig, LTVParams, LiquidationParams, PragmaOracleParams, ShutdownParams,
 };
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
 use vesu::extension::components::position_hooks::{LiquidationConfig, ShutdownConfig};
@@ -140,7 +140,7 @@ pub fn setup_env(
     };
 
     cheat_caller_address(singleton.contract_address, users.owner, CheatSpan::TargetCalls(1));
-    singleton.set_fee_config(FeeConfig { fee_recipient: users.owner });
+    singleton.set_fee_recipient(users.owner);
 
     start_cheat_block_timestamp_global(get_block_timestamp() + 1);
 
