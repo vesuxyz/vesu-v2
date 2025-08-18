@@ -77,7 +77,6 @@ pub mod position_hooks_component {
     use vesu::extension::components::position_hooks::{
         LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus, assert_liquidation_config,
     };
-    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::units::SCALE;
 
     #[storage]
@@ -227,18 +226,8 @@ pub mod position_hooks_component {
         /// # Returns
         /// * `shutdown_mode` - the shutdown mode
         fn update_shutdown_status(ref self: ComponentState<TContractState>, context: Context) -> ShutdownMode {
-            let Context { collateral_asset, collateral_asset_config, .. } = context;
-
             // check if the shutdown mode has been overwritten
             let ShutdownState { shutdown_mode, .. } = self.fixed_shutdown_mode.read();
-
-            if shutdown_mode == ShutdownMode::Redemption {
-                // set max_utilization to 100% if it's not already set
-                if collateral_asset_config.max_utilization != SCALE {
-                    ISingletonV2Dispatcher { contract_address: starknet::get_contract_address() }
-                        .set_asset_parameter(collateral_asset, 'max_utilization', SCALE);
-                }
-            }
 
             // check if the shutdown mode has been set to a non-none value
             if shutdown_mode != ShutdownMode::None {

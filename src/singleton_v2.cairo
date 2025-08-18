@@ -406,6 +406,9 @@ mod SingletonV2 {
 
         /// Asserts that the current utilization of an asset is below the max. allowed utilization
         fn assert_max_utilization(ref self: ContractState, asset_config: AssetConfig) {
+            if self.position_hooks.fixed_shutdown_mode.read().shutdown_mode != ShutdownMode::None {
+                return;
+            }
             assert!(utilization(asset_config) <= asset_config.max_utilization, "utilization-exceeded")
         }
 
@@ -1023,10 +1026,7 @@ mod SingletonV2 {
         /// * `value` - value of the parameter
         fn set_asset_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256) {
             let caller_address = get_caller_address();
-            assert!(
-                caller_address == self.extension_owner.read() || caller_address == get_contract_address(),
-                "caller-not-extension-owner",
-            );
+            assert!(caller_address == self.extension_owner.read(), "caller-not-extension-owner");
 
             let mut asset_config = self.asset_config(asset);
 
