@@ -729,6 +729,19 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
+    #[should_panic(expected: "caller-not-owner-or-agent")]
+    fn test_extension_update_shutdown_status_caller_not_owner_or_agent() {
+        let Env {
+            singleton, extension, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
+
+        create_pool(singleton, extension, config, users.owner, Option::None);
+
+        extension.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+    }
+
+    #[test]
     #[should_panic(expected: "caller-not-singleton-owner")]
     fn test_extension_upgrade_only_owner() {
         let Env { extension, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());

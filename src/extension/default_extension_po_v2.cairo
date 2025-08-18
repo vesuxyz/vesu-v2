@@ -301,6 +301,13 @@ mod DefaultExtensionPOV2 {
             ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownMode {
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
+            let shutdown_mode_agent = singleton.shutdown_mode_agent();
+            assert!(
+                get_caller_address() == self.owner.read() || get_caller_address() == shutdown_mode_agent,
+                "caller-not-owner-or-agent",
+            );
+
+            let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
             let context = singleton.context(collateral_asset, debt_asset, Zero::zero());
             self.position_hooks.update_shutdown_status(context)
         }
