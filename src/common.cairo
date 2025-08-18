@@ -12,6 +12,7 @@ use vesu::units::SCALE;
 /// * `debt` - debt [asset scale]
 /// * `rate_accumulator` - rate accumulator [SCALE]
 /// * `asset_scale` - asset scale [asset scale]
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `nominal_debt` - computed nominal debt [SCALE]
 pub fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
@@ -35,6 +36,7 @@ pub fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u
 /// * `nominal_debt` - nominal debt [SCALE]
 /// * `rate_accumulator` - rate accumulator [SCALE]
 /// * `asset_scale` - asset scale [asset scale]
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `debt` - computed debt [asset scale]
 pub fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
@@ -57,6 +59,7 @@ pub fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u
 /// # Arguments
 /// * `collateral` - collateral asset amount [asset scale]
 /// * `asset_config` - collateral asset config
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `collateral_shares` - collateral shares amount [SCALE]
 pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, round_up: bool) -> u256 {
@@ -90,6 +93,7 @@ pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, 
 /// # Arguments
 /// * `collateral_shares` - collateral shares amount [SCALE]
 /// * `asset_config` - collateral asset config
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `collateral` - collateral asset amount [asset scale]
 pub fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, round_up: bool) -> u256 {

@@ -393,7 +393,12 @@ pub mod position_hooks_component {
             };
             self.fixed_shutdown_mode.write(pool_id, shutdown_state);
 
-            self.emit(SetShutdownMode { pool_id, shutdown_mode, last_updated: shutdown_state.last_updated });
+            self
+                .emit(
+                    SetShutdownMode {
+                        pool_id, shutdown_mode: new_shutdown_mode, last_updated: shutdown_state.last_updated,
+                    },
+                );
         }
 
         /// Updates the tracked total collateral shares and the total nominal debt assigned to a specific pair.
