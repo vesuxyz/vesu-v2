@@ -496,11 +496,8 @@ mod SingletonV2 {
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
 
             if context.position.nominal_debt != 0 {
-                // value of the collateral is either zero or above the floor
-                assert!(
-                    collateral_value == 0 || collateral_value > context.collateral_asset_config.floor,
-                    "dusty-collateral-balance",
-                );
+                // value of the collateral is above the floor
+                assert!(collateral_value > context.collateral_asset_config.floor, "dusty-collateral-balance");
             }
 
             // value of the outstanding debt is either zero or above the floor
@@ -712,15 +709,6 @@ mod SingletonV2 {
         fn compute_liquidation_amounts(
             ref self: ContractState, context: Context, min_collateral_to_receive: u256, mut debt_to_repay: u256,
         ) -> (u256, u256, u256) {
-            // don't allow for liquidations if the pool is not in normal or recovery mode
-            let shutdown_mode = self._update_shutdown_status(context);
-            assert!(
-                (shutdown_mode == ShutdownMode::None || shutdown_mode == ShutdownMode::Recovery)
-                    && context.collateral_asset_price.is_valid
-                    && context.debt_asset_price.is_valid,
-                "emergency-mode",
-            );
-
             // compute the collateral and debt value of the position
             let (collateral, mut collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(
                 context, context.position,
@@ -1083,7 +1071,11 @@ mod SingletonV2 {
                 collateral_asset, debt_asset, user, min_collateral_to_receive, debt_to_repay, ..,
             } = params;
 
-            let context = self.context(collateral_asset, debt_asset, user);
+            let mut context = self.context(collateral_asset, debt_asset, user);
+
+            // don't allow for liquidations if the pool is not in normal mode
+            let shutdown_mode = self._update_shutdown_status(context);
+            assert!(shutdown_mode == ShutdownMode::None, "emergency-mode");
 
             let (collateral, debt, bad_debt) = self
                 .compute_liquidation_amounts(context, min_collateral_to_receive, debt_to_repay);
@@ -1093,9 +1085,6 @@ mod SingletonV2 {
                 denomination: AmountDenomination::Assets, value: I257Trait::new(collateral, true),
             };
             let debt = Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(debt, true) };
-
-            // reload context since it might have changed by a reentered call
-            let mut context = self.context(collateral_asset, debt_asset, user);
 
             // only allow for liquidation of undercollateralized positions
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
@@ -1110,7 +1099,6 @@ mod SingletonV2 {
             } = response;
 
             self.update_pair(context, collateral_shares_delta, nominal_debt_delta);
-            self._update_shutdown_status(context);
 
             self
                 .emit(
