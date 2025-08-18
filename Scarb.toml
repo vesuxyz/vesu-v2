@@ -15,6 +15,7 @@ starknet = "2.11.4"
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.46.0" }
 alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "c804e98" }
 openzeppelin = "2.0.0"
+starkware_utils = { git ="https://github.com/starkware-libs/starkware-starknet-utils", rev="e716f3538e5edfefe441e3a8c207710460e3d511" }
 
 [tool.fmt]
 max-line-length = 120

@@ -129,6 +129,8 @@ mod SingletonV2 {
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
+    use openzeppelin::security::pausable::PausableComponent;
+    use openzeppelin::security::pausable::PausableComponent::InternalImpl as PausableComponentImpl;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{
@@ -136,6 +138,7 @@ mod SingletonV2 {
     };
     use starknet::syscalls::replace_class_syscall;
     use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
+    use starkware_utils::components::pausable::interface::IPausable;
     use vesu::common::{
         apply_position_update_to_context, calculate_collateral, calculate_collateral_and_debt_value,
         calculate_collateral_shares, calculate_debt, calculate_fee_shares, calculate_nominal_debt,
@@ -186,6 +189,8 @@ mod SingletonV2 {
         shutdown_mode_agent: ContractAddress,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        #[substorage(v0)]
+        pausable: PausableComponent::Storage,
         // storage for the pragma oracle component
         #[substorage(v0)]
         pragma_oracle: pragma_oracle_component::Storage,
@@ -321,6 +326,8 @@ mod SingletonV2 {
     enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        #[flat]
+        PausableEvent: PausableComponent::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
         PositionHooksEvents: position_hooks_component::Event,
@@ -340,12 +347,14 @@ mod SingletonV2 {
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    component!(path: PausableComponent, storage: pausable, event: PausableEvent);
     component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
+    impl PausableImplOZ = PausableComponent::PausableImpl<ContractState>;
 
     #[constructor]
     fn constructor(
@@ -790,8 +799,9 @@ mod SingletonV2 {
         /// # Returns
         /// * `response` - see UpdatePositionResponse
         fn modify_position(ref self: ContractState, params: ModifyPositionParams) -> UpdatePositionResponse {
-            let ModifyPositionParams { collateral_asset, debt_asset, user, collateral, debt } = params;
+            self.pausable.assert_not_paused();
 
+            let ModifyPositionParams { collateral_asset, debt_asset, user, collateral, debt } = params;
             let mut context = self.context(collateral_asset, debt_asset, user);
 
             // update the position
@@ -834,6 +844,8 @@ mod SingletonV2 {
         /// # Returns
         /// * `response` - see UpdatePositionResponse
         fn liquidate_position(ref self: ContractState, params: LiquidatePositionParams) -> UpdatePositionResponse {
+            self.pausable.assert_not_paused();
+
             let LiquidatePositionParams {
                 collateral_asset, debt_asset, user, min_collateral_to_receive, debt_to_repay, ..,
             } = params;
@@ -902,6 +914,8 @@ mod SingletonV2 {
             is_legacy: bool,
             data: Span<felt252>,
         ) {
+            self.pausable.assert_not_paused();
+
             transfer_asset(asset, get_contract_address(), receiver, amount, is_legacy);
             IFlashLoanReceiverDispatcher { contract_address: receiver }
                 .on_flash_loan(get_caller_address(), asset, amount, data);
@@ -915,6 +929,8 @@ mod SingletonV2 {
         /// * `delegatee` - address of the delegatee
         /// * `delegation` - delegation status (true = delegate, false = undelegate)
         fn modify_delegation(ref self: ContractState, delegatee: ContractAddress, delegation: bool) {
+            self.pausable.assert_not_paused();
+
             self.delegations.write((get_caller_address(), delegatee), delegation);
 
             self.emit(ModifyDelegation { delegator: get_caller_address(), delegatee, delegation });
@@ -925,6 +941,8 @@ mod SingletonV2 {
         /// * `asset` - address of the asset
         /// * `amount` - amount to donate [asset scale]
         fn donate_to_reserve(ref self: ContractState, asset: ContractAddress, amount: u256) {
+            self.pausable.assert_not_paused();
+
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             let mut asset_config = self.asset_config(asset);
             assert_asset_config_exists(asset_config);
@@ -1022,6 +1040,8 @@ mod SingletonV2 {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_asset_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256) {
+            self.pausable.assert_not_paused();
+
             let caller_address = get_caller_address();
             assert!(
                 caller_address == self.extension_owner.read() || caller_address == get_contract_address(),
@@ -1051,6 +1071,8 @@ mod SingletonV2 {
         /// # Arguments
         /// * `asset` - address of the asset
         fn claim_fees(ref self: ContractState, asset: ContractAddress) {
+            self.pausable.assert_not_paused();
+
             let mut asset_config = self.asset_config(asset);
             let fee_shares = asset_config.fee_shares;
 
@@ -1091,7 +1113,9 @@ mod SingletonV2 {
         /// # Arguments
         /// * `fee_recipient` - new fee address
         fn set_fee_recipient(ref self: ContractState, fee_recipient: ContractAddress) {
+            self.pausable.assert_not_paused();
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+
             self.fee_recipient.write(fee_recipient);
             self.emit(SetFeeRecipient { fee_recipient });
         }
@@ -1125,6 +1149,8 @@ mod SingletonV2 {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
+            self.pausable.assert_not_paused();
+
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.pragma_oracle.set_oracle_parameter(asset, parameter, value);
         }
@@ -1194,6 +1220,8 @@ mod SingletonV2 {
         /// # Arguments
         /// * `shutdown_mode_agent` - address of the shutdown mode agent
         fn set_shutdown_mode_agent(ref self: ContractState, shutdown_mode_agent: ContractAddress) {
+            self.pausable.assert_not_paused();
+
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.shutdown_mode_agent.write(shutdown_mode_agent);
             self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
@@ -1271,6 +1299,8 @@ mod SingletonV2 {
         /// # Arguments
         /// * `shutdown_config` - shutdown config
         fn set_shutdown_config(ref self: ContractState, shutdown_config: ShutdownConfig) {
+            self.pausable.assert_not_paused();
+
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
             self.position_hooks.set_shutdown_config(shutdown_config);
         }
@@ -1279,6 +1309,8 @@ mod SingletonV2 {
         /// # Arguments
         /// * `shutdown_mode` - shutdown mode
         fn set_shutdown_mode(ref self: ContractState, shutdown_mode: ShutdownMode) {
+            self.pausable.assert_not_paused();
+
             let shutdown_mode_agent = self.shutdown_mode_agent();
             assert!(
                 get_caller_address() == self.extension_owner.read() || get_caller_address() == shutdown_mode_agent,
@@ -1342,6 +1374,23 @@ mod SingletonV2 {
             let new_name = ISingletonV2Dispatcher { contract_address: get_contract_address() }.upgrade_name();
             assert(new_name == self.upgrade_name(), 'invalid upgrade name');
             self.emit(ContractUpgraded { new_implementation });
+        }
+    }
+
+    #[abi(embed_v0)]
+    pub impl PausableImpl of IPausable<ContractState> {
+        fn is_paused(self: @ContractState) -> bool {
+            self.pausable.is_paused()
+        }
+
+        fn pause(ref self: ContractState) {
+            self.ownable.assert_only_owner();
+            self.pausable.pause();
+        }
+
+        fn unpause(ref self: ContractState) {
+            self.ownable.assert_only_owner();
+            self.pausable.unpause();
         }
     }
 }
