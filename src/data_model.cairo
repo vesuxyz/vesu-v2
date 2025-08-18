@@ -144,7 +144,6 @@ pub struct PragmaOracleParams {
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Context {
-    pub extension: ContractAddress,
     pub collateral_asset: ContractAddress,
     pub debt_asset: ContractAddress,
     pub collateral_asset_config: AssetConfig,
