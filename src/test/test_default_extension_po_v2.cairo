@@ -415,7 +415,7 @@ mod TestDefaultExtensionPOV2 {
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
-            max_target_utilization: 85_000,
+            max_target_utilization: 99_999,
             target_utilization: 87_500,
             min_full_utilization_rate: 1582470460,
             max_full_utilization_rate: 32150205761,
@@ -812,12 +812,12 @@ mod TestDefaultExtensionPOV2 {
         start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
-                config.pool_id, config.collateral_asset.contract_address, 'max_target_utilization', 5,
+                config.pool_id, config.collateral_asset.contract_address, 'max_target_utilization', 90_000,
             );
         stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
-        assert(interest_rate_config.max_target_utilization == 5, 'Interest rate parameter not set');
+        assert(interest_rate_config.max_target_utilization == 90_000, 'Interest rate parameter not set');
 
         start_cheat_caller_address(extension.contract_address, users.creator);
         extension

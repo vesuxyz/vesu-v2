@@ -84,7 +84,7 @@ fn assert_interest_rate_config(interest_rate_config: InterestRateConfig) {
     let InterestRateConfig {
         min_target_utilization,
         max_target_utilization,
-        ..,
+        target_utilization,
         min_full_utilization_rate,
         max_full_utilization_rate,
         zero_utilization_rate,
@@ -93,6 +93,8 @@ fn assert_interest_rate_config(interest_rate_config: InterestRateConfig) {
     } = interest_rate_config;
     assert!(min_target_utilization <= max_target_utilization, "min-target-utilization-gt-max-target-utilization");
     assert!(max_target_utilization <= UTILIZATION_SCALE, "max-target-utilization-gt-100%");
+    assert!(min_target_utilization <= target_utilization, "target-utilization-lt-min-target-utilization");
+    assert!(target_utilization < max_target_utilization, "target-utilization-gt-max-target-utilization");
     assert!(max_target_utilization != 0, "max-target-utilization-eq-0");
     assert!(zero_utilization_rate <= min_full_utilization_rate, "zero-utilization-rate-gt-min-full-utilization-rate");
     assert!(
