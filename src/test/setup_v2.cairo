@@ -27,6 +27,7 @@ pub const THIRD_PRAGMA_KEY: felt252 = 18669995996566340;
 #[derive(Copy, Drop, Serde)]
 pub struct Users {
     pub owner: ContractAddress,
+    pub pauser: ContractAddress,
     pub extension_owner: ContractAddress,
     pub lender: ContractAddress,
     pub borrower: ContractAddress,
@@ -113,6 +114,7 @@ pub fn setup_env(
 ) -> Env {
     let users = Users {
         owner: contract_address_const::<'owner'>(),
+        pauser: contract_address_const::<'pauser'>(),
         extension_owner: contract_address_const::<'owner'>(),
         lender: contract_address_const::<'lender'>(),
         borrower: contract_address_const::<'borrower'>(),
@@ -135,6 +137,7 @@ pub fn setup_env(
             array![
                 'PoolName',
                 users.owner.into(),
+                users.pauser.into(),
                 mock_pragma_oracle.contract_address.into(),
                 mock_pragma_summary.contract_address.into(),
             ],

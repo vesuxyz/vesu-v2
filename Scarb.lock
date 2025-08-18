@@ -138,10 +138,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "starkware_utils"
+version = "1.0.0"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=e716f3538e5edfefe441e3a8c207710460e3d511#e716f3538e5edfefe441e3a8c207710460e3d511"
+dependencies = [
+ "openzeppelin",
+]
+
+[[package]]
 name = "vesu"
 version = "0.1.0"
 dependencies = [
  "alexandria_math",
  "openzeppelin",
  "snforge_std",
+ "starkware_utils",
 ]
