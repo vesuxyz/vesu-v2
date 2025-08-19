@@ -20,7 +20,7 @@ mod TestPragmaOracle {
 
 
     fn create_custom_pool(
-        extension_owner: ContractAddress,
+        curator: ContractAddress,
         singleton: ISingletonV2Dispatcher,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
@@ -96,7 +96,7 @@ mod TestPragmaOracle {
         let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
 
         // Add assets.
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton
             .add_asset(
                 params: collateral_asset_params,
@@ -104,7 +104,7 @@ mod TestPragmaOracle {
                 pragma_oracle_params: collateral_asset_oracle_params,
             );
 
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton
             .add_asset(
                 params: debt_asset_params,
@@ -116,7 +116,7 @@ mod TestPragmaOracle {
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton
             .set_liquidation_config(
                 :collateral_asset,
@@ -129,7 +129,7 @@ mod TestPragmaOracle {
         let collateral_asset = debt_asset_params.asset;
         let debt_asset = collateral_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton
             .set_liquidation_config(
                 :collateral_asset,
@@ -144,20 +144,20 @@ mod TestPragmaOracle {
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: collateral_asset_debt_cap_params.debt_cap);
 
         let collateral_asset = debt_asset_params.asset;
         let debt_asset = collateral_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_asset_debt_cap_params.debt_cap);
 
         // Set lvt config.
         let collateral_asset = debt_asset_params.asset;
         let debt_asset = collateral_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton
             .set_ltv_config(
                 :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
@@ -166,7 +166,7 @@ mod TestPragmaOracle {
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton
             .set_ltv_config(
                 :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
@@ -174,7 +174,7 @@ mod TestPragmaOracle {
 
         // set the shutdown config
         let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
-        cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
         singleton.set_shutdown_config(shutdown_config: ShutdownConfig { recovery_period, subscription_period });
         // No stop_cheat_caller_address needed for one-shot cheat_caller_address
     }
@@ -227,12 +227,7 @@ mod TestPragmaOracle {
         let timeout = 10;
 
         create_custom_pool(
-            users.extension_owner,
-            singleton,
-            collateral_asset.contract_address,
-            debt_asset.contract_address,
-            timeout,
-            2,
+            users.curator, singleton, collateral_asset.contract_address, debt_asset.contract_address, timeout, 2,
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
@@ -259,12 +254,7 @@ mod TestPragmaOracle {
         let timeout = 10;
 
         create_custom_pool(
-            users.extension_owner,
-            singleton,
-            collateral_asset.contract_address,
-            debt_asset.contract_address,
-            timeout,
-            2,
+            users.curator, singleton, collateral_asset.contract_address, debt_asset.contract_address, timeout, 2,
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
@@ -285,7 +275,7 @@ mod TestPragmaOracle {
 
         let min_number_of_sources = 2;
         create_custom_pool(
-            users.extension_owner,
+            users.curator,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,
@@ -317,7 +307,7 @@ mod TestPragmaOracle {
 
         let min_number_of_sources = 2;
         create_custom_pool(
-            users.extension_owner,
+            users.curator,
             singleton,
             collateral_asset.contract_address,
             debt_asset.contract_address,

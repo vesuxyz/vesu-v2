@@ -21,7 +21,7 @@ mod TestPoolDonation {
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -84,10 +84,10 @@ mod TestPoolDonation {
         assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
         cheat_caller_address(debt_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
-        debt_asset.transfer(users.extension_owner, amount_to_donate_to_reserve);
-        cheat_caller_address(debt_asset.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        debt_asset.transfer(users.curator, amount_to_donate_to_reserve);
+        cheat_caller_address(debt_asset.contract_address, users.curator, CheatSpan::TargetCalls(1));
         debt_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
-        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, users.curator, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(debt_asset.contract_address, amount_to_donate_to_reserve);
 
         let (fee_shares_after, _) = singleton.get_fees(debt_asset.contract_address);
@@ -137,10 +137,10 @@ mod TestPoolDonation {
         let amount_to_donate_to_reserve = 2 * fake_asset_scale;
 
         cheat_caller_address(fake_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
-        fake_asset.transfer(users.extension_owner, amount_to_donate_to_reserve);
-        cheat_caller_address(fake_asset.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        fake_asset.transfer(users.curator, amount_to_donate_to_reserve);
+        cheat_caller_address(fake_asset.contract_address, users.curator, CheatSpan::TargetCalls(1));
         fake_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
-        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, users.curator, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(fake_asset.contract_address, amount_to_donate_to_reserve);
     }
 }
