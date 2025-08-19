@@ -9,34 +9,34 @@ mod TestShutdown {
     use starknet::get_block_timestamp;
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams, ShutdownMode};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
-    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
+    use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_pool};
     use vesu::units::{DAY_IN_SECONDS, SCALE, SCALE_128};
 
     #[test]
     fn test_set_shutdown_mode_recovery() {
-        let (singleton, config, _, _) = setup();
+        let (pool, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
     }
 
     #[test]
     #[should_panic(expected: "shutdown-mode-not-recovery")]
     fn test_set_shutdown_mode_not_recovery() {
-        let (singleton, _, _, _) = setup();
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
+        let (pool, _, _, _) = setup();
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
     }
 
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_from_none() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -51,9 +51,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -65,14 +65,14 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 1
 
@@ -84,14 +84,14 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: (SCALE / 5_000).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     fn test_recovery_mode_made_safer() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -106,9 +106,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -120,16 +120,16 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Recovery
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -141,15 +141,15 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_decreasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -164,9 +164,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -178,16 +178,16 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Recovery
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 1
 
@@ -199,9 +199,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         let params = ModifyPositionParams {
             collateral_asset: collateral_asset.contract_address,
@@ -213,15 +213,15 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_increasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -236,9 +236,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -250,16 +250,16 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Recovery
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 1
 
@@ -271,9 +271,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         let params = ModifyPositionParams {
             collateral_asset: collateral_asset.contract_address,
@@ -283,14 +283,14 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 100).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     fn test_subscription_mode_decreasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -305,9 +305,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -319,32 +319,32 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // User 2
@@ -357,15 +357,15 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: -1_u256.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -380,9 +380,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -394,32 +394,32 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // User 2
@@ -432,15 +432,15 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_decreasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -455,9 +455,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -469,32 +469,32 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -509,15 +509,15 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -532,9 +532,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -546,32 +546,32 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -586,14 +586,14 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 10).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     fn test_redemption_mode_decreasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -608,9 +608,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -622,32 +622,32 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -663,20 +663,20 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Redemption
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Redemption);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         let params = ModifyPositionParams {
@@ -687,15 +687,15 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -710,9 +710,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -724,33 +724,33 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -766,21 +766,21 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Redemption
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Redemption);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
 
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
@@ -794,15 +794,15 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_decreasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -817,9 +817,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -831,33 +831,33 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -876,21 +876,21 @@ mod TestShutdown {
             },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Redemption
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Redemption);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -903,15 +903,15 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: -(nominal_debt_to_draw / 10).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -926,9 +926,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -940,33 +940,33 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -982,21 +982,21 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Redemption
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Redemption);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -1009,9 +1009,9 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 10).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     // non-zero-collateral-shares
@@ -1019,7 +1019,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "non-zero-debt")]
     fn test_redemption_mode_non_zero_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1034,9 +1034,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -1048,42 +1048,42 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // Redemption
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Redemption);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -1096,33 +1096,33 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     #[test]
     fn test_redemption_mode_max_utilization() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, collateral_scale, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-        let borrower = singleton.contract_address;
+        let borrower = pool.contract_address;
 
         start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         collateral_asset.transfer(borrower, collateral_to_deposit * 2);
         stop_cheat_caller_address(collateral_asset.contract_address);
 
         start_cheat_caller_address(collateral_asset.contract_address, borrower);
-        collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+        collateral_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
         stop_cheat_caller_address(collateral_asset.contract_address);
         start_cheat_caller_address(debt_asset.contract_address, borrower);
-        debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+        debt_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
         stop_cheat_caller_address(debt_asset.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 2);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 2);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 1
 
@@ -1135,9 +1135,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -1149,9 +1149,9 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw / 2).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         //
 
@@ -1163,33 +1163,33 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit / 11).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Subscription
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Subscription, 'not-in-subscription');
 
         // fund borrower with debt assets to repay interest
@@ -1205,31 +1205,31 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: -nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Redemption
 
         // third user has to borrow from same pair to increase utilization
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 100);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 100);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        singleton.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Redemption);
+        pool.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
-        let asset_config = singleton.asset_config(collateral_asset.contract_address);
+        let asset_config = pool.asset_config(collateral_asset.contract_address);
 
         let params = ModifyPositionParams {
             collateral_asset: collateral_asset.contract_address,
@@ -1239,9 +1239,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
     }
 
     // Scenario:
@@ -1251,7 +1251,7 @@ mod TestShutdown {
     // -> pool should still be in recovery mode
     #[test]
     fn test_recovery_mode_complex() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
@@ -1267,9 +1267,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         let params = ModifyPositionParams {
             collateral_asset: third_asset.contract_address,
@@ -1279,9 +1279,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -1293,9 +1293,9 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         let params = ModifyPositionParams {
             collateral_asset: collateral_asset.contract_address,
@@ -1305,42 +1305,42 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Pair 1: None -> Recovery
         // warp to non zero block timestamp first
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // oracle failure in pair 1 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
         // update shutdown mode
-        singleton.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
+        pool.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
 
-        let status = singleton.shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
+        let status = pool.shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Pair 2: None -> Recovery
         // undercollateraliztion in pair 2 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // update shutdown mode
-        singleton.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        pool.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Pair 3: None -> Recovery
         // undercollateraliztion in pair 3 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(THIRD_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // update shutdown mode
-        singleton.update_shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
+        pool.update_shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
         // Pair 1: Recovery --> None
@@ -1348,9 +1348,9 @@ mod TestShutdown {
         // oracle recovery in pair 1 --> normal
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 2);
         // update shutdown mode
-        singleton.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
+        pool.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
 
-        let status = singleton.shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
+        let status = pool.shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
         // should still be in recovery because of pair 2
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
     }
@@ -1371,7 +1371,7 @@ mod TestShutdown {
             target_rate_percent: SCALE,
         };
 
-        let (singleton, config, users, terms) = setup_pool(
+        let (pool, config, users, terms) = setup_pool(
             Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::Some(interest_rate_config),
         );
 
@@ -1389,9 +1389,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -1403,33 +1403,33 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         let current_time = current_time + (360 * DAY_IN_SECONDS);
         start_cheat_block_timestamp_global(current_time);
 
-        let asset_config = singleton.asset_config(collateral_asset.contract_address);
+        let asset_config = pool.asset_config(collateral_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
-        let asset_config = singleton.asset_config(debt_asset.contract_address);
+        let asset_config = pool.asset_config(debt_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
 
-        let context = singleton.context(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
+        let context = pool.context(collateral_asset.contract_address, debt_asset.contract_address, users.lender);
         assert!(context.collateral_asset_config.last_rate_accumulator > 18 * SCALE);
         assert!(context.debt_asset_config.last_rate_accumulator > 18 * SCALE);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
 
-        let asset_config = singleton.asset_config(collateral_asset.contract_address);
+        let asset_config = pool.asset_config(collateral_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
-        let asset_config = singleton.asset_config(debt_asset.contract_address);
+        let asset_config = pool.asset_config(debt_asset.contract_address);
         assert!(asset_config.last_rate_accumulator > 18 * SCALE);
 
         stop_cheat_block_timestamp_global();
@@ -1438,7 +1438,7 @@ mod TestShutdown {
     // test that collateral is not double counted
     #[test]
     fn test_shutdown_collateral_accounting() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
@@ -1454,9 +1454,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         let params = ModifyPositionParams {
             collateral_asset: third_asset.contract_address,
@@ -1466,9 +1466,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // Borrower
 
@@ -1480,9 +1480,9 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         let params = ModifyPositionParams {
             collateral_asset: collateral_asset.contract_address,
@@ -1492,30 +1492,30 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: (nominal_debt_to_draw).into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         //
 
         // Pair 1 and Pair 2: None -> Recovery
         // undercollateraliztion in pair 1 and pair 2 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: pool.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 2);
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // update shutdown mode
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        let status = pool.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Recovery, 'not-in-recovery');
     }
 
     #[test]
     fn test_fixed_shutdown_mode() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1530,9 +1530,9 @@ mod TestShutdown {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // User 2
 
@@ -1544,34 +1544,31 @@ mod TestShutdown {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        let shutdown_mode = singleton
-            .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        let shutdown_mode = pool.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        stop_cheat_caller_address(pool.contract_address);
         assert!(shutdown_mode == ShutdownMode::Recovery, "shutdown-mode-not-recovery");
 
-        let shutdown_config = singleton.shutdown_config();
+        let shutdown_config = pool.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Subscription);
-        stop_cheat_caller_address(singleton.contract_address);
-        let shutdown_mode = singleton
-            .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Subscription);
+        stop_cheat_caller_address(pool.contract_address);
+        let shutdown_mode = pool.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Subscription, "shutdown-mode-not-subscription");
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        stop_cheat_caller_address(singleton.contract_address);
-        let shutdown_mode = singleton
-            .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_shutdown_mode(ShutdownMode::Redemption);
+        stop_cheat_caller_address(pool.contract_address);
+        let shutdown_mode = pool.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert!(shutdown_mode == ShutdownMode::Redemption, "shutdown-mode-not-redemption");
     }
 }

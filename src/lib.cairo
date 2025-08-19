@@ -3,7 +3,7 @@ pub mod data_model;
 
 pub mod math;
 pub mod packing;
-pub mod singleton_v2;
+pub mod pool;
 pub mod units;
 
 pub mod extension {
@@ -21,8 +21,8 @@ pub mod vendor {
 pub mod test {
     pub mod mock_asset;
     pub mod mock_oracle;
-    pub mod mock_singleton;
-    pub mod mock_singleton_upgrade;
+    pub mod mock_pool;
+    pub mod mock_pool_upgrade;
     pub mod setup_v2;
     pub mod test_common;
     pub mod test_default_extension_po_v2;
@@ -32,8 +32,8 @@ pub mod test {
     pub mod test_math;
     pub mod test_modify_position;
     pub mod test_packing;
+    pub mod test_pool;
     pub mod test_pool_donations;
     pub mod test_pragma_oracle;
     pub mod test_shutdown;
-    pub mod test_singleton_v2;
 }

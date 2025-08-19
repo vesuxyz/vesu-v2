@@ -8,7 +8,7 @@ mod TestInterestRateModel {
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::calculate_interest_rate;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, InterestRateConfigPacking};
     use vesu::math::pow_scale;
-    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
+    use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
     use vesu::units::{DAY_IN_SECONDS, FRACTION, PERCENT, SCALE, YEAR_IN_SECONDS};
 
@@ -269,13 +269,13 @@ mod TestInterestRateModel {
 
     #[test]
     fn test_set_interest_rate_model_fee_shares() {
-        let (singleton, config, users, terms) = setup();
+        let (pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
+        stop_cheat_caller_address(pool.contract_address);
 
         // LENDER
 
@@ -288,9 +288,9 @@ mod TestInterestRateModel {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // BORROWER
 
@@ -303,24 +303,24 @@ mod TestInterestRateModel {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let (fee_shares, _) = singleton.get_fees(debt_asset.contract_address);
+        let (fee_shares, _) = pool.get_fees(debt_asset.contract_address);
         assert!(fee_shares == 0, "No fee shares should not have accrued");
 
         // interest accrued should be reflected since time has passed
         start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
-        let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
+        let (fee_shares_before, _) = pool.get_fees(debt_asset.contract_address);
         assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let (fee_shares_after, _) = singleton.get_fees(debt_asset.contract_address);
+        let (fee_shares_after, _) = pool.get_fees(debt_asset.contract_address);
         assert!(fee_shares_after == fee_shares_before, "Fee shares mismatch");
     }
 }

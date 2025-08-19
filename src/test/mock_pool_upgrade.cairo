@@ -1,14 +1,14 @@
 #[starknet::interface]
-pub trait IMockSingletonUpgrade<TContractState> {
+pub trait IMockPoolUpgrade<TContractState> {
     fn upgrade_name(ref self: TContractState) -> felt252;
     fn tag(ref self: TContractState) -> felt252;
     fn pool_name(ref self: TContractState) -> felt252;
 }
 
 #[starknet::contract]
-mod MockSingletonUpgrade {
+mod MockPoolUpgrade {
     use starknet::storage::StoragePointerReadAccess;
-    use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
+    use vesu::test::mock_pool_upgrade::IMockPoolUpgrade;
 
     #[storage]
     struct Storage {
@@ -16,13 +16,13 @@ mod MockSingletonUpgrade {
     }
 
     #[abi(embed_v0)]
-    impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
+    impl MockPoolUpgradeImpl of IMockPoolUpgrade<ContractState> {
         fn upgrade_name(ref self: ContractState) -> felt252 {
-            'Vesu Singleton'
+            'Vesu Pool'
         }
 
         fn tag(ref self: ContractState) -> felt252 {
-            'MockSingletonUpgrade'
+            'MockPoolUpgrade'
         }
 
         fn pool_name(ref self: ContractState) -> felt252 {
@@ -34,13 +34,13 @@ mod MockSingletonUpgrade {
 
 #[starknet::contract]
 mod MockExtensionPOV2Upgrade {
-    use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
+    use vesu::test::mock_pool_upgrade::IMockPoolUpgrade;
 
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
+    impl MockPoolUpgradeImpl of IMockPoolUpgrade<ContractState> {
         fn upgrade_name(ref self: ContractState) -> felt252 {
             'Vesu default extension po v2'
         }
@@ -57,13 +57,13 @@ mod MockExtensionPOV2Upgrade {
 
 #[starknet::contract]
 mod MockExtensionEKV2Upgrade {
-    use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
+    use vesu::test::mock_pool_upgrade::IMockPoolUpgrade;
 
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
+    impl MockPoolUpgradeImpl of IMockPoolUpgrade<ContractState> {
         fn upgrade_name(ref self: ContractState) -> felt252 {
             'Vesu DefaultExtensionEKV2'
         }
@@ -79,19 +79,19 @@ mod MockExtensionEKV2Upgrade {
 }
 
 #[starknet::contract]
-mod MockSingletonUpgradeWrongName {
-    use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
+mod MockPoolUpgradeWrongName {
+    use vesu::test::mock_pool_upgrade::IMockPoolUpgrade;
 
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
+    impl MockPoolUpgradeImpl of IMockPoolUpgrade<ContractState> {
         fn upgrade_name(ref self: ContractState) -> felt252 {
             'Not Vesu'
         }
         fn tag(ref self: ContractState) -> felt252 {
-            'MockSingletonUpgradeWrongName'
+            'MockPoolUpgradeWrongName'
         }
 
         fn pool_name(ref self: ContractState) -> felt252 {
@@ -103,7 +103,7 @@ mod MockSingletonUpgradeWrongName {
 #[starknet::contract]
 mod MockEIC {
     use starknet::storage::StoragePointerWriteAccess;
-    use vesu::singleton_v2::IEIC;
+    use vesu::pool::IEIC;
 
     #[storage]
     struct Storage {
