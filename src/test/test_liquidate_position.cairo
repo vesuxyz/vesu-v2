@@ -926,7 +926,7 @@ mod TestLiquidatePosition {
             * debt_scale
             / collateral_scale;
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
@@ -1032,7 +1032,7 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt;
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
@@ -1138,7 +1138,7 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 90 / 100;
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
@@ -1244,7 +1244,7 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 2;
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
@@ -1353,7 +1353,7 @@ mod TestLiquidatePosition {
             * debt_scale)
             / (debt_price * 2);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton
             .set_liquidation_config(
                 collateral_asset.contract_address,
