@@ -92,9 +92,9 @@ pub trait ISingletonV2<TContractState> {
     fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
-    fn extension_owner(self: @TContractState) -> ContractAddress;
-    fn pending_extension_owner(self: @TContractState) -> ContractAddress;
-    fn nominate_curator(ref self: TContractState, pending_extension_owner: ContractAddress);
+    fn curator(self: @TContractState) -> ContractAddress;
+    fn pending_curator(self: @TContractState) -> ContractAddress;
+    fn nominate_curator(ref self: TContractState, pending_curator: ContractAddress);
     fn accept_curator_ownership(ref self: TContractState);
 
     fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
@@ -181,10 +181,10 @@ mod SingletonV2 {
     struct Storage {
         // tracks the name
         pool_name: felt252,
-        // The owner of the extension
-        extension_owner: ContractAddress,
-        // The pending extension owner
-        pending_extension_owner: ContractAddress,
+        // The owner of the pool
+        curator: ContractAddress,
+        // The pending curator
+        pending_curator: ContractAddress,
         // Indicates whether the contract is paused
         paused: bool,
         // tracks the configuration / state of each asset
@@ -384,15 +384,15 @@ mod SingletonV2 {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetExtensionOwner {
+    struct SetCurator {
         #[key]
-        extension_owner: ContractAddress,
+        curator: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct NominateExtensionOwner {
+    struct NominateCurator {
         #[key]
-        pending_extension_owner: ContractAddress,
+        pending_curator: ContractAddress,
     }
 
     #[event]
@@ -421,8 +421,8 @@ mod SingletonV2 {
         SetShutdownConfig: SetShutdownConfig,
         SetShutdownMode: SetShutdownMode,
         SetDebtCap: SetDebtCap,
-        SetExtensionOwner: SetExtensionOwner,
-        NominateExtensionOwner: NominateExtensionOwner,
+        SetCurator: SetCurator,
+        NominateCurator: NominateCurator,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -437,15 +437,15 @@ mod SingletonV2 {
         ref self: ContractState,
         name: felt252,
         owner: ContractAddress,
-        extension_owner: ContractAddress,
+        curator: ContractAddress,
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
     ) {
         self.pool_name.write(name);
         self.ownable.initializer(owner);
-        assert!(extension_owner.is_non_zero(), "invalid-zero-extension-owner");
-        self.extension_owner.write(extension_owner);
-        self.pending_extension_owner.write(Zero::zero());
+        assert!(curator.is_non_zero(), "invalid-zero-curator");
+        self.curator.write(curator);
+        self.pending_curator.write(Zero::zero());
         self.paused.write(false);
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
@@ -628,7 +628,6 @@ mod SingletonV2 {
 
         /// Computes the new rate accumulator and the interest rate at full utilization for a given asset
         /// # Arguments
-        /// * `extension` - address of the extension contract
         /// * `asset` - address of the asset
         /// # Returns
         /// * `asset_config` - asset config containing the updated last rate accumulator and full utilization rate
@@ -1227,7 +1226,7 @@ mod SingletonV2 {
         fn donate_to_reserve(ref self: ContractState, asset: ContractAddress, amount: u256) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             let mut asset_config = self.asset_config(asset);
             assert_asset_config_exists(asset_config);
             // donate amount to the reserve
@@ -1251,7 +1250,7 @@ mod SingletonV2 {
         ) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             assert!(collateral_asset != debt_asset, "identical-assets");
             assert_ltv_config(ltv_config);
 
@@ -1272,7 +1271,7 @@ mod SingletonV2 {
             self.assert_not_paused();
 
             let caller = get_caller_address();
-            assert!(caller == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(caller == self.curator.read(), "caller-not-curator");
             assert!(self.asset_configs.read(params.asset).scale == 0, "asset-config-already-exists");
 
             let asset = IERC20Dispatcher { contract_address: params.asset };
@@ -1331,7 +1330,7 @@ mod SingletonV2 {
             self.assert_not_paused();
 
             let caller_address = get_caller_address();
-            assert!(caller_address == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(caller_address == self.curator.read(), "caller-not-curator");
 
             let mut asset_config = self.asset_config(asset);
 
@@ -1352,7 +1351,7 @@ mod SingletonV2 {
             self.emit(SetAssetParameter { asset, parameter, value });
         }
 
-        /// Claims the fees accrued in the extension for a given asset and sends them to the fee recipient
+        /// Claims the fees accrued in the pool for a given asset and sends them to the fee recipient
         /// # Arguments
         /// * `asset` - address of the asset
         fn claim_fees(ref self: ContractState, asset: ContractAddress) {
@@ -1399,7 +1398,7 @@ mod SingletonV2 {
         /// * `fee_recipient` - new fee address
         fn set_fee_recipient(ref self: ContractState, fee_recipient: ContractAddress) {
             self.assert_not_paused();
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
 
             self.fee_recipient.write(fee_recipient);
             self.emit(SetFeeRecipient { fee_recipient });
@@ -1436,7 +1435,7 @@ mod SingletonV2 {
         fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             self.pragma_oracle.set_oracle_parameter(asset, parameter, value);
         }
 
@@ -1490,7 +1489,7 @@ mod SingletonV2 {
         ) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             let asset_config = self.asset_config(asset);
             self.asset_configs.write(asset, asset_config);
             self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
@@ -1509,7 +1508,7 @@ mod SingletonV2 {
         fn set_shutdown_mode_agent(ref self: ContractState, shutdown_mode_agent: ContractAddress) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             self.shutdown_mode_agent.write(shutdown_mode_agent);
             self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
         }
@@ -1565,7 +1564,7 @@ mod SingletonV2 {
         ) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             self.debt_caps.write((collateral_asset, debt_asset), debt_cap);
             self.emit(SetDebtCap { collateral_asset, debt_asset, debt_cap });
         }
@@ -1583,7 +1582,7 @@ mod SingletonV2 {
         ) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
 
             self
@@ -1608,7 +1607,7 @@ mod SingletonV2 {
         fn set_shutdown_config(ref self: ContractState, shutdown_config: ShutdownConfig) {
             self.assert_not_paused();
 
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             self.shutdown_config.write(shutdown_config);
             self.emit(SetShutdownConfig { shutdown_config });
         }
@@ -1621,8 +1620,8 @@ mod SingletonV2 {
 
             let shutdown_mode_agent = self.shutdown_mode_agent();
             assert!(
-                get_caller_address() == self.extension_owner.read() || get_caller_address() == shutdown_mode_agent,
-                "caller-not-extension-owner-or-agent",
+                get_caller_address() == self.curator.read() || get_caller_address() == shutdown_mode_agent,
+                "caller-not-curator-or-agent",
             );
             assert!(
                 get_caller_address() != shutdown_mode_agent || new_shutdown_mode == ShutdownMode::Recovery,
@@ -1709,50 +1708,50 @@ mod SingletonV2 {
 
             let caller = get_caller_address();
             assert!(
-                caller == self.extension_owner.read() || caller == self.shutdown_mode_agent.read(),
-                "caller-not-extension-owner-or-agent",
+                caller == self.curator.read() || caller == self.shutdown_mode_agent.read(),
+                "caller-not-curator-or-agent",
             );
 
             let context = self.context(collateral_asset, debt_asset, Zero::zero());
             self._update_shutdown_status(context)
         }
 
-        /// Returns the address of the extension owner
+        /// Returns the address of the curator
         /// # Returns
-        /// * `extension_owner` - address of the extension owner
-        fn extension_owner(self: @ContractState) -> ContractAddress {
-            self.extension_owner.read()
+        /// * `curator` - address of the curator
+        fn curator(self: @ContractState) -> ContractAddress {
+            self.curator.read()
         }
 
-        /// Returns the address of the pending extension owner
+        /// Returns the address of the pending curator
         /// # Returns
-        /// * `pending_extension_owner` - address of the pending extension owner
-        fn pending_extension_owner(self: @ContractState) -> ContractAddress {
-            self.pending_extension_owner.read()
+        /// * `pending_curator` - address of the pending curator
+        fn pending_curator(self: @ContractState) -> ContractAddress {
+            self.pending_curator.read()
         }
 
-        /// Initiate transferring ownership of the extension.
+        /// Initiate transferring ownership of the pool.
         /// The nominated curator should invoke `accept_curator_ownership` to complete the transfer.
         /// At that point, the original curator will be removed and replaced with the nominated curator.
         /// # Arguments
-        /// * `extension_owner` - address of the new extension owner
-        fn nominate_curator(ref self: ContractState, pending_extension_owner: ContractAddress) {
-            assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
+        /// * `curator` - address of the new curator
+        fn nominate_curator(ref self: ContractState, pending_curator: ContractAddress) {
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
 
-            self.pending_extension_owner.write(pending_extension_owner);
-            self.emit(NominateExtensionOwner { pending_extension_owner });
+            self.pending_curator.write(pending_curator);
+            self.emit(NominateCurator { pending_curator });
         }
 
         /// Accept the curator address.
         /// At this point, the original curator will be removed and replaced with the nominated curator.
         fn accept_curator_ownership(ref self: ContractState) {
-            let new_extension_owner = self.pending_extension_owner.read();
-            assert!(get_caller_address() == new_extension_owner, "caller-not-new-extension-owner");
-            assert!(new_extension_owner.is_non_zero(), "invalid-zero-extension-owner-address");
+            let new_curator = self.pending_curator.read();
+            assert!(get_caller_address() == new_curator, "caller-not-new-curator");
+            assert!(new_curator.is_non_zero(), "invalid-zero-curator-address");
 
-            self.pending_extension_owner.write(Zero::zero());
-            self.extension_owner.write(new_extension_owner);
-            self.emit(SetExtensionOwner { extension_owner: new_extension_owner });
+            self.pending_curator.write(Zero::zero());
+            self.curator.write(new_curator);
+            self.emit(SetCurator { curator: new_curator });
         }
 
         /// Pauses the contract
