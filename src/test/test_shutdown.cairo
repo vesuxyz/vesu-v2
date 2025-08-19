@@ -1224,9 +1224,8 @@ mod TestShutdown {
 
         start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
-        stop_cheat_caller_address(singleton.contract_address);
-
         singleton.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
 
         let status = singleton.shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
@@ -1552,9 +1551,9 @@ mod TestShutdown {
 
         start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
-        stop_cheat_caller_address(singleton.contract_address);
         let shutdown_mode = singleton
             .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        stop_cheat_caller_address(singleton.contract_address);
         assert!(shutdown_mode == ShutdownMode::Recovery, "shutdown-mode-not-recovery");
 
         let shutdown_config = singleton.shutdown_config();
