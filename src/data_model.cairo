@@ -130,16 +130,6 @@ pub struct UpdatePositionResponse {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-pub struct PragmaOracleParams {
-    pub pragma_key: felt252,
-    pub timeout: u64, // [seconds]
-    pub number_of_sources: u32,
-    pub start_time_offset: u64, // [seconds]
-    pub time_window: u64, // [seconds]
-    pub aggregation_mode: AggregationMode,
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
 pub struct ShutdownParams {
     pub recovery_period: u64, // [seconds]
     pub subscription_period: u64 // [seconds]
@@ -170,7 +160,7 @@ pub struct LiquidationConfig {
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Pair {
-    pub total_collateral_shares: u256, // packed as u128 [SCALE] 
+    pub total_collateral_shares: u256, // packed as u128 [SCALE]
     pub total_nominal_debt: u256 // packed as u123 [SCALE]
 }
 
