@@ -352,13 +352,14 @@ mod SingletonV2 {
         ref self: ContractState,
         name: felt252,
         owner: ContractAddress,
+        extension_owner: ContractAddress,
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
     ) {
         self.pool_name.write(name);
         self.ownable.initializer(owner);
-        // TODO: Support a different owner for the extension.
-        self.extension_owner.write(owner);
+        assert!(extension_owner.is_non_zero(), "invalid-zero-extension-owner");
+        self.extension_owner.write(extension_owner);
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
     }

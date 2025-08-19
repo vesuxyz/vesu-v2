@@ -16,7 +16,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_create_pool() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
@@ -39,9 +39,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_add_asset_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        let asset = deploy_asset(users.owner);
+        let asset = deploy_asset(users.extension_owner);
 
         let asset_params = AssetParams {
             asset: asset.contract_address,
@@ -81,7 +81,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_add_asset_already_exists() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -127,9 +127,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_add_asset_pragma_key_must_be_set() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        let asset = deploy_asset(users.owner);
+        let asset = deploy_asset(users.extension_owner);
 
         let asset_params = AssetParams {
             asset: asset.contract_address,
@@ -174,9 +174,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_add_asset_po() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        let asset = deploy_asset(users.owner);
+        let asset = deploy_asset(users.extension_owner);
 
         let asset_params = AssetParams {
             asset: asset.contract_address,
@@ -226,7 +226,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_asset_parameter_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.extension_owner, Option::None);
+        create_pool(singleton, config, users.extension_owner, users.extension_owner, Option::None);
 
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
     }
@@ -235,7 +235,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_asset_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
@@ -255,7 +255,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_ltv_config_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         singleton
             .set_ltv_config(
@@ -269,11 +269,11 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_ltv_config() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let ltv_config = LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() };
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_ltv_config(config.collateral_asset.contract_address, config.debt_asset.contract_address, ltv_config);
         stop_cheat_caller_address(singleton.contract_address);
@@ -289,7 +289,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_liquidation_config_caller_not_extension_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let liquidation_factor = 10 * PERCENT;
 
@@ -305,11 +305,11 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_liquidation_config() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let liquidation_factor = 10 * PERCENT;
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_liquidation_config(
                 config.collateral_asset.contract_address,
@@ -328,12 +328,12 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_shutdown_config() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = 12 * DAY_IN_SECONDS;
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -348,7 +348,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_shutdown_config_caller_not_extension_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = 12 * DAY_IN_SECONDS;
@@ -360,44 +360,44 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_oracle_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
         stop_cheat_caller_address(singleton.contract_address);
 
         let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.timeout == 5_u64, 'timeout not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'number_of_sources', 11_u64.into());
         stop_cheat_caller_address(singleton.contract_address);
 
         let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.number_of_sources == 11, 'number_of_sources not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'start_time_offset', 10_u64.into());
         stop_cheat_caller_address(singleton.contract_address);
 
         let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.start_time_offset == 10, 'start_time_offset not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 10_u64.into());
         stop_cheat_caller_address(singleton.contract_address);
 
         let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.time_window == 10, 'time_window not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'aggregation_mode', 'Mean'.into());
         stop_cheat_caller_address(singleton.contract_address);
 
         let oracle_config = singleton.oracle_config(config.collateral_asset.contract_address);
         assert(oracle_config.aggregation_mode == AggregationMode::Mean, 'aggregation_mode not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'pragma_key', '123'.into());
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -410,7 +410,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_oracle_parameter_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
     }
@@ -420,9 +420,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_oracle_parameter_invalid_oracle_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'a', 5_u64.into());
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -432,9 +432,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_oracle_parameter_oracle_config_not_set() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(Zero::zero(), 'timeout', 5_u64.into());
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -444,9 +444,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_oracle_parameter_time_window_greater_than_start_time_offset() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 1_u64.into());
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -455,27 +455,27 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_interest_rate_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
         stop_cheat_caller_address(singleton.contract_address);
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.min_target_utilization == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'max_target_utilization', 5);
         stop_cheat_caller_address(singleton.contract_address);
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.max_target_utilization == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'target_utilization', 5);
         stop_cheat_caller_address(singleton.contract_address);
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.target_utilization == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_interest_rate_parameter(
                 config.collateral_asset.contract_address, 'min_full_utilization_rate', 1582470461,
@@ -484,7 +484,7 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.min_full_utilization_rate == 1582470461, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton
             .set_interest_rate_parameter(
                 config.collateral_asset.contract_address, 'max_full_utilization_rate', SCALE * 3,
@@ -493,19 +493,19 @@ mod TestDefaultExtensionPOV2 {
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.max_full_utilization_rate == SCALE * 3, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'zero_utilization_rate', 1);
         stop_cheat_caller_address(singleton.contract_address);
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.zero_utilization_rate == 1, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'rate_half_life', 5);
         stop_cheat_caller_address(singleton.contract_address);
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
         assert(interest_rate_config.rate_half_life == 5, 'Interest rate parameter not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'target_rate_percent', 5);
         stop_cheat_caller_address(singleton.contract_address);
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
@@ -517,7 +517,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_interest_rate_parameter_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
     }
@@ -527,9 +527,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_interest_rate_parameter_invalid_interest_rate_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'a', 5);
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -539,9 +539,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_interest_rate_parameter_interest_rate_config_not_set() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_interest_rate_parameter(Zero::zero(), 'min_target_utilization', 5);
         stop_cheat_caller_address(singleton.contract_address);
     }
@@ -550,9 +550,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_fee_recipient() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_fee_recipient(users.lender);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -565,7 +565,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_fee_recipient_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         singleton.set_fee_recipient(users.lender);
     }
@@ -574,9 +574,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_debt_cap() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -590,7 +590,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_debt_cap_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         singleton.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
 
@@ -603,9 +603,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_shutdown_mode_agent() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_shutdown_mode_agent(users.lender);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -618,7 +618,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_set_shutdown_mode_agent_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         singleton.set_shutdown_mode_agent(users.lender);
     }
@@ -627,9 +627,9 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_shutdown_mode() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_shutdown_mode_agent(users.lender);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -641,7 +641,7 @@ mod TestDefaultExtensionPOV2 {
             .shutdown_status(config.collateral_asset.contract_address, config.debt_asset.contract_address);
         assert(shutdown_status.shutdown_mode == ShutdownMode::Recovery, 'Shutdown mode not set');
 
-        start_cheat_caller_address(singleton.contract_address, users.owner);
+        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
         singleton.set_shutdown_mode(ShutdownMode::None);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -655,7 +655,7 @@ mod TestDefaultExtensionPOV2 {
     fn test_extension_set_shutdown_mode_caller_not_owner_or_agent() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(singleton, config, users.owner, Option::None);
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
 
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
     }
