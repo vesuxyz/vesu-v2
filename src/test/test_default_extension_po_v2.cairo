@@ -624,6 +624,57 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
+    fn test_set_curator() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        singleton.nominate_curator(users.lender);
+
+        assert(singleton.pending_extension_owner() == users.lender, 'Nominated curator not set');
+        assert(singleton.extension_owner() == users.extension_owner, 'Curator was set');
+
+        cheat_caller_address(singleton.contract_address, users.lender, CheatSpan::TargetCalls(1));
+        singleton.accept_curator_ownership();
+
+        assert(singleton.pending_extension_owner() == Zero::zero(), 'Nominated curator not reset');
+        assert(singleton.extension_owner() == users.lender, 'Curator not set');
+    }
+
+    #[test]
+    #[should_panic(expected: "caller-not-extension-owner")]
+    fn test_nominate_curator_caller_not_owner() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        singleton.nominate_curator(users.lender);
+    }
+
+    #[test]
+    #[should_panic(expected: "caller-not-new-extension-owner")]
+    fn test_accept_zero_curator_different_caller() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        cheat_caller_address(singleton.contract_address, users.lender, CheatSpan::TargetCalls(1));
+        singleton.accept_curator_ownership();
+    }
+
+    #[test]
+    #[should_panic(expected: "invalid-zero-extension-owner-address")]
+    fn test_accept_zero_curator() {
+        let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(singleton, config, users.owner, users.extension_owner, Option::None);
+
+        cheat_caller_address(singleton.contract_address, Zero::zero(), CheatSpan::TargetCalls(1));
+        singleton.accept_curator_ownership();
+    }
+
+    #[test]
     fn test_extension_set_shutdown_mode() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
