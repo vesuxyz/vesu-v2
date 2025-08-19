@@ -9,6 +9,7 @@ mod TestShutdown {
     use starknet::get_block_timestamp;
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams, ShutdownMode};
     use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use vesu::oracle::IOracleDispatcherTrait;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_pool};
@@ -16,7 +17,7 @@ mod TestShutdown {
 
     #[test]
     fn test_set_shutdown_mode_recovery() {
-        let (singleton, config, _, _) = setup();
+        let (_, singleton, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
@@ -28,7 +29,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "shutdown-mode-not-recovery")]
     fn test_set_shutdown_mode_not_recovery() {
-        let (singleton, _, _, _) = setup();
+        let (_, singleton, _, _, _) = setup();
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
     }
@@ -36,7 +37,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_from_none() {
-        let (singleton, config, users, terms) = setup();
+        let (_, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -91,7 +92,7 @@ mod TestShutdown {
 
     #[test]
     fn test_recovery_mode_made_safer() {
-        let (singleton, config, users, terms) = setup();
+        let (_, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -149,7 +150,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_decreasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (_, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -221,7 +222,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_increasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (_, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -290,7 +291,7 @@ mod TestShutdown {
 
     #[test]
     fn test_subscription_mode_decreasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -324,7 +325,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -365,7 +366,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -399,7 +400,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -440,7 +441,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_decreasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -474,7 +475,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -517,7 +518,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -551,7 +552,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -593,7 +594,7 @@ mod TestShutdown {
 
     #[test]
     fn test_redemption_mode_decreasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -627,7 +628,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -695,7 +696,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_collateral() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -729,7 +730,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -802,7 +803,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_decreasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -836,7 +837,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -911,7 +912,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -945,7 +946,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -1019,7 +1020,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "non-zero-debt")]
     fn test_redemption_mode_non_zero_debt() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1053,7 +1054,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -1103,7 +1104,7 @@ mod TestShutdown {
 
     #[test]
     fn test_redemption_mode_max_utilization() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, collateral_scale, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1168,7 +1169,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // reduce oracle price
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
@@ -1251,7 +1252,7 @@ mod TestShutdown {
     // -> pool should still be in recovery mode
     #[test]
     fn test_recovery_mode_complex() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
@@ -1313,7 +1314,7 @@ mod TestShutdown {
         // warp to non zero block timestamp first
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // oracle failure in pair 1 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
         // update shutdown mode
         singleton.update_shutdown_status(debt_asset.contract_address, collateral_asset.contract_address);
@@ -1323,7 +1324,7 @@ mod TestShutdown {
 
         // Pair 2: None -> Recovery
         // undercollateraliztion in pair 2 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
@@ -1335,7 +1336,7 @@ mod TestShutdown {
 
         // Pair 3: None -> Recovery
         // undercollateraliztion in pair 3 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(THIRD_PRAGMA_KEY, SCALE_128 / 41 / 10);
         // update shutdown mode
         singleton.update_shutdown_status(collateral_asset.contract_address, third_asset.contract_address);
@@ -1371,7 +1372,7 @@ mod TestShutdown {
             target_rate_percent: SCALE,
         };
 
-        let (singleton, config, users, terms) = setup_pool(
+        let (_, singleton, config, users, terms) = setup_pool(
             Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::Some(interest_rate_config),
         );
 
@@ -1438,7 +1439,7 @@ mod TestShutdown {
     // test that collateral is not double counted
     #[test]
     fn test_shutdown_collateral_accounting() {
-        let (singleton, config, users, terms) = setup();
+        let (oracle, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
@@ -1500,7 +1501,7 @@ mod TestShutdown {
 
         // Pair 1 and Pair 2: None -> Recovery
         // undercollateraliztion in pair 1 and pair 2 --> recovery
-        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: singleton.pragma_oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 2);
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
@@ -1515,7 +1516,7 @@ mod TestShutdown {
 
     #[test]
     fn test_fixed_shutdown_mode() {
-        let (singleton, config, users, terms) = setup();
+        let (_, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
