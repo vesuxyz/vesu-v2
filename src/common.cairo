@@ -412,6 +412,7 @@ pub fn apply_position_update_to_context(
         }
         context.position.collateral_shares -= collateral_shares_delta.abs();
         context.collateral_asset_config.total_collateral_shares -= collateral_shares_delta.abs();
+        assert!(context.collateral_asset_config.reserve >= collateral_delta.abs(), "insufficient-reserve");
         context.collateral_asset_config.reserve -= collateral_delta.abs();
     }
 
@@ -424,6 +425,7 @@ pub fn apply_position_update_to_context(
     if nominal_debt_delta > Zero::zero() {
         context.position.nominal_debt += nominal_debt_delta.abs();
         context.debt_asset_config.total_nominal_debt += nominal_debt_delta.abs();
+        assert!(context.debt_asset_config.reserve >= debt_delta.abs(), "insufficient-reserve");
         context.debt_asset_config.reserve -= debt_delta.abs();
     } else if nominal_debt_delta < Zero::zero() {
         // limit the nominal debt delta to the position's nominal debt
