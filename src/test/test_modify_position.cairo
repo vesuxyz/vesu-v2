@@ -72,7 +72,7 @@ mod TestModifyPosition {
         stop_cheat_caller_address(singleton.contract_address);
 
         // set max utilization
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_asset_parameter(third_asset.contract_address, 'max_utilization', SCALE / 10);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -200,7 +200,7 @@ mod TestModifyPosition {
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         // set floor to 0
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_asset_parameter(collateral_asset.contract_address, 'floor', 100_000_000_000); // (* price)
         singleton.set_asset_parameter(debt_asset.contract_address, 'floor', 0);
         stop_cheat_caller_address(singleton.contract_address);
@@ -242,7 +242,7 @@ mod TestModifyPosition {
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, .. } = terms;
 
         // set floor to 0
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_asset_parameter(collateral_asset.contract_address, 'floor', 0);
         singleton.set_asset_parameter(debt_asset.contract_address, 'floor', 1_000_000); // (* price)
         stop_cheat_caller_address(singleton.contract_address);
@@ -579,10 +579,10 @@ mod TestModifyPosition {
 
         let pool_donation = collateral_to_deposit / 2;
         cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
-        collateral_asset.transfer(users.extension_owner, pool_donation);
-        cheat_caller_address(collateral_asset.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        collateral_asset.transfer(users.curator, pool_donation);
+        cheat_caller_address(collateral_asset.contract_address, users.curator, CheatSpan::TargetCalls(1));
         collateral_asset.approve(singleton.contract_address, pool_donation);
-        cheat_caller_address(singleton.contract_address, users.extension_owner, CheatSpan::TargetCalls(1));
+        cheat_caller_address(singleton.contract_address, users.curator, CheatSpan::TargetCalls(1));
         singleton.donate_to_reserve(collateral_asset.contract_address, pool_donation);
 
         start_cheat_caller_address(singleton.contract_address, users.lender);
@@ -1080,9 +1080,9 @@ mod TestModifyPosition {
         assert(asset_config.total_collateral_shares > total_collateral_shares, 'Shares not increased');
 
         // withdraw fees
-        let balance_before = third_asset.balance_of(users.extension_owner);
+        let balance_before = third_asset.balance_of(users.curator);
         singleton.claim_fees(third_asset.contract_address);
-        let balance_after = third_asset.balance_of(users.extension_owner);
+        let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
         assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
     }
@@ -1186,10 +1186,10 @@ mod TestModifyPosition {
 
         // withdraw fees
         let (_, fee_amount) = singleton.get_fees(third_asset.contract_address);
-        let balance_before = third_asset.balance_of(users.extension_owner);
+        let balance_before = third_asset.balance_of(users.curator);
         singleton.claim_fees(third_asset.contract_address);
 
-        let balance_after = third_asset.balance_of(users.extension_owner);
+        let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
         assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
     }
