@@ -103,6 +103,12 @@ pub mod pragma_oracle_component {
             let OracleConfig {
                 pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
             } = self.oracle_configs.read(asset);
+
+            // Early return in case of unset oracle config.
+            if pragma_key.is_zero() {
+                return (0, false);
+            }
+
             let dispatcher = IPragmaABIDispatcher { contract_address: self.oracle_address.read() };
             let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
 

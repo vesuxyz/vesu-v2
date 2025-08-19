@@ -15,7 +15,7 @@ mod TestPoolDonation {
 
     #[test]
     fn test_donate_to_reserve_pool() {
-        let (singleton, config, users, terms) = setup();
+        let (_, singleton, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -115,7 +115,7 @@ mod TestPoolDonation {
     #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_donate_to_reserve_pool_incorrect_asset() {
-        let (singleton, config, users, _) = setup();
+        let (_, singleton, config, users, _) = setup();
         let TestConfig { debt_asset, .. } = config;
 
         let mock_asset_class = ContractClass { class_hash: get_class_hash(debt_asset.contract_address) };
