@@ -1853,6 +1853,7 @@ mod SingletonV2 {
             // attribute the accrued fee shares to the pool's extension
             self.attribute_fee_shares(pool_id, extension, asset, fee_shares);
             // retrieve amount from the reserve
+            assert!(asset_config.reserve >= amount, "insufficient-reserve");
             asset_config.reserve -= amount;
             self.asset_configs.write((pool_id, asset), asset_config);
             transfer_asset(asset, get_contract_address(), receiver, amount, asset_config.is_legacy);
