@@ -1,13 +1,11 @@
 use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
-    Amount, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams, ModifyPositionParams,
-    Position, PragmaOracleParams, UpdatePositionResponse,
+    Amount, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams, LiquidationConfig,
+    ModifyPositionParams, Pair, Position, PragmaOracleParams, ShutdownConfig, ShutdownMode, ShutdownStatus,
+    UpdatePositionResponse,
 };
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
-use vesu::extension::components::position_hooks::{
-    LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus,
-};
 use vesu::extension::components::pragma_oracle::OracleConfig;
 
 #[starknet::interface]
@@ -114,7 +112,7 @@ pub trait ISingletonV2<TContractState> {
         liquidation_config: LiquidationConfig,
     );
     fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
-    fn set_shutdown_mode(ref self: TContractState, shutdown_mode: ShutdownMode);
+    fn set_shutdown_mode(ref self: TContractState, new_shutdown_mode: ShutdownMode);
     fn update_shutdown_status(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
     ) -> ShutdownMode;
@@ -143,15 +141,12 @@ mod SingletonV2 {
     };
     use vesu::data_model::{
         Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams,
-        ModifyPositionParams, Position, PragmaOracleParams, UpdatePositionResponse, assert_asset_config,
-        assert_asset_config_exists, assert_ltv_config,
+        LiquidationConfig, ModifyPositionParams, Pair, Position, PragmaOracleParams, ShutdownConfig, ShutdownMode,
+        ShutdownState, ShutdownStatus, UpdatePositionResponse, assert_asset_config, assert_asset_config_exists,
+        assert_ltv_config,
     };
     use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
-    use vesu::extension::components::position_hooks::position_hooks_component::PositionHooksTrait;
-    use vesu::extension::components::position_hooks::{
-        LiquidationConfig, Pair, ShutdownConfig, ShutdownMode, ShutdownStatus, position_hooks_component,
-    };
     use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
     use vesu::math::pow_10;
@@ -184,6 +179,18 @@ mod SingletonV2 {
         fee_recipient: ContractAddress,
         // tracks the address that can transition the shutdown mode
         shutdown_mode_agent: ContractAddress,
+        // contains the shutdown configuration
+        shutdown_config: ShutdownConfig,
+        // contains the current shutdown mode
+        fixed_shutdown_mode: ShutdownState,
+        // contains the liquidation configuration for each pair
+        // (collateral_asset, debt_asset) -> liquidation configuration
+        liquidation_configs: Map<(ContractAddress, ContractAddress), LiquidationConfig>,
+        // tracks the total collateral shares and the total nominal debt for each pair
+        // (collateral asset, debt asset) -> pair configuration
+        pairs: Map<(ContractAddress, ContractAddress), Pair>,
+        // tracks the debt caps for each asset
+        debt_caps: Map<(ContractAddress, ContractAddress), u256>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         // storage for the pragma oracle component
@@ -192,9 +199,6 @@ mod SingletonV2 {
         // storage for the interest rate model component
         #[substorage(v0)]
         interest_rate_model: interest_rate_model_component::Storage,
-        // storage for the position hooks component
-        #[substorage(v0)]
-        position_hooks: position_hooks_component::Storage,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -316,6 +320,35 @@ mod SingletonV2 {
         agent: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    pub struct SetLiquidationConfig {
+        #[key]
+        collateral_asset: ContractAddress,
+        #[key]
+        debt_asset: ContractAddress,
+        liquidation_config: LiquidationConfig,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct SetShutdownConfig {
+        shutdown_config: ShutdownConfig,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct SetShutdownMode {
+        shutdown_mode: ShutdownMode,
+        last_updated: u64,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct SetDebtCap {
+        #[key]
+        collateral_asset: ContractAddress,
+        #[key]
+        debt_asset: ContractAddress,
+        debt_cap: u256,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -323,7 +356,6 @@ mod SingletonV2 {
         OwnableEvent: OwnableComponent::Event,
         PragmaOracleEvents: pragma_oracle_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
-        PositionHooksEvents: position_hooks_component::Event,
         ModifyPosition: ModifyPosition,
         LiquidatePosition: LiquidatePosition,
         UpdateContext: UpdateContext,
@@ -337,12 +369,15 @@ mod SingletonV2 {
         ClaimFees: ClaimFees,
         SetFeeRecipient: SetFeeRecipient,
         SetShutdownModeAgent: SetShutdownModeAgent,
+        SetLiquidationConfig: SetLiquidationConfig,
+        SetShutdownConfig: SetShutdownConfig,
+        SetShutdownMode: SetShutdownMode,
+        SetDebtCap: SetDebtCap,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
-    component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -406,7 +441,7 @@ mod SingletonV2 {
 
         /// Asserts that the current utilization of an asset is below the max. allowed utilization
         fn assert_max_utilization(ref self: ContractState, asset_config: AssetConfig) {
-            if self.position_hooks.fixed_shutdown_mode.read().shutdown_mode != ShutdownMode::None {
+            if self.fixed_shutdown_mode.read().shutdown_mode != ShutdownMode::None {
                 return;
             }
             assert!(utilization(asset_config) <= asset_config.max_utilization, "utilization-exceeded")
@@ -563,6 +598,200 @@ mod SingletonV2 {
             asset_config.last_updated = get_block_timestamp();
 
             asset_config
+        }
+
+        /// Updates the tracked total collateral shares and the total nominal debt assigned to a specific pair.
+        /// # Arguments
+        /// * `context` - contextual state of the user (position owner)
+        /// * `collateral_shares_delta` - collateral shares balance delta of the position
+        /// * `nominal_debt_delta` - nominal debt balance delta of the position
+        fn update_pair(
+            ref self: ContractState, context: Context, collateral_shares_delta: i257, nominal_debt_delta: i257,
+        ) {
+            // update the balances of the pair of the modified position
+            let Pair {
+                mut total_collateral_shares, mut total_nominal_debt,
+            } = self.pairs.read((context.collateral_asset, context.debt_asset));
+            if collateral_shares_delta > Zero::zero() {
+                total_collateral_shares = total_collateral_shares + collateral_shares_delta.abs();
+            } else if collateral_shares_delta < Zero::zero() {
+                total_collateral_shares = total_collateral_shares - collateral_shares_delta.abs();
+            }
+            if nominal_debt_delta > Zero::zero() {
+                total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs();
+                let debt_cap = self.debt_caps.read((context.collateral_asset, context.debt_asset));
+                if debt_cap != 0 {
+                    let total_debt = calculate_debt(
+                        total_nominal_debt,
+                        context.debt_asset_config.last_rate_accumulator,
+                        context.debt_asset_config.scale,
+                        true,
+                    );
+                    assert!(total_debt <= debt_cap, "debt-cap-exceeded");
+                }
+            } else if nominal_debt_delta < Zero::zero() {
+                total_nominal_debt = total_nominal_debt - nominal_debt_delta.abs();
+            }
+            self
+                .pairs
+                .write(
+                    (context.collateral_asset, context.debt_asset),
+                    Pair { total_collateral_shares, total_nominal_debt },
+                );
+        }
+
+        /// Transitions into recovery mode if a pair is violating the constraints
+        /// # Arguments
+        /// * `context` - contextual state of the user (position owner)
+        /// # Returns
+        /// * `shutdown_mode` - the shutdown mode
+        fn _update_shutdown_status(ref self: ContractState, context: Context) -> ShutdownMode {
+            // check if the shutdown mode has been overwritten
+            let ShutdownState { shutdown_mode, .. } = self.fixed_shutdown_mode.read();
+
+            // check if the shutdown mode has been set to a non-none value
+            if shutdown_mode != ShutdownMode::None {
+                return shutdown_mode;
+            }
+
+            let ShutdownStatus { shutdown_mode, violating } = self._shutdown_status(context);
+
+            // if there is a current violation and no timestamp exists for the pair, then set the it (recovery)
+            if violating {
+                self.fixed_shutdown_mode.write(ShutdownState { shutdown_mode, last_updated: get_block_timestamp() });
+            }
+
+            shutdown_mode
+        }
+
+        /// Note: In order to get the shutdown status for the entire pool, this function needs to be called on all
+        /// pairs associated with the pool.
+        /// The furthest progressed shutdown mode for a pair is the shutdown mode of the pool.
+        /// # Arguments
+        /// * `context` - contextual state of the user (position owner)
+        /// # Returns
+        /// * `shutdown_status` - shutdown status of the pool
+        fn _shutdown_status(self: @ContractState, context: Context) -> ShutdownStatus {
+            // if pool is in either subscription period, redemption period, then return mode
+            let ShutdownState { mut shutdown_mode, .. } = self.fixed_shutdown_mode.read();
+
+            // check oracle status
+            let invalid_oracle = !context.collateral_asset_price.is_valid || !context.debt_asset_price.is_valid;
+
+            // check rate accumulator values
+            let collateral_accumulator = context.collateral_asset_config.last_rate_accumulator;
+            let debt_accumulator = context.debt_asset_config.last_rate_accumulator;
+            let safe_rate_accumulator = collateral_accumulator < 18 * SCALE && debt_accumulator < 18 * SCALE;
+
+            // either the oracle price is invalid or unsafe rate accumulator
+            let violating = invalid_oracle || !safe_rate_accumulator;
+
+            // set shutdown mode to recovery if there is a violation and the shutdown mode is not set already
+            if shutdown_mode == ShutdownMode::None && violating {
+                shutdown_mode = ShutdownMode::Recovery;
+            }
+
+            ShutdownStatus { shutdown_mode, violating }
+        }
+
+        /// Implements logic to execute before a position gets liquidated.
+        /// Liquidations are only allowed in normal and recovery mode. The liquidator has to be specify how much
+        /// debt to repay and the minimum amount of collateral to receive in exchange. The value of the collateral
+        /// is discounted by the liquidation factor in comparison to the current price (according to the oracle).
+        /// In an event where there's not enough collateral to cover the debt, the liquidation will result in bad debt.
+        /// The bad debt is attributed to the pool and distributed amongst the lenders of the corresponding
+        /// collateral asset. The liquidator receives all the collateral but only has to repay the proportioned
+        /// debt value.
+        /// # Arguments
+        /// * `context` - contextual state of the user (position owner)
+        /// * `min_collateral_to_receive` - minimum amount of collateral to be received
+        /// * `debt_to_repay` - amount of debt to be repaid
+        /// # Returns
+        /// * `collateral` - amount of collateral to be removed
+        /// * `debt` - amount of debt to be removed
+        /// * `bad_debt` - amount of bad debt accrued during the liquidation
+        fn compute_liquidation_amounts(
+            ref self: ContractState, context: Context, min_collateral_to_receive: u256, mut debt_to_repay: u256,
+        ) -> (u256, u256, u256) {
+            // don't allow for liquidations if the pool is not in normal or recovery mode
+            let shutdown_mode = self._update_shutdown_status(context);
+            assert!(
+                (shutdown_mode == ShutdownMode::None || shutdown_mode == ShutdownMode::Recovery)
+                    && context.collateral_asset_price.is_valid
+                    && context.debt_asset_price.is_valid,
+                "emergency-mode",
+            );
+
+            // compute the collateral and debt value of the position
+            let (collateral, mut collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(
+                context, context.position,
+            );
+
+            // if the liquidation factor is not set, then set it to 100%
+            let liquidation_config: LiquidationConfig = self
+                .liquidation_configs
+                .read((context.collateral_asset, context.debt_asset));
+            let liquidation_factor = if liquidation_config.liquidation_factor == 0 {
+                SCALE
+            } else {
+                liquidation_config.liquidation_factor.into()
+            };
+
+            // limit debt to repay by the position's outstanding debt
+            debt_to_repay = if debt_to_repay > debt {
+                debt
+            } else {
+                debt_to_repay
+            };
+
+            // apply liquidation factor to debt value to get the collateral amount to release
+            let collateral_value_to_receive = u256_mul_div(
+                debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Floor,
+            );
+            let mut collateral_to_receive = u256_mul_div(
+                u256_mul_div(collateral_value_to_receive, SCALE, context.collateral_asset_price.value, Rounding::Floor),
+                context.collateral_asset_config.scale,
+                liquidation_factor,
+                Rounding::Floor,
+            );
+
+            // limit collateral to receive by the position's remaining collateral balance
+            collateral_to_receive = if collateral_to_receive > collateral {
+                collateral
+            } else {
+                collateral_to_receive
+            };
+
+            // apply liquidation factor to collateral value
+            collateral_value = u256_mul_div(collateral_value, liquidation_factor, SCALE, Rounding::Floor);
+
+            // check that a min. amount of collateral is released
+            assert!(collateral_to_receive >= min_collateral_to_receive, "less-than-min-collateral");
+
+            // account for bad debt if there isn't enough collateral to cover the debt
+            let mut bad_debt = 0;
+            if collateral_value < debt_value {
+                // limit the bad debt by the outstanding collateral and debt values (in usd)
+                if collateral_value < u256_mul_div(
+                    debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Ceil,
+                ) {
+                    bad_debt =
+                        u256_mul_div(
+                            debt_value - collateral_value,
+                            context.debt_asset_config.scale,
+                            context.debt_asset_price.value,
+                            Rounding::Floor,
+                        );
+                    debt_to_repay = debt;
+                } else {
+                    // derive the bad debt proportionally to the debt repaid
+                    bad_debt =
+                        u256_mul_div(debt_to_repay, debt_value - collateral_value, collateral_value, Rounding::Ceil);
+                    debt_to_repay = debt_to_repay + bad_debt;
+                }
+            }
+
+            (collateral_to_receive, debt_to_repay, bad_debt)
         }
     }
 
@@ -806,11 +1035,25 @@ mod SingletonV2 {
             // verify invariants
             self.assert_position_invariants(context, collateral_delta, debt_delta);
 
-            self
-                .position_hooks
-                .after_modify_position(
-                    context, collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta,
-                );
+            self.update_pair(context, collateral_shares_delta, nominal_debt_delta);
+
+            let shutdown_mode = self._update_shutdown_status(context);
+
+            // check invariants for collateral and debt amounts
+            if shutdown_mode == ShutdownMode::Recovery {
+                let decreasing_collateral = collateral_delta < Zero::zero();
+                let increasing_debt = debt_delta > Zero::zero();
+                assert!(!(decreasing_collateral || increasing_debt), "in-recovery");
+            } else if shutdown_mode == ShutdownMode::Subscription {
+                let modifying_collateral = collateral_delta != Zero::zero();
+                let increasing_debt = debt_delta > Zero::zero();
+                assert!(!(modifying_collateral || increasing_debt), "in-subscription");
+            } else if shutdown_mode == ShutdownMode::Redemption {
+                let increasing_collateral = collateral_delta > Zero::zero();
+                let modifying_debt = debt_delta != Zero::zero();
+                assert!(!(increasing_collateral || modifying_debt), "in-redemption");
+                assert!(context.position.nominal_debt == 0, "non-zero-debt");
+            }
 
             self
                 .emit(
@@ -844,8 +1087,7 @@ mod SingletonV2 {
             let context = self.context(collateral_asset, debt_asset, user);
 
             let (collateral, debt, bad_debt) = self
-                .position_hooks
-                .before_liquidate_position(context, min_collateral_to_receive, debt_to_repay);
+                .compute_liquidation_amounts(context, min_collateral_to_receive, debt_to_repay);
 
             // convert unsigned amounts to signed amounts
             let collateral = Amount {
@@ -868,7 +1110,8 @@ mod SingletonV2 {
                 mut collateral_delta, mut collateral_shares_delta, debt_delta, nominal_debt_delta, bad_debt,
             } = response;
 
-            self.position_hooks.after_liquidate_position(context, collateral_shares_delta, nominal_debt_delta);
+            self.update_pair(context, collateral_shares_delta, nominal_debt_delta);
+            self._update_shutdown_status(context);
 
             self
                 .emit(
@@ -1206,7 +1449,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `debt_cap` - debt cap
         fn debt_caps(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256 {
-            self.position_hooks.debt_caps.read((collateral_asset, debt_asset))
+            self.debt_caps.read((collateral_asset, debt_asset))
         }
 
         /// Returns the liquidation configuration for a given pairing of assets
@@ -1218,7 +1461,7 @@ mod SingletonV2 {
         fn liquidation_config(
             self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> LiquidationConfig {
-            self.position_hooks.liquidation_configs.read((collateral_asset, debt_asset))
+            self.liquidation_configs.read((collateral_asset, debt_asset))
         }
 
         /// Returns the shutdown configuration
@@ -1226,7 +1469,7 @@ mod SingletonV2 {
         /// * `recovery_period` - recovery period
         /// * `subscription_period` - subscription period
         fn shutdown_config(self: @ContractState) -> ShutdownConfig {
-            self.position_hooks.shutdown_config.read()
+            self.shutdown_config.read()
         }
 
         /// Returns the total (sum of all positions) collateral shares and nominal debt balances for a given pair
@@ -1237,7 +1480,7 @@ mod SingletonV2 {
         /// * `total_collateral_shares` - total collateral shares
         /// * `total_nominal_debt` - total nominal debt
         fn pairs(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair {
-            self.position_hooks.pairs.read((collateral_asset, debt_asset))
+            self.pairs.read((collateral_asset, debt_asset))
         }
 
         /// Sets the debt cap for a given asset
@@ -1249,7 +1492,8 @@ mod SingletonV2 {
             ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
         ) {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
-            self.position_hooks.set_debt_cap(collateral_asset, debt_asset, debt_cap);
+            self.debt_caps.write((collateral_asset, debt_asset), debt_cap);
+            self.emit(SetDebtCap { collateral_asset, debt_asset, debt_cap });
         }
 
         /// Sets the liquidation config for a given pair
@@ -1264,7 +1508,22 @@ mod SingletonV2 {
             liquidation_config: LiquidationConfig,
         ) {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
-            self.position_hooks.set_liquidation_config(collateral_asset, debt_asset, liquidation_config);
+            assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
+
+            self
+                .liquidation_configs
+                .write(
+                    (collateral_asset, debt_asset),
+                    LiquidationConfig {
+                        liquidation_factor: if liquidation_config.liquidation_factor == 0 {
+                            SCALE.try_into().unwrap()
+                        } else {
+                            liquidation_config.liquidation_factor
+                        },
+                    },
+                );
+
+            self.emit(SetLiquidationConfig { collateral_asset, debt_asset, liquidation_config });
         }
 
         /// Sets the shutdown config
@@ -1272,28 +1531,71 @@ mod SingletonV2 {
         /// * `shutdown_config` - shutdown config
         fn set_shutdown_config(ref self: ContractState, shutdown_config: ShutdownConfig) {
             assert!(get_caller_address() == self.extension_owner.read(), "caller-not-extension-owner");
-            self.position_hooks.set_shutdown_config(shutdown_config);
+            self.shutdown_config.write(shutdown_config);
+            self.emit(SetShutdownConfig { shutdown_config });
         }
 
         /// Sets the shutdown mode and overwrites the inferred shutdown mode
         /// # Arguments
         /// * `shutdown_mode` - shutdown mode
-        fn set_shutdown_mode(ref self: ContractState, shutdown_mode: ShutdownMode) {
+        fn set_shutdown_mode(ref self: ContractState, new_shutdown_mode: ShutdownMode) {
             let shutdown_mode_agent = self.shutdown_mode_agent();
             assert!(
                 get_caller_address() == self.extension_owner.read() || get_caller_address() == shutdown_mode_agent,
                 "caller-not-extension-owner-or-agent",
             );
             assert!(
-                get_caller_address() != shutdown_mode_agent || shutdown_mode == ShutdownMode::Recovery,
+                get_caller_address() != shutdown_mode_agent || new_shutdown_mode == ShutdownMode::Recovery,
                 "shutdown-mode-not-recovery",
             );
-            self.position_hooks.set_shutdown_mode(shutdown_mode);
+
+            let ShutdownState { shutdown_mode, last_updated, .. } = self.fixed_shutdown_mode.read();
+
+            // can only transition to recovery mode if the shutdown mode is in normal mode
+            assert!(
+                shutdown_mode != ShutdownMode::None || new_shutdown_mode == ShutdownMode::Recovery,
+                "shutdown-mode-not-none",
+            );
+            // can only transition back to normal mode or subscription mode if the shutdown mode is in recovery mode
+            assert!(
+                shutdown_mode != ShutdownMode::Recovery
+                    || (new_shutdown_mode == ShutdownMode::None || new_shutdown_mode == ShutdownMode::Subscription),
+                "shutdown-mode-not-recovery",
+            );
+            // can only transition to redemption mode if the shutdown mode is in subscription mode
+            assert!(
+                shutdown_mode != ShutdownMode::Subscription || new_shutdown_mode == ShutdownMode::Redemption,
+                "shutdown-mode-not-subscription",
+            );
+            // can not transition into any shutdown mode if the shutdown mode is in redemption mode
+            assert!(shutdown_mode != ShutdownMode::Redemption, "shutdown-mode-in-redemption");
+
+            let ShutdownConfig { recovery_period, subscription_period } = self.shutdown_config.read();
+
+            // can only transition to subscription mode if the recovery period has passed
+            assert!(
+                new_shutdown_mode != ShutdownMode::Subscription || last_updated
+                    + recovery_period < get_block_timestamp(),
+                "shutdown-mode-recovery-period",
+            );
+
+            // can only transition to redemption mode if the subscription period has passed
+            assert!(
+                new_shutdown_mode != ShutdownMode::Redemption || last_updated
+                    + subscription_period < get_block_timestamp(),
+                "shutdown-mode-subscription-period",
+            );
+
+            let shutdown_state = ShutdownState {
+                shutdown_mode: new_shutdown_mode, last_updated: get_block_timestamp(),
+            };
+            self.fixed_shutdown_mode.write(shutdown_state);
+
+            self.emit(SetShutdownMode { shutdown_mode, last_updated: shutdown_state.last_updated });
         }
 
         /// Returns the shutdown mode for a specific pair.
         /// To check the shutdown status of the pool, the shutdown mode for all pairs must be checked.
-        /// See `shutdown_status` in `position_hooks.cairo`.
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
@@ -1308,11 +1610,10 @@ mod SingletonV2 {
             self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
         ) -> ShutdownStatus {
             let context = self.context(collateral_asset, debt_asset, Zero::zero());
-            self.position_hooks.shutdown_status(context)
+            self._shutdown_status(context)
         }
 
         /// Updates the shutdown mode for a specific pair.
-        /// See `update_shutdown_status` in `position_hooks.cairo`.
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
@@ -1328,7 +1629,7 @@ mod SingletonV2 {
             );
 
             let context = self.context(collateral_asset, debt_asset, Zero::zero());
-            self.position_hooks.update_shutdown_status(context)
+            self._update_shutdown_status(context)
         }
 
         /// Returns the name of the contract
