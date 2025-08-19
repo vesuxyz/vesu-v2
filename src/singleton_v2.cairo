@@ -476,16 +476,14 @@ mod SingletonV2 {
                     context, context.position,
                 );
                 self.assert_collateralization(collateral_value, debt_value, context.max_ltv.into());
-                // caller owns the position or has a delegate for modifying it
-                self.assert_ownership(context.user);
-                if collateral_delta < Zero::zero() {
-                    // max. utilization of the collateral is not exceed
-                    self.assert_max_utilization(context.collateral_asset_config);
-                }
-                if debt_delta > Zero::zero() {
-                    // max. utilization of the collateral is not exceed
-                    self.assert_max_utilization(context.debt_asset_config);
-                }
+            }
+            if collateral_delta < Zero::zero() {
+                // max. utilization of the collateral is not exceed
+                self.assert_max_utilization(context.collateral_asset_config);
+            }
+            if debt_delta > Zero::zero() {
+                // max. utilization of the collateral is not exceed
+                self.assert_max_utilization(context.debt_asset_config);
             }
         }
 
@@ -1024,6 +1022,9 @@ mod SingletonV2 {
         fn modify_position(ref self: ContractState, params: ModifyPositionParams) -> UpdatePositionResponse {
             let ModifyPositionParams { collateral_asset, debt_asset, user, collateral, debt } = params;
 
+            // caller owns the position or has a delegate for modifying it
+            self.assert_ownership(user);
+
             let mut context = self.context(collateral_asset, debt_asset, user);
 
             // update the position
@@ -1551,24 +1552,27 @@ mod SingletonV2 {
 
             let ShutdownState { shutdown_mode, last_updated, .. } = self.fixed_shutdown_mode.read();
 
-            // can only transition to recovery mode if the shutdown mode is in normal mode
-            assert!(
-                shutdown_mode != ShutdownMode::None || new_shutdown_mode == ShutdownMode::Recovery,
-                "shutdown-mode-not-none",
-            );
-            // can only transition back to normal mode or subscription mode if the shutdown mode is in recovery mode
-            assert!(
-                shutdown_mode != ShutdownMode::Recovery
-                    || (new_shutdown_mode == ShutdownMode::None || new_shutdown_mode == ShutdownMode::Subscription),
-                "shutdown-mode-not-recovery",
-            );
-            // can only transition to redemption mode if the shutdown mode is in subscription mode
-            assert!(
-                shutdown_mode != ShutdownMode::Subscription || new_shutdown_mode == ShutdownMode::Redemption,
-                "shutdown-mode-not-subscription",
-            );
-            // can not transition into any shutdown mode if the shutdown mode is in redemption mode
-            assert!(shutdown_mode != ShutdownMode::Redemption, "shutdown-mode-in-redemption");
+            match shutdown_mode {
+                ShutdownMode::None => {
+                    // can only transition to recovery mode
+                    assert!(new_shutdown_mode == ShutdownMode::Recovery, "shutdown-mode-not-none");
+                },
+                ShutdownMode::Recovery => {
+                    // can only transition back to normal mode or subscription mode
+                    assert!(
+                        new_shutdown_mode == ShutdownMode::None || new_shutdown_mode == ShutdownMode::Subscription,
+                        "shutdown-mode-not-recovery",
+                    );
+                },
+                ShutdownMode::Subscription => {
+                    // can only transition to redemption mode
+                    assert!(new_shutdown_mode == ShutdownMode::Redemption, "shutdown-mode-not-subscription");
+                },
+                ShutdownMode::Redemption => {
+                    // can not transition into any shutdown mode
+                    assert!(false, "shutdown-mode-in-redemption");
+                },
+            }
 
             let ShutdownConfig { recovery_period, subscription_period } = self.shutdown_config.read();
 
