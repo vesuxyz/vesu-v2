@@ -551,7 +551,10 @@ mod SingletonV2 {
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        /// Asserts that the delegatee has the delegate of the delegator for a specific pool
+        /// Asserts one of the following 3:
+        /// 1. The delegatee has the delegate of the delegator for a specific pool
+        /// 2. The delegator himself is calling
+        /// 3. The extension is calling
         fn assert_ownership(
             ref self: ContractState, pool_id: felt252, extension: ContractAddress, delegator: ContractAddress,
         ) {
