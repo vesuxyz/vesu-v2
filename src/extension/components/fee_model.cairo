@@ -135,7 +135,10 @@ pub mod fee_model_component {
             let fee_config = self.fee_configs.read(pool_id);
             let amount = collateral_delta.abs();
 
-            IERC20Dispatcher { contract_address: collateral_asset }.transfer(fee_config.fee_recipient, amount);
+            assert!(
+                IERC20Dispatcher { contract_address: collateral_asset }.transfer(fee_config.fee_recipient, amount),
+                "fee-transfer-failed",
+            );
 
             self
                 .emit(
