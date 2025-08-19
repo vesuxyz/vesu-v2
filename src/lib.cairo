@@ -2,6 +2,7 @@ pub mod common;
 pub mod data_model;
 
 pub mod math;
+pub mod oracle;
 pub mod packing;
 pub mod singleton_v2;
 pub mod units;

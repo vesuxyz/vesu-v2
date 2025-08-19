@@ -11,7 +11,9 @@ use vesu::data_model::{
     ShutdownConfig, ShutdownParams,
 };
 use vesu::extension::components::interest_rate_model::InterestRateConfig;
+use vesu::extension::components::pragma_oracle::OracleConfig;
 use vesu::math::pow_10;
+use vesu::oracle::{IOracleDispatcher, IOracleDispatcherTrait};
 use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
 use vesu::test::mock_oracle::{
     IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
@@ -44,6 +46,7 @@ pub struct LendingTerms {
 
 #[derive(Copy, Drop, Serde)]
 pub struct Env {
+    pub oracle_contract: IOracleDispatcher,
     pub singleton: ISingletonV2Dispatcher,
     pub config: TestConfig,
     pub users: Users,
@@ -127,15 +130,22 @@ pub fn setup_env(
 
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
+    let oracle_contract = IOracleDispatcher {
+        contract_address: deploy_with_args(
+            "Oracle",
+            array![
+                users.owner.into(),
+                mock_pragma_oracle.contract_address.into(),
+                mock_pragma_summary.contract_address.into(),
+            ],
+        ),
+    };
+
     let singleton = ISingletonV2Dispatcher {
         contract_address: deploy_with_args(
             "SingletonV2",
             array![
-                'PoolName',
-                users.owner.into(),
-                users.extension_owner.into(),
-                mock_pragma_oracle.contract_address.into(),
-                mock_pragma_summary.contract_address.into(),
+                'PoolName', users.owner.into(), users.extension_owner.into(), oracle_contract.contract_address.into(),
             ],
         ),
     };
@@ -214,7 +224,7 @@ pub fn setup_env(
     let third_scale = pow_10(third_asset.decimals().into());
     let config = TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale };
 
-    Env { singleton, config, users }
+    Env { oracle_contract, singleton, config, users }
 }
 
 pub fn test_interest_rate_config() -> InterestRateConfig {
@@ -231,6 +241,7 @@ pub fn test_interest_rate_config() -> InterestRateConfig {
 }
 
 pub fn create_pool(
+    oracle_contract: IOracleDispatcher,
     singleton: ISingletonV2Dispatcher,
     config: TestConfig,
     owner: ContractAddress,
@@ -327,21 +338,46 @@ pub fn create_pool(
     let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
 
     // Add assets.
-    cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
-    singleton
-        .add_asset(
-            params: collateral_asset_params,
-            :interest_rate_config,
-            pragma_oracle_params: collateral_asset_oracle_params,
-        );
+    cheat_caller_address(oracle_contract.contract_address, owner, CheatSpan::TargetCalls(1));
+    let collateral_oracle_config = OracleConfig {
+        pragma_key: collateral_asset_oracle_params.pragma_key,
+        timeout: collateral_asset_oracle_params.timeout,
+        number_of_sources: collateral_asset_oracle_params.number_of_sources,
+        start_time_offset: collateral_asset_oracle_params.start_time_offset,
+        time_window: collateral_asset_oracle_params.time_window,
+        aggregation_mode: collateral_asset_oracle_params.aggregation_mode,
+    };
+    oracle_contract.set_oracle_config(asset: collateral_asset_params.asset, oracle_config: collateral_oracle_config);
 
     cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
-    singleton
-        .add_asset(params: debt_asset_params, :interest_rate_config, pragma_oracle_params: debt_asset_oracle_params);
+    singleton.add_asset(params: collateral_asset_params, :interest_rate_config);
+
+    cheat_caller_address(oracle_contract.contract_address, owner, CheatSpan::TargetCalls(1));
+    let debt_oracle_config = OracleConfig {
+        pragma_key: debt_asset_oracle_params.pragma_key,
+        timeout: debt_asset_oracle_params.timeout,
+        number_of_sources: debt_asset_oracle_params.number_of_sources,
+        start_time_offset: debt_asset_oracle_params.start_time_offset,
+        time_window: debt_asset_oracle_params.time_window,
+        aggregation_mode: debt_asset_oracle_params.aggregation_mode,
+    };
+    oracle_contract.set_oracle_config(asset: debt_asset_params.asset, oracle_config: debt_oracle_config);
 
     cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
-    singleton
-        .add_asset(params: third_asset_params, :interest_rate_config, pragma_oracle_params: third_asset_oracle_params);
+    singleton.add_asset(params: debt_asset_params, :interest_rate_config);
+
+    cheat_caller_address(oracle_contract.contract_address, owner, CheatSpan::TargetCalls(1));
+    let third_oracle_config = OracleConfig {
+        pragma_key: third_asset_oracle_params.pragma_key,
+        timeout: third_asset_oracle_params.timeout,
+        number_of_sources: third_asset_oracle_params.number_of_sources,
+        start_time_offset: third_asset_oracle_params.start_time_offset,
+        time_window: third_asset_oracle_params.time_window,
+        aggregation_mode: third_asset_oracle_params.aggregation_mode,
+    };
+    oracle_contract.set_oracle_config(asset: third_asset_params.asset, oracle_config: third_oracle_config);
+    cheat_caller_address(singleton.contract_address, extension_owner, CheatSpan::TargetCalls(1));
+    singleton.add_asset(params: third_asset_params, :interest_rate_config);
 
     // Set liquidation config.
     let collateral_asset = collateral_asset_params.asset;
@@ -465,12 +501,12 @@ pub fn setup_pool(
     third_address: ContractAddress,
     fund_borrower: bool,
     interest_rate_config: Option<InterestRateConfig>,
-) -> (ISingletonV2Dispatcher, TestConfig, Users, LendingTerms) {
+) -> (IOracleDispatcher, ISingletonV2Dispatcher, TestConfig, Users, LendingTerms) {
     let Env {
-        singleton, config, users, ..,
+        oracle_contract, singleton, config, users, ..,
     } = setup_env(oracle_address, collateral_address, debt_address, third_address);
 
-    create_pool(singleton, config, users.owner, users.extension_owner, interest_rate_config);
+    create_pool(oracle_contract, singleton, config, users.owner, users.extension_owner, interest_rate_config);
 
     let TestConfig {
         collateral_asset, debt_asset, third_asset, collateral_scale, debt_scale, third_scale, ..,
@@ -510,9 +546,9 @@ pub fn setup_pool(
     singleton.set_shutdown_mode_agent(get_contract_address());
     stop_cheat_caller_address(singleton.contract_address);
 
-    (singleton, config, users, terms)
+    (oracle_contract, singleton, config, users, terms)
 }
 
-pub fn setup() -> (ISingletonV2Dispatcher, TestConfig, Users, LendingTerms) {
+pub fn setup() -> (IOracleDispatcher, ISingletonV2Dispatcher, TestConfig, Users, LendingTerms) {
     setup_pool(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::None)
 }
