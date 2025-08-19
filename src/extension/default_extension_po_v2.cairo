@@ -601,11 +601,11 @@ mod DefaultExtensionPOV2 {
                 let v_token_config = *v_token_params.at(i);
                 let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
 
-                // deploy the vToken for the the collateral asset
-                self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
-
                 // burn inflation fee
                 self.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
+
+                // deploy the vToken for the the collateral asset
+                self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
                 i += 1;
             }
@@ -695,15 +695,15 @@ mod DefaultExtensionPOV2 {
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
 
-            // deploy the vToken for the the collateral asset
-            let VTokenParams { v_token_name, v_token_symbol } = v_token_params;
-            self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
-
             let singleton = ISingletonV2Dispatcher { contract_address: self.singleton.read() };
             singleton.set_asset_config(pool_id, asset_params);
 
             // burn inflation fee
             self.burn_inflation_fee(pool_id, asset, asset_params.is_legacy);
+
+            // deploy the vToken for the the collateral asset
+            let VTokenParams { v_token_name, v_token_symbol } = v_token_params;
+            self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
         }
 
         /// Sets the debt cap for a given asset in a pool
