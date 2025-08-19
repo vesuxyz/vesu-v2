@@ -12,7 +12,7 @@ use vesu::data_model::{
 };
 use vesu::interest_rate_model::InterestRateConfig;
 use vesu::math::pow_10;
-use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
 use vesu::test::mock_oracle::{
     IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
 };
@@ -44,7 +44,7 @@ pub struct LendingTerms {
 
 #[derive(Copy, Drop, Serde)]
 pub struct Env {
-    pub singleton: ISingletonV2Dispatcher,
+    pub pool: IPoolDispatcher,
     pub config: TestConfig,
     pub users: Users,
 }
@@ -127,9 +127,9 @@ pub fn setup_env(
 
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
-    let singleton = ISingletonV2Dispatcher {
+    let pool = IPoolDispatcher {
         contract_address: deploy_with_args(
-            "SingletonV2",
+            "Pool",
             array![
                 'PoolName',
                 users.owner.into(),
@@ -140,8 +140,8 @@ pub fn setup_env(
         ),
     };
 
-    cheat_caller_address(singleton.contract_address, users.curator, CheatSpan::TargetCalls(1));
-    singleton.set_fee_recipient(users.curator);
+    cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
+    pool.set_fee_recipient(users.curator);
 
     start_cheat_block_timestamp_global(get_block_timestamp() + 1);
 
@@ -169,37 +169,37 @@ pub fn setup_env(
     third_asset.transfer(users.curator, INFLATION_FEE * 2);
     stop_cheat_caller_address(third_asset.contract_address);
 
-    // approve singleton to transfer assets on behalf of owner
+    // approve pool to transfer assets on behalf of owner
     start_cheat_caller_address(collateral_asset.contract_address, users.curator);
-    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    collateral_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(debt_asset.contract_address, users.curator);
-    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    debt_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.curator);
-    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    third_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
-    // approve Singleton to transfer assets on behalf of lender
+    // approve Pool to transfer assets on behalf of lender
     start_cheat_caller_address(debt_asset.contract_address, users.lender);
-    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    debt_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(collateral_asset.contract_address, users.lender);
-    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    collateral_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.lender);
-    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    third_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
-    // approve Singleton to transfer assets on behalf of borrower
+    // approve Pool to transfer assets on behalf of borrower
     start_cheat_caller_address(debt_asset.contract_address, users.borrower);
-    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    debt_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
-    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    collateral_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.borrower);
-    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    third_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
     if oracle_address.is_zero() {
@@ -214,7 +214,7 @@ pub fn setup_env(
     let third_scale = pow_10(third_asset.decimals().into());
     let config = TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale };
 
-    Env { singleton, config, users }
+    Env { pool, config, users }
 }
 
 pub fn test_interest_rate_config() -> InterestRateConfig {
@@ -231,7 +231,7 @@ pub fn test_interest_rate_config() -> InterestRateConfig {
 }
 
 pub fn create_pool(
-    singleton: ISingletonV2Dispatcher,
+    pool: IPoolDispatcher,
     config: TestConfig,
     owner: ContractAddress,
     curator: ContractAddress,
@@ -327,28 +327,26 @@ pub fn create_pool(
     let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
 
     // Add assets.
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .add_asset(
             params: collateral_asset_params,
             :interest_rate_config,
             pragma_oracle_params: collateral_asset_oracle_params,
         );
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
-        .add_asset(params: debt_asset_params, :interest_rate_config, pragma_oracle_params: debt_asset_oracle_params);
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool.add_asset(params: debt_asset_params, :interest_rate_config, pragma_oracle_params: debt_asset_oracle_params);
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
-        .add_asset(params: third_asset_params, :interest_rate_config, pragma_oracle_params: third_asset_oracle_params);
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool.add_asset(params: third_asset_params, :interest_rate_config, pragma_oracle_params: third_asset_oracle_params);
 
     // Set liquidation config.
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_liquidation_config(
             :collateral_asset,
             :debt_asset,
@@ -358,8 +356,8 @@ pub fn create_pool(
     let collateral_asset = debt_asset_params.asset;
     let debt_asset = collateral_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_liquidation_config(
             :collateral_asset,
             :debt_asset,
@@ -369,8 +367,8 @@ pub fn create_pool(
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = third_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_liquidation_config(
             :collateral_asset,
             :debt_asset,
@@ -380,8 +378,8 @@ pub fn create_pool(
     let collateral_asset = third_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_liquidation_config(
             :collateral_asset,
             :debt_asset,
@@ -392,33 +390,33 @@ pub fn create_pool(
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_0.debt_cap);
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_0.debt_cap);
 
     let collateral_asset = debt_asset_params.asset;
     let debt_asset = collateral_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_1.debt_cap);
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_1.debt_cap);
 
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = third_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_2.debt_cap);
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_2.debt_cap);
 
     let collateral_asset = third_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_3.debt_cap);
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_cap_params_3.debt_cap);
 
     // Set lvt config.
     let collateral_asset = debt_asset_params.asset;
     let debt_asset = collateral_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
         );
@@ -426,8 +424,8 @@ pub fn create_pool(
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
         );
@@ -435,8 +433,8 @@ pub fn create_pool(
     let collateral_asset = collateral_asset_params.asset;
     let debt_asset = third_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_2.max_ltv },
         );
@@ -444,18 +442,18 @@ pub fn create_pool(
     let collateral_asset = third_asset_params.asset;
     let debt_asset = debt_asset_params.asset;
 
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool
         .set_ltv_config(
             :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_3.max_ltv },
         );
 
     // set the shutdown config
     let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
-    cheat_caller_address(singleton.contract_address, curator, CheatSpan::TargetCalls(1));
-    singleton.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
+    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
+    pool.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
 
-    assert!(singleton.pool_name() == 'PoolName', "pool name not set");
+    assert!(pool.pool_name() == 'PoolName', "pool name not set");
 }
 
 pub fn setup_pool(
@@ -465,12 +463,10 @@ pub fn setup_pool(
     third_address: ContractAddress,
     fund_borrower: bool,
     interest_rate_config: Option<InterestRateConfig>,
-) -> (ISingletonV2Dispatcher, TestConfig, Users, LendingTerms) {
-    let Env {
-        singleton, config, users, ..,
-    } = setup_env(oracle_address, collateral_address, debt_address, third_address);
+) -> (IPoolDispatcher, TestConfig, Users, LendingTerms) {
+    let Env { pool, config, users, .. } = setup_env(oracle_address, collateral_address, debt_address, third_address);
 
-    create_pool(singleton, config, users.owner, users.curator, interest_rate_config);
+    create_pool(pool, config, users.owner, users.curator, interest_rate_config);
 
     let TestConfig {
         collateral_asset, debt_asset, third_asset, collateral_scale, debt_scale, third_scale, ..,
@@ -481,9 +477,9 @@ pub fn setup_pool(
     let liquidity_to_deposit_third = third_scale;
     let collateral_to_deposit = collateral_scale;
     let debt_to_draw = debt_scale / 2; // 50% LTV
-    let asset_config = singleton.asset_config(debt_asset.contract_address);
+    let asset_config = pool.asset_config(debt_asset.contract_address);
     let rate_accumulator = asset_config.last_rate_accumulator;
-    let nominal_debt_to_draw = singleton.calculate_nominal_debt(debt_to_draw.into(), rate_accumulator, debt_scale);
+    let nominal_debt_to_draw = pool.calculate_nominal_debt(debt_to_draw.into(), rate_accumulator, debt_scale);
 
     let terms = LendingTerms {
         liquidity_to_deposit,
@@ -501,18 +497,18 @@ pub fn setup_pool(
         stop_cheat_caller_address(collateral_asset.contract_address);
     }
 
-    start_cheat_caller_address(singleton.contract_address, users.curator);
-    singleton.set_asset_parameter(collateral_asset.contract_address, 'floor', SCALE / 10_000);
-    singleton.set_asset_parameter(debt_asset.contract_address, 'floor', SCALE / 10_000);
-    singleton.set_asset_parameter(third_asset.contract_address, 'floor', SCALE / 10_000);
-    stop_cheat_caller_address(singleton.contract_address);
-    start_cheat_caller_address(singleton.contract_address, users.curator);
-    singleton.set_shutdown_mode_agent(get_contract_address());
-    stop_cheat_caller_address(singleton.contract_address);
+    start_cheat_caller_address(pool.contract_address, users.curator);
+    pool.set_asset_parameter(collateral_asset.contract_address, 'floor', SCALE / 10_000);
+    pool.set_asset_parameter(debt_asset.contract_address, 'floor', SCALE / 10_000);
+    pool.set_asset_parameter(third_asset.contract_address, 'floor', SCALE / 10_000);
+    stop_cheat_caller_address(pool.contract_address);
+    start_cheat_caller_address(pool.contract_address, users.curator);
+    pool.set_shutdown_mode_agent(get_contract_address());
+    stop_cheat_caller_address(pool.contract_address);
 
-    (singleton, config, users, terms)
+    (pool, config, users, terms)
 }
 
-pub fn setup() -> (ISingletonV2Dispatcher, TestConfig, Users, LendingTerms) {
+pub fn setup() -> (IPoolDispatcher, TestConfig, Users, LendingTerms) {
     setup_pool(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::None)
 }

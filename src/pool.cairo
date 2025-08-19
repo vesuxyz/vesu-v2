@@ -16,7 +16,7 @@ pub trait IFlashLoanReceiver<TContractState> {
 }
 
 #[starknet::interface]
-pub trait ISingletonV2<TContractState> {
+pub trait IPool<TContractState> {
     fn pool_name(self: @TContractState) -> felt252;
     fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
     fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
@@ -140,7 +140,7 @@ pub trait IEIC<TContractState> {
 
 
 #[starknet::contract]
-mod SingletonV2 {
+mod Pool {
     use alexandria_math::i257::{I257Trait, i257};
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::OwnableComponent;
@@ -169,12 +169,12 @@ mod SingletonV2 {
     use vesu::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::math::pow_10;
     use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
+    use vesu::pool::{
+        IEICDispatcherTrait, IEICLibraryDispatcher, IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait,
+        IPool, IPoolDispatcher, IPoolDispatcherTrait,
+    };
     use vesu::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::pragma_oracle::{OracleConfig, pragma_oracle_component};
-    use vesu::singleton_v2::{
-        IEICDispatcherTrait, IEICLibraryDispatcher, IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait,
-        ISingletonV2, ISingletonV2Dispatcher, ISingletonV2DispatcherTrait,
-    };
     use vesu::units::{INFLATION_FEE, SCALE};
 
     #[storage]
@@ -838,7 +838,7 @@ mod SingletonV2 {
     }
 
     #[abi(embed_v0)]
-    impl SingletonV2Impl of ISingletonV2<ContractState> {
+    impl PoolImpl of IPool<ContractState> {
         /// Returns the name of a pool
         /// # Returns
         /// * `name` - name of the pool
@@ -1791,7 +1791,7 @@ mod SingletonV2 {
         /// # Returns
         /// * `name` - the name of the contract
         fn upgrade_name(self: @ContractState) -> felt252 {
-            'Vesu Singleton'
+            'Vesu Pool'
         }
 
         /// Upgrades the contract to a new implementation
@@ -1811,7 +1811,7 @@ mod SingletonV2 {
             }
             replace_class_syscall(new_implementation).unwrap_syscall();
             // Check to prevent mistakes when upgrading the contract
-            let new_name = ISingletonV2Dispatcher { contract_address: get_contract_address() }.upgrade_name();
+            let new_name = IPoolDispatcher { contract_address: get_contract_address() }.upgrade_name();
             assert(new_name == self.upgrade_name(), 'invalid upgrade name');
             self.emit(ContractUpgraded { new_implementation });
         }
