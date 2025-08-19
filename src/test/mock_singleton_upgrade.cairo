@@ -2,14 +2,18 @@
 pub trait IMockSingletonUpgrade<TContractState> {
     fn upgrade_name(ref self: TContractState) -> felt252;
     fn tag(ref self: TContractState) -> felt252;
+    fn pool_name(ref self: TContractState) -> felt252;
 }
 
 #[starknet::contract]
 mod MockSingletonUpgrade {
+    use starknet::storage::StoragePointerReadAccess;
     use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
 
     #[storage]
-    struct Storage {}
+    struct Storage {
+        pool_name: felt252,
+    }
 
     #[abi(embed_v0)]
     impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
@@ -19,6 +23,10 @@ mod MockSingletonUpgrade {
 
         fn tag(ref self: ContractState) -> felt252 {
             'MockSingletonUpgrade'
+        }
+
+        fn pool_name(ref self: ContractState) -> felt252 {
+            self.pool_name.read()
         }
     }
 }
@@ -40,6 +48,10 @@ mod MockExtensionPOV2Upgrade {
         fn tag(ref self: ContractState) -> felt252 {
             'MockExtensionPOV2Upgrade'
         }
+
+        fn pool_name(ref self: ContractState) -> felt252 {
+            'mock-default-value'
+        }
     }
 }
 
@@ -59,6 +71,10 @@ mod MockExtensionEKV2Upgrade {
         fn tag(ref self: ContractState) -> felt252 {
             'MockExtensionEKV2Upgrade'
         }
+
+        fn pool_name(ref self: ContractState) -> felt252 {
+            'mock-default-value'
+        }
     }
 }
 
@@ -76,6 +92,31 @@ mod MockSingletonUpgradeWrongName {
         }
         fn tag(ref self: ContractState) -> felt252 {
             'MockSingletonUpgradeWrongName'
+        }
+
+        fn pool_name(ref self: ContractState) -> felt252 {
+            'mock-default-value'
+        }
+    }
+}
+
+#[starknet::contract]
+mod MockEIC {
+    use starknet::storage::StoragePointerWriteAccess;
+    use vesu::singleton_v2::IEIC;
+
+    #[storage]
+    struct Storage {
+        // used to check if the eic is initialized
+        pool_name: felt252,
+    }
+
+    #[abi(embed_v0)]
+    impl MockEICImpl of IEIC<ContractState> {
+        fn eic_initialize(ref self: ContractState, data: Span<felt252>) {
+            let mock_eic_param: felt252 = (*data[0]).try_into().unwrap();
+            assert(mock_eic_param == 'NewPoolName', 'Invalid mock eic data');
+            self.pool_name.write(mock_eic_param);
         }
     }
 }
