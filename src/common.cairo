@@ -305,6 +305,7 @@ pub fn apply_position_update_to_context(
         context.position.nominal_debt += nominal_debt_delta.abs();
         context.debt_asset_config.total_nominal_debt += nominal_debt_delta.abs();
         context.debt_asset_config.reserve -= debt_delta.abs();
+        assert!(bad_debt == 0, "bad-debt-not-zero");
     } else if nominal_debt_delta < Zero::zero() {
         // limit the nominal debt delta to the position's nominal debt
         if nominal_debt_delta.abs() > context.position.nominal_debt {
