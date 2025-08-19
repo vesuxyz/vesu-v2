@@ -479,6 +479,7 @@ mod SingletonV2 {
     /// * `pool_id` - id of the pool
     /// * `extension` - address of the pool's extension contract
     /// * `asset` - address of the asset
+    /// * `asset_config` - asset config containing the previous rate accumulator and full utilization rate
     /// # Returns
     /// * `asset_config` - asset config containing the updated last rate accumulator and full utilization rate
     fn rate_accumulator(
@@ -1785,6 +1786,7 @@ mod SingletonV2 {
         /// * `receiver` - address of the flash loan receiver
         /// * `asset` - address of the asset
         /// * `amount` - amount of the asset to loan
+        /// * `is_legacy` - whether the asset is using legacy naming conventions
         /// * `data` - data to pass to the flash loan receiver
         fn flash_loan(
             ref self: ContractState,
