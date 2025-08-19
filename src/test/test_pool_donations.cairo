@@ -9,23 +9,23 @@ mod TestPoolDonation {
     use starknet::get_block_timestamp;
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
     use vesu::math::pow_10;
-    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
+    use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
     use vesu::units::{DAY_IN_SECONDS, PERCENT};
 
     #[test]
     fn test_donate_to_reserve_pool() {
-        let (_, singleton, config, users, terms) = setup();
+        let (_, pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
 
-        start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let initial_singleton_debt_asset_balance = debt_asset.balance_of(singleton.contract_address);
+        let initial_pool_debt_asset_balance = debt_asset.balance_of(pool.contract_address);
 
         // LENDER
 
@@ -38,23 +38,23 @@ mod TestPoolDonation {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
-        let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance == initial_singleton_debt_asset_balance + liquidity_to_deposit, "Not transferred to Singleton");
+        let balance = debt_asset.balance_of(pool.contract_address);
+        assert!(balance == initial_pool_debt_asset_balance + liquidity_to_deposit, "Not transferred to Pool");
 
-        let (old_position, collateral, _) = singleton
+        let (old_position, collateral, _) = pool
             .position(debt_asset.contract_address, collateral_asset.contract_address, users.lender);
 
         assert!(collateral == liquidity_to_deposit, "Collateral not set");
 
-        let asset_config = singleton.asset_config(debt_asset.contract_address);
+        let asset_config = pool.asset_config(debt_asset.contract_address);
         let old_pool_reserve = asset_config.reserve;
 
         let amount_to_donate_to_reserve = 25 * debt_scale;
@@ -70,27 +70,27 @@ mod TestPoolDonation {
             debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.borrower);
-        let response = singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        let response = pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
-        let (fee_shares, _) = singleton.get_fees(debt_asset.contract_address);
+        let (fee_shares, _) = pool.get_fees(debt_asset.contract_address);
         assert!(fee_shares == 0, "No fee shares should not have accrued");
 
         // interest accrued should be reflected since time has passed
         start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
-        let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
+        let (fee_shares_before, _) = pool.get_fees(debt_asset.contract_address);
         assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
         cheat_caller_address(debt_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         debt_asset.transfer(users.curator, amount_to_donate_to_reserve);
         cheat_caller_address(debt_asset.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        debt_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
-        cheat_caller_address(singleton.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        singleton.donate_to_reserve(debt_asset.contract_address, amount_to_donate_to_reserve);
+        debt_asset.approve(pool.contract_address, amount_to_donate_to_reserve);
+        cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
+        pool.donate_to_reserve(debt_asset.contract_address, amount_to_donate_to_reserve);
 
-        let (fee_shares_after, _) = singleton.get_fees(debt_asset.contract_address);
+        let (fee_shares_after, _) = pool.get_fees(debt_asset.contract_address);
         assert!(fee_shares_after == fee_shares_before, "Fee shares mismatch");
 
         let balance = debt_asset.balance_of(users.lender);
@@ -99,12 +99,12 @@ mod TestPoolDonation {
             "Not transferred from Lender",
         );
 
-        let (new_position, _, _) = singleton
+        let (new_position, _, _) = pool
             .position(debt_asset.contract_address, collateral_asset.contract_address, users.lender);
 
         assert!(new_position.collateral_shares == old_position.collateral_shares, "Collateral shares should unchanged");
 
-        let asset_config = singleton.asset_config(debt_asset.contract_address);
+        let asset_config = pool.asset_config(debt_asset.contract_address);
         let new_pool_reserve = asset_config.reserve;
         assert!(
             new_pool_reserve == old_pool_reserve + amount_to_donate_to_reserve - response.debt_delta.abs(),
@@ -115,7 +115,7 @@ mod TestPoolDonation {
     #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_donate_to_reserve_pool_incorrect_asset() {
-        let (_, singleton, config, users, _) = setup();
+        let (_, pool, config, users, _) = setup();
         let TestConfig { debt_asset, .. } = config;
 
         let mock_asset_class = ContractClass { class_hash: get_class_hash(debt_asset.contract_address) };
@@ -130,17 +130,17 @@ mod TestPoolDonation {
         let fake_asset = IERC20Dispatcher { contract_address };
 
         assert!(fake_asset.balance_of(users.lender) == supply, "Fake asset not minted");
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        fake_asset.approve(singleton.contract_address, supply);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        fake_asset.approve(pool.contract_address, supply);
+        stop_cheat_caller_address(pool.contract_address);
 
         let amount_to_donate_to_reserve = 2 * fake_asset_scale;
 
         cheat_caller_address(fake_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         fake_asset.transfer(users.curator, amount_to_donate_to_reserve);
         cheat_caller_address(fake_asset.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        fake_asset.approve(singleton.contract_address, amount_to_donate_to_reserve);
-        cheat_caller_address(singleton.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        singleton.donate_to_reserve(fake_asset.contract_address, amount_to_donate_to_reserve);
+        fake_asset.approve(pool.contract_address, amount_to_donate_to_reserve);
+        cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
+        pool.donate_to_reserve(fake_asset.contract_address, amount_to_donate_to_reserve);
     }
 }

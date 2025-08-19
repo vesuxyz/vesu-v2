@@ -27,7 +27,7 @@ url = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/rdvL5iHy
 block_id.number = "1565065"
 
 [tool.voyager]
-singleton = { path = "src/singleton_v2.cairo" }
+pool = { path = "src/pool.cairo" }
 
 [scripts]
 buildRelease = "scarb --profile release build"
