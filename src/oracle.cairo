@@ -35,11 +35,9 @@ mod Oracle {
     use vesu::data_model::AssetPrice;
     use vesu::oracle::IOracle;
     use vesu::packing::{AssetConfigPacking, PositionPacking};
+    use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher, IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::pragma_oracle::{OracleConfig, pragma_oracle_component};
-    use vesu::singleton_v2::{
-        IEICDispatcherTrait, IEICLibraryDispatcher, ISingletonV2Dispatcher, ISingletonV2DispatcherTrait,
-    };
 
     #[storage]
     struct Storage {
@@ -222,7 +220,7 @@ mod Oracle {
             }
             replace_class_syscall(new_implementation).unwrap_syscall();
             // Check to prevent mistakes when upgrading the contract
-            let new_name = ISingletonV2Dispatcher { contract_address: get_contract_address() }.upgrade_name();
+            let new_name = IPoolDispatcher { contract_address: get_contract_address() }.upgrade_name();
             assert(new_name == self.upgrade_name(), 'invalid upgrade name');
             self.emit(ContractUpgraded { new_implementation });
         }
