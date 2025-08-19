@@ -34,7 +34,7 @@ mod TestPragmaOracle {
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
-            max_target_utilization: 85_000,
+            max_target_utilization: 99_999,
             target_utilization: 87_500,
             min_full_utilization_rate: 1582470460,
             max_full_utilization_rate: 32150205761,
