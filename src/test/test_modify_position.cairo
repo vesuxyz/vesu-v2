@@ -1195,6 +1195,7 @@ mod TestModifyPosition {
     }
 
     #[test]
+    #[should_panic(expected: "asset-config-nonexistent")]
     fn test_modify_position_zero_asset() {
         let (singleton, config, users, terms) = setup();
         let TestConfig { debt_asset, .. } = config;
@@ -1216,35 +1217,15 @@ mod TestModifyPosition {
     }
 
     #[test]
-    #[should_panic(expected: "zero-debt")]
-    fn test_modify_position_zero_asset_borrow() {
-        let (singleton, config, users, terms) = setup();
-        let TestConfig { debt_asset, .. } = config;
-        let LendingTerms { liquidity_to_deposit, .. } = terms;
-
-        let params = ModifyPositionParams {
-            collateral_asset: debt_asset.contract_address,
-            debt_asset: Zero::zero(),
-            user: users.lender,
-            collateral: Amount { denomination: AmountDenomination::Assets, value: (liquidity_to_deposit).into() },
-            debt: Amount { denomination: AmountDenomination::Native, value: (SCALE / 4).into() },
-        };
-
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
-    }
-
-    #[test]
     #[should_panic(expected: "not-collateralized")]
     fn test_modify_position_no_pair() {
         let (singleton, config, users, terms) = setup();
-        let TestConfig { collateral_asset, third_asset, .. } = config;
+        let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
         let params = ModifyPositionParams {
             collateral_asset: collateral_asset.contract_address,
-            debt_asset: Zero::zero(),
+            debt_asset: debt_asset.contract_address,
             user: users.lender,
             collateral: Amount { denomination: AmountDenomination::Assets, value: (collateral_to_deposit).into() },
             debt: Default::default(),

@@ -579,12 +579,10 @@ mod SingletonV2 {
         /// * `asset_config` - asset configuration
         fn asset_config(self: @ContractState, asset: ContractAddress) -> AssetConfig {
             let mut asset_config = self.asset_configs.read(asset);
-            if asset.is_non_zero() {
-                // Check that the asset is registered.
-                assert_asset_config_exists(asset_config);
-            }
+            // Check that the asset is registered.
+            assert_asset_config_exists(asset_config);
 
-            if asset_config.last_updated != get_block_timestamp() && asset != Zero::zero() {
+            if asset_config.last_updated != get_block_timestamp() {
                 let new_asset_config = self.new_rate_accumulator(asset, asset_config);
                 let fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
                 asset_config = new_asset_config;
@@ -778,16 +776,8 @@ mod SingletonV2 {
                 debt_asset,
                 collateral_asset_config,
                 debt_asset_config,
-                collateral_asset_price: if collateral_asset == Zero::zero() {
-                    AssetPrice { value: 0, is_valid: true }
-                } else {
-                    self.price(collateral_asset)
-                },
-                debt_asset_price: if debt_asset == Zero::zero() {
-                    AssetPrice { value: 0, is_valid: true }
-                } else {
-                    self.price(debt_asset)
-                },
+                collateral_asset_price: self.price(collateral_asset),
+                debt_asset_price: self.price(debt_asset),
                 max_ltv: self.ltv_configs.read((collateral_asset, debt_asset)).max_ltv,
                 user,
                 position: self.positions.read((collateral_asset, debt_asset, user)),
@@ -977,7 +967,7 @@ mod SingletonV2 {
         ) {
             let caller = get_caller_address();
             assert!(caller == self.extension_owner.read(), "caller-not-extension-owner");
-            assert!(self.asset_configs.read((params.asset)).scale == 0, "asset-config-already-exists");
+            assert!(self.asset_configs.read(params.asset).scale == 0, "asset-config-already-exists");
 
             let asset = IERC20Dispatcher { contract_address: params.asset };
             let scale = pow_10(asset.decimals().into());
