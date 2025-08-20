@@ -24,8 +24,8 @@ mod TestPragmaOracle {
     fn create_custom_pool(
         owner: ContractAddress,
         curator: ContractAddress,
-        oracle: IOracleDispatcher,
         pool: IPoolDispatcher,
+        oracle: IOracleDispatcher,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         timeout: u64,
@@ -179,7 +179,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_get_default_price() {
-        let (oracle, _, config, _, _) = setup();
+        let (_, oracle, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let collateral_asset_price = oracle.price(collateral_asset.contract_address);
@@ -194,14 +194,14 @@ mod TestPragmaOracle {
     #[test]
     #[should_panic(expected: "oracle-price-invalid")]
     fn test_price_invalid() {
-        let (oracle, _, _, _, _) = setup();
+        let (_, oracle, _, _, _) = setup();
 
         oracle.price(Zero::zero());
     }
 
     #[test]
     fn test_get_price_high() {
-        let (oracle, _, config, _, _) = setup();
+        let (_, oracle, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
@@ -227,7 +227,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let timeout = 10;
@@ -235,8 +235,8 @@ mod TestPragmaOracle {
         create_custom_pool(
             users.owner,
             users.curator,
-            oracle,
             pool,
+            oracle,
             collateral_asset.contract_address,
             debt_asset.contract_address,
             timeout,
@@ -261,7 +261,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout_stale_price() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let timeout = 10;
@@ -269,8 +269,8 @@ mod TestPragmaOracle {
         create_custom_pool(
             users.owner,
             users.curator,
-            oracle,
             pool,
+            oracle,
             collateral_asset.contract_address,
             debt_asset.contract_address,
             timeout,
@@ -290,15 +290,15 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_reached() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
         create_custom_pool(
             users.owner,
             users.curator,
-            oracle,
             pool,
+            oracle,
             collateral_asset.contract_address,
             debt_asset.contract_address,
             0,
@@ -324,15 +324,15 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_not_reached() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let min_number_of_sources = 2;
         create_custom_pool(
             users.owner,
             users.curator,
-            oracle,
             pool,
+            oracle,
             collateral_asset.contract_address,
             debt_asset.contract_address,
             0,
@@ -351,7 +351,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_price_twap() {
-        let (oracle, _, config, _, _) = setup();
+        let (_, oracle, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         store(

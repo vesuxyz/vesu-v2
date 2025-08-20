@@ -48,9 +48,9 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_non_existent_asset_config() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let dummy_address = contract_address_const::<'dummy'>();
         pool.asset_config(dummy_address);
@@ -59,7 +59,7 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "asset-config-already-exists")]
     fn test_create_pool_duplicate_asset() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -86,7 +86,7 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "invalid-ltv-config")]
     fn test_create_pool_assert_ltv_config_invalid_ltv_config() {
-        let Env { oracle, pool, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset = deploy_asset(users.curator);
 
@@ -160,7 +160,7 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "scale-exceeded")]
     fn test_create_pool_assert_asset_config_scale_exceeded() {
-        let Env { oracle, pool, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let asset = deploy_asset_with_decimals(get_contract_address(), 19);
 
@@ -188,7 +188,7 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "max-utilization-exceeded")]
     fn test_create_pool_assert_asset_config_max_utilization_exceeded() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -214,7 +214,7 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "rate-accumulator-too-low")]
     fn test_create_pool_assert_asset_config_rate_accumulator_too_low() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -240,7 +240,7 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "fee-rate-exceeded")]
     fn test_create_pool_assert_asset_config_fee_rate_exceeded() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -266,9 +266,9 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_add_asset_not_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let asset = deploy_asset(users.curator);
 
@@ -288,9 +288,9 @@ mod TestPool {
 
     #[test]
     fn test_add_asset() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let asset = deploy_asset(users.curator);
 
@@ -324,9 +324,9 @@ mod TestPool {
 
     #[test]
     fn test_set_asset_parameter() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
@@ -348,7 +348,7 @@ mod TestPool {
 
     #[test]
     fn test_set_asset_parameter_fee_shares() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -407,9 +407,9 @@ mod TestPool {
 
     #[test]
     fn test_set_ltv_config() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
@@ -432,9 +432,9 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "contract-already-paused")]
     fn test_pool_pause_paused_contract() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.owner);
         pool.pause();
@@ -453,9 +453,9 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "contract-already-unpaused")]
     fn test_pool_unpause_unpaused_contract() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(pool.contract_address, users.owner, CheatSpan::TargetCalls(1));
         pool.unpause();
@@ -464,9 +464,9 @@ mod TestPool {
     #[test]
     #[should_panic(expected: "contract-paused")]
     fn test_pool_call_paused_contract() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(pool.contract_address, users.owner, CheatSpan::TargetCalls(1));
         pool.pause();
@@ -483,9 +483,9 @@ mod TestPool {
 
     #[test]
     fn test_pool_pause_flow() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.owner);
         pool.pause();

@@ -17,7 +17,7 @@ mod TestShutdown {
 
     #[test]
     fn test_set_shutdown_mode_recovery() {
-        let (_, pool, config, _, _) = setup();
+        let (pool, _, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         pool.set_shutdown_mode(ShutdownMode::Recovery);
@@ -29,7 +29,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "shutdown-mode-not-recovery")]
     fn test_set_shutdown_mode_not_recovery() {
-        let (_, pool, _, _, _) = setup();
+        let (pool, _, _, _, _) = setup();
         pool.set_shutdown_mode(ShutdownMode::Recovery);
         pool.set_shutdown_mode(ShutdownMode::Subscription);
     }
@@ -37,7 +37,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_from_none() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -92,7 +92,7 @@ mod TestShutdown {
 
     #[test]
     fn test_recovery_mode_made_safer() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -150,7 +150,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_decreasing_collateral() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -222,7 +222,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-recovery")]
     fn test_recovery_mode_increasing_debt() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -291,7 +291,7 @@ mod TestShutdown {
 
     #[test]
     fn test_subscription_mode_decreasing_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -366,7 +366,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_collateral() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -441,7 +441,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_decreasing_collateral() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -518,7 +518,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-subscription")]
     fn test_subscription_mode_increasing_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -594,7 +594,7 @@ mod TestShutdown {
 
     #[test]
     fn test_redemption_mode_decreasing_collateral() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -696,7 +696,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_collateral() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -803,7 +803,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_decreasing_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -912,7 +912,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "in-redemption")]
     fn test_redemption_mode_increasing_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1020,7 +1020,7 @@ mod TestShutdown {
     #[test]
     #[should_panic(expected: "non-zero-debt")]
     fn test_redemption_mode_non_zero_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1104,7 +1104,7 @@ mod TestShutdown {
 
     #[test]
     fn test_redemption_mode_max_utilization() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, collateral_scale, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -1252,7 +1252,7 @@ mod TestShutdown {
     // -> pool should still be in recovery mode
     #[test]
     fn test_recovery_mode_complex() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
@@ -1372,7 +1372,7 @@ mod TestShutdown {
             target_rate_percent: SCALE,
         };
 
-        let (_, pool, config, users, terms) = setup_pool(
+        let (pool, _, config, users, terms) = setup_pool(
             Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::Some(interest_rate_config),
         );
 
@@ -1439,7 +1439,7 @@ mod TestShutdown {
     // test that collateral is not double counted
     #[test]
     fn test_shutdown_collateral_accounting() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, liquidity_to_deposit_third, ..,
@@ -1516,7 +1516,7 @@ mod TestShutdown {
 
     #[test]
     fn test_fixed_shutdown_mode() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
