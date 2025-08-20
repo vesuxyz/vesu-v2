@@ -3,6 +3,7 @@ pub mod data_model;
 pub mod interest_rate_model;
 
 pub mod math;
+pub mod oracle;
 pub mod packing;
 pub mod pragma_oracle;
 pub mod singleton_v2;
