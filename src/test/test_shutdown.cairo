@@ -1361,9 +1361,9 @@ mod TestShutdown {
         start_cheat_block_timestamp_global(current_time);
 
         let interest_rate_config = InterestRateConfig {
-            min_target_utilization: 100_000,
+            min_target_utilization: 90_000,
             max_target_utilization: 100_000,
-            target_utilization: 100_000,
+            target_utilization: 99_999,
             min_full_utilization_rate: 100824704600, // 300% per year
             max_full_utilization_rate: 100824704600,
             zero_utilization_rate: 100824704600,

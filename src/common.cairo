@@ -12,6 +12,7 @@ use vesu::units::SCALE;
 /// * `debt` - debt [asset scale]
 /// * `rate_accumulator` - rate accumulator [SCALE]
 /// * `asset_scale` - asset scale [asset scale]
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `nominal_debt` - computed nominal debt [SCALE]
 pub fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
@@ -35,6 +36,7 @@ pub fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u
 /// * `nominal_debt` - nominal debt [SCALE]
 /// * `rate_accumulator` - rate accumulator [SCALE]
 /// * `asset_scale` - asset scale [asset scale]
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `debt` - computed debt [asset scale]
 pub fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u256, round_up: bool) -> u256 {
@@ -57,6 +59,7 @@ pub fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u
 /// # Arguments
 /// * `collateral` - collateral asset amount [asset scale]
 /// * `asset_config` - collateral asset config
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `collateral_shares` - collateral shares amount [SCALE]
 pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, round_up: bool) -> u256 {
@@ -81,6 +84,7 @@ pub fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, 
 /// # Arguments
 /// * `collateral_shares` - collateral shares amount [SCALE]
 /// * `asset_config` - collateral asset config
+/// * `round_up` - whether to round up the result
 /// # Returns
 /// * `collateral` - collateral asset amount [asset scale]
 pub fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, round_up: bool) -> u256 {
@@ -157,10 +161,10 @@ pub fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u25
     }
 
     let accrued_interest = calculate_debt(
-        asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, false,
+        asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, true,
     );
     let fee = u256_mul_div(accrued_interest, fee_rate, SCALE, Rounding::Floor);
-    let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, false);
+    let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, true);
 
     if total_assets == 0 {
         return 0;
@@ -292,6 +296,7 @@ pub fn apply_position_update_to_context(
         }
         context.position.collateral_shares -= collateral_shares_delta.abs();
         context.collateral_asset_config.total_collateral_shares -= collateral_shares_delta.abs();
+        assert!(context.collateral_asset_config.reserve >= collateral_delta.abs(), "insufficient-reserve");
         context.collateral_asset_config.reserve -= collateral_delta.abs();
     }
 
@@ -304,6 +309,7 @@ pub fn apply_position_update_to_context(
     if nominal_debt_delta > Zero::zero() {
         context.position.nominal_debt += nominal_debt_delta.abs();
         context.debt_asset_config.total_nominal_debt += nominal_debt_delta.abs();
+        assert!(context.debt_asset_config.reserve >= debt_delta.abs(), "insufficient-reserve");
         context.debt_asset_config.reserve -= debt_delta.abs();
         assert!(bad_debt == 0, "bad-debt-not-zero");
     } else if nominal_debt_delta < Zero::zero() {

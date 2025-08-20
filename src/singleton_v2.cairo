@@ -490,10 +490,12 @@ mod SingletonV2 {
             assert!(!self.paused.read(), "contract-paused");
         }
 
-        /// Asserts that the delegatee has the delegate of the delegator
-        fn assert_ownership(ref self: ContractState, delegator: ContractAddress) {
-            let has_delegation = self.delegations.read((delegator, get_caller_address()));
-            assert!(delegator == get_caller_address() || has_delegation, "no-delegation");
+        /// Asserts that the caller is either:
+        /// 1. the owner of the position, or
+        /// 2. a delegatee of the owner of the position.
+        fn assert_ownership(ref self: ContractState, position_user: ContractAddress) {
+            let has_delegation = self.delegations.read((position_user, get_caller_address()));
+            assert!(position_user == get_caller_address() || has_delegation, "no-delegation");
         }
 
         /// Asserts that the current utilization of an asset is below the max. allowed utilization
@@ -629,6 +631,7 @@ mod SingletonV2 {
         /// Computes the new rate accumulator and the interest rate at full utilization for a given asset
         /// # Arguments
         /// * `asset` - address of the asset
+        /// * `asset_config` - asset config containing the previous rate accumulator and full utilization rate
         /// # Returns
         /// * `asset_config` - asset config containing the updated last rate accumulator and full utilization rate
         fn new_rate_accumulator(
@@ -1188,6 +1191,7 @@ mod SingletonV2 {
         /// * `receiver` - address of the flash loan receiver
         /// * `asset` - address of the asset
         /// * `amount` - amount of the asset to loan
+        /// * `is_legacy` - whether the asset is using legacy naming conventions
         /// * `data` - data to pass to the flash loan receiver
         fn flash_loan(
             ref self: ContractState,
@@ -1370,7 +1374,9 @@ mod SingletonV2 {
             let amount = calculate_collateral(fee_shares, asset_config, false);
             let fee_recipient = self.fee_recipient.read();
 
-            IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, amount);
+            assert!(
+                IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, amount), "fee-transfer-failed",
+            );
 
             self.emit(ClaimFees { asset, recipient: fee_recipient, amount });
         }
@@ -1673,7 +1679,7 @@ mod SingletonV2 {
             };
             self.fixed_shutdown_mode.write(shutdown_state);
 
-            self.emit(SetShutdownMode { shutdown_mode, last_updated: shutdown_state.last_updated });
+            self.emit(SetShutdownMode { shutdown_mode: new_shutdown_mode, last_updated: shutdown_state.last_updated });
         }
 
         /// Returns the shutdown mode for a specific pair.

@@ -190,7 +190,7 @@ mod TestDefaultExtensionPOV2 {
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
-            max_target_utilization: 85_000,
+            max_target_utilization: 99_999,
             target_utilization: 87_500,
             min_full_utilization_rate: 1582470460,
             max_full_utilization_rate: 32150205761,
@@ -464,10 +464,11 @@ mod TestDefaultExtensionPOV2 {
         assert(interest_rate_config.min_target_utilization == 5, 'Interest rate parameter not set');
 
         start_cheat_caller_address(singleton.contract_address, users.curator);
-        singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'max_target_utilization', 5);
+        singleton
+            .set_interest_rate_parameter(config.collateral_asset.contract_address, 'max_target_utilization', 90_000);
         stop_cheat_caller_address(singleton.contract_address);
         let interest_rate_config = singleton.interest_rate_config(config.collateral_asset.contract_address);
-        assert(interest_rate_config.max_target_utilization == 5, 'Interest rate parameter not set');
+        assert(interest_rate_config.max_target_utilization == 90_000, 'Interest rate parameter not set');
 
         start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_interest_rate_parameter(config.collateral_asset.contract_address, 'target_utilization', 5);
