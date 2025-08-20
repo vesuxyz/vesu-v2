@@ -15,7 +15,7 @@ mod TestInterestRateModel {
     fn interest_rate_config() -> InterestRateConfig {
         InterestRateConfig {
             min_target_utilization: 75_000,
-            max_target_utilization: 85_000,
+            max_target_utilization: 99_999,
             target_utilization: 87_500,
             min_full_utilization_rate: 1582470460,
             max_full_utilization_rate: 32150205761,
@@ -106,8 +106,8 @@ mod TestInterestRateModel {
         let (rate, next_full_utilization_rate) = calculate_interest_rate(
             interest_rate_config, utilization, time_delta, last_full_utilization_rate,
         );
-        assert!(to_apr(rate) == 05_060, "invalid rate");
-        assert!(to_apr(next_full_utilization_rate) == 23_333, "invalid next_full_utilization_rate");
+        assert!(to_apr(rate) == 07_515, "invalid rate");
+        assert!(to_apr(next_full_utilization_rate) == 19_999, "invalid next_full_utilization_rate");
     }
 
     #[test]
@@ -317,7 +317,7 @@ mod TestInterestRateModel {
         assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
         start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
+        pool.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 88_000);
         stop_cheat_caller_address(pool.contract_address);
 
         let (fee_shares_after, _) = pool.get_fees(debt_asset.contract_address);
