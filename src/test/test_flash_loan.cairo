@@ -7,7 +7,7 @@ trait IFlashLoanGeneric<TContractState> {
 mod FlashLoanReceiver {
     use starknet::ContractAddress;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
-    use vesu::singleton_v2::IFlashLoanReceiver;
+    use vesu::pool::IFlashLoanReceiver;
     use vesu::test::test_flash_loan::IFlashLoanGeneric;
 
     #[storage]
@@ -38,7 +38,7 @@ mod MaliciousFlashLoanReceiver {
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const};
-    use vesu::singleton_v2::IFlashLoanReceiver;
+    use vesu::pool::IFlashLoanReceiver;
 
     #[storage]
     struct Storage {}
@@ -58,13 +58,13 @@ mod FlashLoan {
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
-    use vesu::singleton_v2::{IFlashLoanReceiverDispatcher, ISingletonV2DispatcherTrait};
+    use vesu::pool::{IFlashLoanReceiverDispatcher, IPoolDispatcherTrait};
     use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_contract, setup};
     use vesu::test::test_flash_loan::{IFlashLoanGenericDispatcher, IFlashLoanGenericDispatcherTrait};
 
     #[test]
     fn test_flash_loan_fractional_pool_amount() {
-        let (_, singleton, config, users, terms) = setup();
+        let (_, pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -73,7 +73,7 @@ mod FlashLoan {
         let flash_loan_receiver_view = IFlashLoanGenericDispatcher { contract_address: flash_loan_receiver_add };
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
-        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
+        let pre_deposit_balance = debt_asset.balance_of(pool.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
             debt_asset: collateral_asset.contract_address,
@@ -83,21 +83,21 @@ mod FlashLoan {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
-        let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
+        let balance = debt_asset.balance_of(pool.contract_address);
+        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Pool");
 
         let flash_loan_amount = (balance / 2);
 
         start_cheat_caller_address(debt_asset.contract_address, flash_loan_receiver.contract_address);
-        debt_asset.approve(singleton.contract_address, flash_loan_amount);
+        debt_asset.approve(pool.contract_address, flash_loan_amount);
         stop_cheat_caller_address(debt_asset.contract_address);
 
         assert!(
@@ -105,8 +105,8 @@ mod FlashLoan {
             "Flash loan receiver should have 0 balance",
         );
 
-        start_cheat_caller_address(singleton.contract_address, flash_loan_receiver.contract_address);
-        singleton
+        start_cheat_caller_address(pool.contract_address, flash_loan_receiver.contract_address);
+        pool
             .flash_loan(
                 flash_loan_receiver.contract_address,
                 debt_asset.contract_address,
@@ -119,21 +119,19 @@ mod FlashLoan {
             flash_loan_receiver_view.flash_loan_amount() == flash_loan_amount,
             "Flash loan correctly sent to flash loan receiver",
         );
-        stop_cheat_caller_address(singleton.contract_address);
+        stop_cheat_caller_address(pool.contract_address);
 
         assert!(
             debt_asset.balance_of(flash_loan_receiver.contract_address) == 0,
             "Flash loan receiver should have 0 balance",
         );
-        assert!(
-            debt_asset.balance_of(singleton.contract_address) == balance, "Singleton should have maintained balance",
-        );
+        assert!(debt_asset.balance_of(pool.contract_address) == balance, "Pool should have maintained balance");
     }
 
 
     #[test]
     fn test_flash_loan_entire_pool() {
-        let (_, singleton, config, users, terms) = setup();
+        let (_, pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -142,7 +140,7 @@ mod FlashLoan {
         let flash_loan_receiver_view = IFlashLoanGenericDispatcher { contract_address: flash_loan_receiver_add };
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
-        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
+        let pre_deposit_balance = debt_asset.balance_of(pool.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
             debt_asset: collateral_asset.contract_address,
@@ -152,24 +150,24 @@ mod FlashLoan {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
-        let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
+        let balance = debt_asset.balance_of(pool.contract_address);
+        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Pool");
 
         // entire balance of the pool
         let flash_loan_amount = balance;
         start_cheat_caller_address(debt_asset.contract_address, flash_loan_receiver.contract_address);
-        debt_asset.approve(singleton.contract_address, flash_loan_amount);
+        debt_asset.approve(pool.contract_address, flash_loan_amount);
         stop_cheat_caller_address(debt_asset.contract_address);
-        start_cheat_caller_address(singleton.contract_address, flash_loan_receiver.contract_address);
-        singleton
+        start_cheat_caller_address(pool.contract_address, flash_loan_receiver.contract_address);
+        pool
             .flash_loan(
                 flash_loan_receiver.contract_address,
                 debt_asset.contract_address,
@@ -182,21 +180,19 @@ mod FlashLoan {
             flash_loan_receiver_view.flash_loan_amount() == flash_loan_amount,
             "Flash loan correctly sent to flash loan receiver",
         );
-        stop_cheat_caller_address(singleton.contract_address);
+        stop_cheat_caller_address(pool.contract_address);
 
         assert!(
             debt_asset.balance_of(flash_loan_receiver.contract_address) == 0,
             "Flash loan receiver should have 0 balance",
         );
-        assert!(
-            debt_asset.balance_of(singleton.contract_address) == balance, "Singleton should have maintained balance",
-        );
+        assert!(debt_asset.balance_of(pool.contract_address) == balance, "Pool should have maintained balance");
     }
 
     #[test]
     #[should_panic(expected: ('ERC20: insufficient balance',))]
     fn test_flash_loan_malicious_user() {
-        let (_, singleton, config, users, terms) = setup();
+        let (_, pool, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -206,7 +202,7 @@ mod FlashLoan {
         };
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
-        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
+        let pre_deposit_balance = debt_asset.balance_of(pool.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
             debt_asset: collateral_asset.contract_address,
@@ -216,24 +212,24 @@ mod FlashLoan {
             debt: Default::default(),
         };
 
-        start_cheat_caller_address(singleton.contract_address, users.lender);
-        singleton.modify_position(params);
-        stop_cheat_caller_address(singleton.contract_address);
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
-        let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
+        let balance = debt_asset.balance_of(pool.contract_address);
+        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Pool");
 
         // entire balance of the pool
         let flash_loan_amount = balance;
         start_cheat_caller_address(debt_asset.contract_address, malicious_flash_loan_receiver.contract_address);
-        debt_asset.approve(singleton.contract_address, flash_loan_amount);
+        debt_asset.approve(pool.contract_address, flash_loan_amount);
         stop_cheat_caller_address(debt_asset.contract_address);
-        start_cheat_caller_address(singleton.contract_address, malicious_flash_loan_receiver.contract_address);
-        singleton
+        start_cheat_caller_address(pool.contract_address, malicious_flash_loan_receiver.contract_address);
+        pool
             .flash_loan(
                 malicious_flash_loan_receiver.contract_address,
                 debt_asset.contract_address,
@@ -241,6 +237,6 @@ mod FlashLoan {
                 false,
                 array![].span(),
             );
-        stop_cheat_caller_address(singleton.contract_address);
+        stop_cheat_caller_address(pool.contract_address);
     }
 }
