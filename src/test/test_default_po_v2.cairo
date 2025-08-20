@@ -687,7 +687,7 @@ mod TestDefaultPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-curator")]
-    fn test_pool_nominate_curator_caller_not_owner() {
+    fn test_pool_nominate_curator_caller_not_curator() {
         let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
@@ -738,7 +738,7 @@ mod TestDefaultPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-curator")]
-    fn test_oracle_nominate_curator_caller_not_owner() {
+    fn test_oracle_nominate_curator_caller_not_curator() {
         let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
