@@ -269,7 +269,7 @@ mod TestInterestRateModel {
 
     #[test]
     fn test_set_interest_rate_model_fee_shares() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 

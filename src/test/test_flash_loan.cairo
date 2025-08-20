@@ -64,7 +64,7 @@ mod FlashLoan {
 
     #[test]
     fn test_flash_loan_fractional_pool_amount() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -131,7 +131,7 @@ mod FlashLoan {
 
     #[test]
     fn test_flash_loan_entire_pool() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -192,7 +192,7 @@ mod FlashLoan {
     #[test]
     #[should_panic(expected: ('ERC20: insufficient balance',))]
     fn test_flash_loan_malicious_user() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 

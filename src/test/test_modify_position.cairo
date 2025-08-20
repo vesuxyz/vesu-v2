@@ -19,7 +19,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "no-delegation")]
     fn test_modify_position_no_delegation() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit_third, .. } = terms;
 
@@ -53,7 +53,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "utilization-exceeded")]
     fn test_modify_position_utilization_exceeded() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -94,7 +94,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "not-collateralized")]
     fn test_modify_position_not_collateralized() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -142,7 +142,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "dusty-collateral-balance")]
     fn test_modify_position_dusty_collateral_balance() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -184,7 +184,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "dusty-debt-balance")]
     fn test_modify_position_dusty_debt_balance() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, .. } = terms;
 
@@ -226,7 +226,7 @@ mod TestModifyPosition {
     #[test]
     #[fuzzer(runs: 256, seed: 100)]
     fn test_fuzz_modify_position_deposit_withdraw_collateral(seed: u128) {
-        let (_, pool, config, users, _) = setup();
+        let (pool, _, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         start_cheat_caller_address(pool.contract_address, users.lender);
@@ -340,7 +340,7 @@ mod TestModifyPosition {
     #[test]
     #[fuzzer(runs: 256, seed: 100)]
     fn test_fuzz_modify_position_borrow_repay_debt(seed: u128) {
-        let (_, pool, config, users, _) = setup();
+        let (pool, _, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
 
         let amount: u256 = seed.into() / 10000000000000;
@@ -468,7 +468,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_collateral_amounts() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
@@ -607,7 +607,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_debt_amounts() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, debt_to_draw, .. } = terms;
 
@@ -731,7 +731,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_complex() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, debt_scale, .. } = config;
         let LendingTerms {
             liquidity_to_deposit, collateral_to_deposit, debt_to_draw, nominal_debt_to_draw, ..,
@@ -928,7 +928,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_fees() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, third_scale, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -1002,7 +1002,7 @@ mod TestModifyPosition {
 
     #[test]
     fn test_modify_position_accrue_interest() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, third_asset, third_scale, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 
@@ -1108,7 +1108,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_modify_position_zero_asset() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
@@ -1130,7 +1130,7 @@ mod TestModifyPosition {
     #[test]
     #[should_panic(expected: "not-collateralized")]
     fn test_modify_position_no_pair() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, third_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
 

@@ -46,8 +46,8 @@ pub struct LendingTerms {
 
 #[derive(Copy, Drop, Serde)]
 pub struct Env {
-    pub oracle: IOracleDispatcher,
     pub pool: IPoolDispatcher,
+    pub oracle: IOracleDispatcher,
     pub config: TestConfig,
     pub users: Users,
 }
@@ -222,7 +222,7 @@ pub fn setup_env(
     let third_scale = pow_10(third_asset.decimals().into());
     let config = TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale };
 
-    Env { oracle, pool, config, users }
+    Env { pool, oracle, config, users }
 }
 
 pub fn test_interest_rate_config() -> InterestRateConfig {
@@ -239,8 +239,8 @@ pub fn test_interest_rate_config() -> InterestRateConfig {
 }
 
 pub fn create_pool(
-    oracle: IOracleDispatcher,
     pool: IPoolDispatcher,
+    oracle: IOracleDispatcher,
     config: TestConfig,
     owner: ContractAddress,
     curator: ContractAddress,
@@ -475,12 +475,12 @@ pub fn setup_pool(
     third_address: ContractAddress,
     fund_borrower: bool,
     interest_rate_config: Option<InterestRateConfig>,
-) -> (IOracleDispatcher, IPoolDispatcher, TestConfig, Users, LendingTerms) {
+) -> (IPoolDispatcher, IOracleDispatcher, TestConfig, Users, LendingTerms) {
     let Env {
-        oracle, pool, config, users, ..,
+        pool, oracle, config, users, ..,
     } = setup_env(oracle_address, collateral_address, debt_address, third_address);
 
-    create_pool(oracle, pool, config, users.owner, users.curator, interest_rate_config);
+    create_pool(pool, oracle, config, users.owner, users.curator, interest_rate_config);
 
     let TestConfig {
         collateral_asset, debt_asset, third_asset, collateral_scale, debt_scale, third_scale, ..,
@@ -520,9 +520,9 @@ pub fn setup_pool(
     pool.set_shutdown_mode_agent(get_contract_address());
     stop_cheat_caller_address(pool.contract_address);
 
-    (oracle, pool, config, users, terms)
+    (pool, oracle, config, users, terms)
 }
 
-pub fn setup() -> (IOracleDispatcher, IPoolDispatcher, TestConfig, Users, LendingTerms) {
+pub fn setup() -> (IPoolDispatcher, IOracleDispatcher, TestConfig, Users, LendingTerms) {
     setup_pool(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::None)
 }

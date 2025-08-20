@@ -16,7 +16,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "not-undercollateralized")]
     fn test_liquidate_position_not_undercollateralized() {
-        let (_, pool, config, users, terms) = setup();
+        let (pool, _, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -75,7 +75,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_1() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -135,7 +135,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "emergency-mode")]
     fn test_liquidate_position_invalid_oracle_2() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -194,7 +194,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_no_bad_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -266,7 +266,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_bad_debt_2() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -354,7 +354,7 @@ mod TestLiquidatePosition {
     #[test]
     #[should_panic(expected: "less-than-min-collateral")]
     fn test_liquidate_position_partial_insufficient_collateral_released() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -421,7 +421,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_partial_bad_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -494,7 +494,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_full_bad_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -567,7 +567,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_full_no_bad_debt() {
-        let (oracle, pool, config, users, terms) = setup();
+        let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
@@ -640,7 +640,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_1_full_liquidation() {
-        let (oracle, pool, config, users, _) = setup();
+        let (pool, oracle, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -749,7 +749,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_2_full_liquidation() {
-        let (oracle, pool, config, users, _) = setup();
+        let (pool, oracle, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -855,7 +855,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_3_full_liquidation() {
-        let (oracle, pool, config, users, _) = setup();
+        let (pool, oracle, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -961,7 +961,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_4_full_liquidation() {
-        let (oracle, pool, config, users, _) = setup();
+        let (pool, oracle, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;
@@ -1067,7 +1067,7 @@ mod TestLiquidatePosition {
 
     #[test]
     fn test_liquidate_position_scenario_5_partial_liquidation() {
-        let (oracle, pool, config, users, _) = setup();
+        let (pool, oracle, config, users, _) = setup();
         let TestConfig { collateral_asset, debt_asset, collateral_scale, debt_scale, .. } = config;
 
         let liquidity_to_deposit = 100 * debt_scale;

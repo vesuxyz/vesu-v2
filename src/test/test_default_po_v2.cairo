@@ -16,9 +16,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_create_pool() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
@@ -39,9 +39,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_add_asset_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let asset = deploy_asset(users.curator);
 
@@ -72,9 +72,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "asset-config-already-exists")]
     fn test_add_asset_already_exists() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
@@ -109,9 +109,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "pragma-key-must-be-set")]
     fn test_add_asset_pragma_key_must_be_set() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let asset = deploy_asset(users.curator);
 
@@ -160,9 +160,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "oracle-price-invalid")]
     fn test_add_asset_before_set_oracle() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let asset = deploy_asset(users.curator);
 
@@ -196,9 +196,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_add_asset_po() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let asset = deploy_asset(users.curator);
 
@@ -251,18 +251,18 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_asset_parameter_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
     }
 
     #[test]
     fn test_set_asset_parameter() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_asset_parameter(config.collateral_asset.contract_address, 'max_utilization', 0);
@@ -280,9 +280,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_ltv_config_caller_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool
             .set_ltv_config(
@@ -294,9 +294,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_ltv_config() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let ltv_config = LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() };
 
@@ -312,9 +312,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_liquidation_config_caller_not_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let liquidation_factor = 10 * PERCENT;
 
@@ -328,9 +328,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_liquidation_config() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let liquidation_factor = 10 * PERCENT;
 
@@ -351,9 +351,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_shutdown_config() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = 12 * DAY_IN_SECONDS;
@@ -371,9 +371,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_shutdown_config_caller_not_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = 12 * DAY_IN_SECONDS;
@@ -383,9 +383,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_oracle_parameter() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(oracle.contract_address, users.curator);
         oracle.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
@@ -433,9 +433,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "oracle-already-set")]
     fn test_add_existed_asset() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, users.curator, CheatSpan::TargetCalls(1));
         oracle
@@ -455,9 +455,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_oracle_parameter_caller_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         oracle.set_oracle_parameter(config.collateral_asset.contract_address, 'timeout', 5_u64.into());
     }
@@ -465,9 +465,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "invalid-oracle-parameter")]
     fn test_set_oracle_parameter_invalid_oracle_parameter() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(oracle.contract_address, users.curator);
         oracle.set_oracle_parameter(config.collateral_asset.contract_address, 'a', 5_u64.into());
@@ -477,9 +477,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "oracle-config-not-set")]
     fn test_set_oracle_parameter_oracle_config_not_set() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(oracle.contract_address, users.curator);
         oracle.set_oracle_parameter(Zero::zero(), 'timeout', 5_u64.into());
@@ -489,9 +489,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "time-window-must-be-less-than-start-time-offset")]
     fn test_set_oracle_parameter_time_window_greater_than_start_time_offset() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(oracle.contract_address, users.curator);
         oracle.set_oracle_parameter(config.collateral_asset.contract_address, 'time_window', 1_u64.into());
@@ -500,9 +500,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_interest_rate_parameter() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
@@ -562,9 +562,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_interest_rate_parameter_caller_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.set_interest_rate_parameter(config.collateral_asset.contract_address, 'min_target_utilization', 5);
     }
@@ -572,9 +572,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "invalid-interest-rate-parameter")]
     fn test_set_interest_rate_parameter_invalid_interest_rate_parameter() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_interest_rate_parameter(config.collateral_asset.contract_address, 'a', 5);
@@ -584,9 +584,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_set_interest_rate_parameter_non_existent_asset() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_interest_rate_parameter(Zero::zero(), 'min_target_utilization', 5);
@@ -595,9 +595,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_fee_recipient() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_fee_recipient(users.lender);
@@ -610,18 +610,18 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_fee_recipient_caller_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.set_fee_recipient(users.lender);
     }
 
     #[test]
     fn test_set_debt_cap() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
@@ -633,9 +633,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_debt_cap_caller_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
 
@@ -644,9 +644,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_shutdown_mode_agent() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_shutdown_mode_agent(users.lender);
@@ -659,18 +659,18 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_set_shutdown_mode_agent_caller_not_owner() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.set_shutdown_mode_agent(users.lender);
     }
 
     #[test]
     fn test_pool_set_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
         pool.nominate_curator(users.lender);
@@ -688,9 +688,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_pool_nominate_curator_caller_not_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.nominate_curator(users.lender);
     }
@@ -698,9 +698,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-new-curator")]
     fn test_pool_accept_zero_curator_different_caller() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(pool.contract_address, users.lender, CheatSpan::TargetCalls(1));
         pool.accept_curator_ownership();
@@ -709,9 +709,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "invalid-zero-curator-address")]
     fn test_pool_accept_zero_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(pool.contract_address, Zero::zero(), CheatSpan::TargetCalls(1));
         pool.accept_curator_ownership();
@@ -719,9 +719,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_oracle_set_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, users.curator, CheatSpan::TargetCalls(1));
         oracle.nominate_curator(users.lender);
@@ -739,9 +739,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator")]
     fn test_oracle_nominate_curator_caller_not_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         oracle.nominate_curator(users.lender);
     }
@@ -749,9 +749,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-new-curator")]
     fn test_oracle_accept_zero_curator_different_caller() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, users.lender, CheatSpan::TargetCalls(1));
         oracle.accept_curator_ownership();
@@ -760,9 +760,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "invalid-zero-curator-address")]
     fn test_oracle_accept_zero_curator() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, Zero::zero(), CheatSpan::TargetCalls(1));
         oracle.accept_curator_ownership();
@@ -770,9 +770,9 @@ mod TestDefaultPOV2 {
 
     #[test]
     fn test_set_shutdown_mode() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool.set_shutdown_mode_agent(users.lender);
@@ -798,9 +798,9 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator-or-agent")]
     fn test_set_shutdown_mode_caller_not_owner_or_agent() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.set_shutdown_mode(ShutdownMode::Recovery);
     }
@@ -808,10 +808,10 @@ mod TestDefaultPOV2 {
     #[test]
     #[should_panic(expected: "caller-not-curator-or-agent")]
     fn test_update_shutdown_status_caller_not_curator_or_agent() {
-        let Env { oracle, pool, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        create_pool(oracle, pool, config, users.owner, users.curator, Option::None);
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
     }
