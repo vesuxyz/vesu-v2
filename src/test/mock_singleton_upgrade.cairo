@@ -33,7 +33,7 @@ mod MockSingletonUpgrade {
 
 
 #[starknet::contract]
-mod MockExtensionPOV2Upgrade {
+mod MockPOV2Upgrade {
     use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
 
     #[storage]
@@ -42,11 +42,11 @@ mod MockExtensionPOV2Upgrade {
     #[abi(embed_v0)]
     impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
         fn upgrade_name(ref self: ContractState) -> felt252 {
-            'Vesu default extension po v2'
+            'Vesu default po v2'
         }
 
         fn tag(ref self: ContractState) -> felt252 {
-            'MockExtensionPOV2Upgrade'
+            'MockPOV2Upgrade'
         }
 
         fn pool_name(ref self: ContractState) -> felt252 {
@@ -56,7 +56,7 @@ mod MockExtensionPOV2Upgrade {
 }
 
 #[starknet::contract]
-mod MockExtensionEKV2Upgrade {
+mod MockEKV2Upgrade {
     use vesu::test::mock_singleton_upgrade::IMockSingletonUpgrade;
 
     #[storage]
@@ -65,11 +65,11 @@ mod MockExtensionEKV2Upgrade {
     #[abi(embed_v0)]
     impl MockSingletonUpgradeImpl of IMockSingletonUpgrade<ContractState> {
         fn upgrade_name(ref self: ContractState) -> felt252 {
-            'Vesu DefaultExtensionEKV2'
+            'Vesu DefaultEKV2'
         }
 
         fn tag(ref self: ContractState) -> felt252 {
-            'MockExtensionEKV2Upgrade'
+            'MockEKV2Upgrade'
         }
 
         fn pool_name(ref self: ContractState) -> felt252 {

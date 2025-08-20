@@ -1,12 +1,12 @@
 #[cfg(test)]
-mod TestDefaultExtensionPOV2 {
+mod TestDefaultPOV2 {
     use core::num::traits::Zero;
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
     use vesu::data_model::{AssetParams, LTVConfig, PragmaOracleParams};
     use vesu::data_model::{LiquidationConfig, ShutdownConfig, ShutdownMode};
-    use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use vesu::interest_rate_model::InterestRateConfig;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env};
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
@@ -357,7 +357,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_extension_set_oracle_parameter() {
+    fn test_set_oracle_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -407,7 +407,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-curator")]
-    fn test_extension_set_oracle_parameter_caller_not_owner() {
+    fn test_set_oracle_parameter_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -417,7 +417,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "invalid-oracle-parameter")]
-    fn test_extension_set_oracle_parameter_invalid_oracle_parameter() {
+    fn test_set_oracle_parameter_invalid_oracle_parameter() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -429,7 +429,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "oracle-config-not-set")]
-    fn test_extension_set_oracle_parameter_oracle_config_not_set() {
+    fn test_set_oracle_parameter_oracle_config_not_set() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -441,7 +441,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "time-window-must-be-less-than-start-time-offset")]
-    fn test_extension_set_oracle_parameter_time_window_greater_than_start_time_offset() {
+    fn test_set_oracle_parameter_time_window_greater_than_start_time_offset() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -571,7 +571,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_extension_set_debt_cap() {
+    fn test_set_debt_cap() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -587,7 +587,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-curator")]
-    fn test_extension_set_debt_cap_caller_not_owner() {
+    fn test_set_debt_cap_caller_not_owner() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -675,7 +675,7 @@ mod TestDefaultExtensionPOV2 {
     }
 
     #[test]
-    fn test_extension_set_shutdown_mode() {
+    fn test_set_shutdown_mode() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);
@@ -703,7 +703,7 @@ mod TestDefaultExtensionPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-curator-or-agent")]
-    fn test_extension_set_shutdown_mode_caller_not_owner_or_agent() {
+    fn test_set_shutdown_mode_caller_not_owner_or_agent() {
         let Env { singleton, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(singleton, config, users.owner, users.curator, Option::None);

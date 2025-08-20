@@ -139,59 +139,6 @@ mod TestModifyPosition {
         stop_cheat_caller_address(singleton.contract_address);
     }
 
-    // // not applicable anymore due to rounding conventions
-    // // expected for amounts less than 1e(SCALE-asset.scale)
-    // #[test]
-    // #[should_panic(expected: "zero-shares-minted")]
-    // fn test_modify_position_zero_shares_minted() {
-    //     let (singleton, extension, config, users, terms) = setup();
-    //     let TestConfig { collateral_asset, third_asset, .. } = config;
-    //     let LendingTerms { collateral_to_deposit, .. } = terms;
-
-    //     // set floor to 0
-    //     start_prank(CheatTarget::One(extension.contract_address), users.owner);
-    //     extension.set_asset_parameter(collateral_asset.contract_address, 'floor', 0);
-    //     extension.set_asset_parameter(third_asset.contract_address, 'floor', 0);
-    //     stop_prank(CheatTarget::One(extension.contract_address));
-
-    //     // Supply
-
-    //     let params = ModifyPositionParams {
-    //         collateral_asset: collateral_asset.contract_address,
-    //         debt_asset: third_asset.contract_address,
-    //         user: users.lender,
-    //         collateral: Amount {
-    //             amount_type: AmountType::Delta,
-    //             denomination: AmountDenomination::Assets,
-    //             value: collateral_to_deposit.into(),
-    //         },
-    //         debt: Default::default(),
-    //         data: ArrayTrait::new().span()
-    //     };
-
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
-    //     singleton.modify_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
-
-    //     let params = ModifyPositionParams {
-    //         collateral_asset: collateral_asset.contract_address,
-    //         debt_asset: third_asset.contract_address,
-    //         user: users.lender,
-    //         collateral: Amount {
-    //             amount_type: AmountType::Delta,
-    //             denomination: AmountDenomination::Native,
-    //             value: 1_000_000_000
-    //                 .into(), // 1e(SCALE-asset.scale) -> 1e(18-8) -> 1e10, 1e9 yields 1 since it's rounding up
-    //         },
-    //         debt: Default::default(),
-    //         data: ArrayTrait::new().span()
-    //     };
-
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
-    //     singleton.modify_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
-    // }
-
     #[test]
     #[should_panic(expected: "dusty-collateral-balance")]
     fn test_modify_position_dusty_collateral_balance() {
@@ -275,35 +222,6 @@ mod TestModifyPosition {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
     }
-
-    // #[test]
-    // #[should_panic(expected: "pack-collateral-shares")]
-    // fn test_modify_position_collateral_amount_too_large() {
-    //     let (singleton, extension, config, users, terms) = setup();
-    //     let TestConfig { collateral_asset, third_asset, .. } = config;
-
-    //     // Supply
-
-    //     let amount: u256 = integer::BoundedInt::<u128>::max().into();
-
-    //     let params = ModifyPositionParams {
-    //         collateral_asset: collateral_asset.contract_address,
-    //         debt_asset: third_asset.contract_address,
-    //         user: users.lender,
-    //         collateral: Amount {
-    //             denomination: AmountDenomination::Assets,
-    //             value: amount.into(),
-    //         },
-    //         debt: Default::default(),
-    //         data: ArrayTrait::new().span()
-    //     };
-
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
-    //     singleton.modify_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
-    // }
-
-    // after-modify-position-failed
 
     #[test]
     #[fuzzer(runs: 256, seed: 100)]

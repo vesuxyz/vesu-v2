@@ -109,7 +109,7 @@ pub mod interest_rate_model_component {
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::calculate_rate_accumulator;
-    use vesu::extension::components::interest_rate_model::{
+    use vesu::interest_rate_model::{
         InterestRateConfig, UTILIZATION_SCALE, UTILIZATION_SCALE_TO_SCALE, assert_interest_rate_config,
     };
     use vesu::units::SCALE;

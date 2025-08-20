@@ -5,8 +5,8 @@ use vesu::data_model::{
     ModifyPositionParams, Pair, Position, PragmaOracleParams, ShutdownConfig, ShutdownMode, ShutdownStatus,
     UpdatePositionResponse,
 };
-use vesu::extension::components::interest_rate_model::InterestRateConfig;
-use vesu::extension::components::pragma_oracle::OracleConfig;
+use vesu::interest_rate_model::InterestRateConfig;
+use vesu::pragma_oracle::OracleConfig;
 
 #[starknet::interface]
 pub trait IFlashLoanReceiver<TContractState> {
@@ -165,12 +165,12 @@ mod SingletonV2 {
         ShutdownState, ShutdownStatus, UpdatePositionResponse, assert_asset_config, assert_asset_config_exists,
         assert_ltv_config,
     };
-    use vesu::extension::components::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
-    use vesu::extension::components::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
-    use vesu::extension::components::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
-    use vesu::extension::components::pragma_oracle::{OracleConfig, pragma_oracle_component};
+    use vesu::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
+    use vesu::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::math::pow_10;
     use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
+    use vesu::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
+    use vesu::pragma_oracle::{OracleConfig, pragma_oracle_component};
     use vesu::singleton_v2::{
         IEICDispatcherTrait, IEICLibraryDispatcher, IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait,
         ISingletonV2, ISingletonV2Dispatcher, ISingletonV2DispatcherTrait,
