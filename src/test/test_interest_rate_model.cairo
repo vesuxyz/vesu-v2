@@ -273,7 +273,7 @@ mod TestInterestRateModel {
         let TestConfig { collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_asset_parameter(debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -316,7 +316,7 @@ mod TestInterestRateModel {
         let (fee_shares_before, _) = singleton.get_fees(debt_asset.contract_address);
         assert!(fee_shares_before > 0, "Fee shares should have been accrued");
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_interest_rate_parameter(debt_asset.contract_address, 'max_target_utilization', 86_000);
         stop_cheat_caller_address(singleton.contract_address);
 

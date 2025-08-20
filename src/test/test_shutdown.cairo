@@ -70,7 +70,7 @@ mod TestShutdown {
         stop_cheat_caller_address(singleton.contract_address);
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -127,7 +127,7 @@ mod TestShutdown {
         // Recovery
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -185,7 +185,7 @@ mod TestShutdown {
         // Recovery
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -257,7 +257,7 @@ mod TestShutdown {
         // Recovery
 
         // Manually move to recovery.
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -328,7 +328,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -340,7 +340,7 @@ mod TestShutdown {
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -403,7 +403,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -415,7 +415,7 @@ mod TestShutdown {
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -478,7 +478,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -490,7 +490,7 @@ mod TestShutdown {
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -555,7 +555,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -567,7 +567,7 @@ mod TestShutdown {
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
         // Subscription
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -631,7 +631,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -643,7 +643,7 @@ mod TestShutdown {
         let shutdown_config = singleton.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -672,7 +672,7 @@ mod TestShutdown {
         let shutdown_config = singleton.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -733,7 +733,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -746,7 +746,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -776,7 +776,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -840,7 +840,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -853,7 +853,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -886,7 +886,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -949,7 +949,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -962,7 +962,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -992,7 +992,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1057,7 +1057,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1068,7 +1068,7 @@ mod TestShutdown {
 
         let shutdown_config = singleton.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1079,7 +1079,7 @@ mod TestShutdown {
 
         let shutdown_config = singleton.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1120,7 +1120,7 @@ mod TestShutdown {
         debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
         stop_cheat_caller_address(debt_asset.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 2);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1172,7 +1172,7 @@ mod TestShutdown {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 / 41 / 10);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1185,7 +1185,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1213,7 +1213,7 @@ mod TestShutdown {
 
         // third user has to borrow from same pair to increase utilization
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_asset_parameter(collateral_asset.contract_address, 'max_utilization', SCALE / 100);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1221,7 +1221,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
         singleton.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
         stop_cheat_caller_address(singleton.contract_address);
@@ -1420,7 +1420,7 @@ mod TestShutdown {
         assert!(context.debt_asset_config.last_rate_accumulator > 18 * SCALE);
 
         // Recovery
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1505,7 +1505,7 @@ mod TestShutdown {
         // warp such that next violation is at a different timestamp
         start_cheat_block_timestamp_global(get_block_timestamp() + 1);
         // update shutdown mode
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         stop_cheat_caller_address(singleton.contract_address);
 
@@ -1548,7 +1548,7 @@ mod TestShutdown {
         singleton.modify_position(params);
         stop_cheat_caller_address(singleton.contract_address);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Recovery);
         let shutdown_mode = singleton
             .update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
@@ -1558,7 +1558,7 @@ mod TestShutdown {
         let shutdown_config = singleton.shutdown_config();
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.recovery_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Subscription);
         stop_cheat_caller_address(singleton.contract_address);
         let shutdown_mode = singleton
@@ -1567,7 +1567,7 @@ mod TestShutdown {
 
         start_cheat_block_timestamp_global(get_block_timestamp() + shutdown_config.subscription_period + 1);
 
-        start_cheat_caller_address(singleton.contract_address, users.extension_owner);
+        start_cheat_caller_address(singleton.contract_address, users.curator);
         singleton.set_shutdown_mode(ShutdownMode::Redemption);
         stop_cheat_caller_address(singleton.contract_address);
         let shutdown_mode = singleton
