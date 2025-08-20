@@ -25,8 +25,8 @@ pub mod pragma_oracle_component {
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_block_timestamp};
-    use vesu::extension::components::pragma_oracle::{OracleConfig, assert_oracle_config};
     use vesu::math::pow_10;
+    use vesu::pragma_oracle::{OracleConfig, assert_oracle_config};
     use vesu::units::SCALE;
     use vesu::vendor::pragma::{
         AggregationMode, DataType, IPragmaABIDispatcher, IPragmaABIDispatcherTrait, ISummaryStatsABIDispatcher,

@@ -12,7 +12,7 @@ mod TestSingletonV2 {
     use vesu::data_model::{
         Amount, AmountDenomination, AssetParams, LTVConfig, LTVParams, ModifyPositionParams, PragmaOracleParams,
     };
-    use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use vesu::interest_rate_model::InterestRateConfig;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_singleton_upgrade::{IMockSingletonUpgradeDispatcher, IMockSingletonUpgradeDispatcherTrait};
     use vesu::test::setup_v2::{

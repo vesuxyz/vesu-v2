@@ -5,8 +5,8 @@ mod TestInterestRateModel {
     use starknet::get_block_timestamp;
     use vesu::common::{calculate_debt, calculate_utilization};
     use vesu::data_model::{Amount, AmountDenomination, AssetConfig, ModifyPositionParams};
-    use vesu::extension::components::interest_rate_model::interest_rate_model_component::calculate_interest_rate;
-    use vesu::extension::components::interest_rate_model::{InterestRateConfig, InterestRateConfigPacking};
+    use vesu::interest_rate_model::interest_rate_model_component::calculate_interest_rate;
+    use vesu::interest_rate_model::{InterestRateConfig, InterestRateConfigPacking};
     use vesu::math::pow_scale;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};

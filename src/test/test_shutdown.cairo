@@ -8,7 +8,7 @@ mod TestShutdown {
     };
     use starknet::get_block_timestamp;
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams, ShutdownMode};
-    use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use vesu::interest_rate_model::InterestRateConfig;
     use vesu::singleton_v2::ISingletonV2DispatcherTrait;
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, LendingTerms, THIRD_PRAGMA_KEY, TestConfig, setup, setup_pool};

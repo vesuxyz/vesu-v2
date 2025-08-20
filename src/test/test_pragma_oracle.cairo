@@ -8,7 +8,7 @@ mod TestPragmaOracle {
         AssetParams, DebtCapParams, LTVConfig, LTVParams, LiquidationConfig, LiquidationParams, PragmaOracleParams,
         ShutdownConfig, ShutdownParams,
     };
-    use vesu::extension::components::interest_rate_model::InterestRateConfig;
+    use vesu::interest_rate_model::InterestRateConfig;
     use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
