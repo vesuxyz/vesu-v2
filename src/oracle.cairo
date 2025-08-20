@@ -33,9 +33,9 @@ mod Oracle {
     use starknet::syscalls::replace_class_syscall;
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_contract_address};
     use vesu::data_model::AssetPrice;
-    use vesu::oracle::IOracle;
+    use vesu::oracle::{IOracle, IOracleDispatcher, IOracleDispatcherTrait};
     use vesu::packing::{AssetConfigPacking, PositionPacking};
-    use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher, IPoolDispatcher, IPoolDispatcherTrait};
+    use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher};
     use vesu::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
     use vesu::pragma_oracle::{OracleConfig, pragma_oracle_component};
 
@@ -97,6 +97,7 @@ mod Oracle {
         self.ownable.initializer(owner);
         assert!(curator.is_non_zero(), "invalid-zero-curator");
         self.curator.write(curator);
+        self.pending_curator.write(Zero::zero());
 
         self.pragma_oracle.set_oracle(oracle_address);
         self.pragma_oracle.set_summary_address(summary_address);
@@ -220,7 +221,7 @@ mod Oracle {
             }
             replace_class_syscall(new_implementation).unwrap_syscall();
             // Check to prevent mistakes when upgrading the contract
-            let new_name = IPoolDispatcher { contract_address: get_contract_address() }.upgrade_name();
+            let new_name = IOracleDispatcher { contract_address: get_contract_address() }.upgrade_name();
             assert(new_name == self.upgrade_name(), 'invalid upgrade name');
             self.emit(ContractUpgraded { new_implementation });
         }
