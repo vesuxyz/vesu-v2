@@ -29,7 +29,7 @@ mod TestPragmaOracle {
     ) {
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 75_000,
-            max_target_utilization: 85_000,
+            max_target_utilization: 99_999,
             target_utilization: 87_500,
             min_full_utilization_rate: 1582470460,
             max_full_utilization_rate: 32150205761,
@@ -347,10 +347,10 @@ mod TestPragmaOracle {
 
         let max: u128 = Bounded::<u128>::MAX;
         // set collateral asset price
-        pragma_oracle.set_price(COLL_PRAGMA_KEY, 0);
+        pragma_oracle.set_price(COLL_PRAGMA_KEY, 1);
         pragma_summary.set_twap(COLL_PRAGMA_KEY, max, 18);
         // set debt asset price
-        pragma_oracle.set_price(DEBT_PRAGMA_KEY, 0);
+        pragma_oracle.set_price(DEBT_PRAGMA_KEY, 1);
         pragma_summary.set_twap(DEBT_PRAGMA_KEY, max, 18);
 
         let collateral_asset_price = singleton.price(collateral_asset.contract_address);

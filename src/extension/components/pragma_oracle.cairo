@@ -128,7 +128,8 @@ pub mod pragma_oracle_component {
                 get_block_timestamp() - response.last_updated_timestamp
             };
             let valid = (timeout == 0 || time_delta <= timeout)
-                && (number_of_sources == 0 || number_of_sources <= response.num_sources_aggregated);
+                && (number_of_sources <= response.num_sources_aggregated)
+                && (response.price.into() != 0);
 
             (price, valid)
         }
