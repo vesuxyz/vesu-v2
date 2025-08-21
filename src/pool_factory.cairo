@@ -29,22 +29,25 @@ pub trait IPoolFactory<TContractState> {
 #[starknet::contract]
 mod pool_factory {
     use core::num::traits::Zero;
-    use starknet::syscalls::deploy_syscall;
-    use starknet::{ContractAddress, get_contract_address};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
-    use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
-    use vesu::data_model::{AssetParams, DebtCapParams, LTVParams, LiquidationParams, ShutdownParams, VTokenParams, LiquidationConfig, ShutdownConfig};
+    use starknet::syscalls::deploy_syscall;
+    use starknet::{ContractAddress, get_contract_address};
+    use vesu::data_model::{
+        AssetParams, DebtCapParams, LTVParams, LiquidationConfig, LiquidationParams, ShutdownConfig, ShutdownParams,
+        VTokenParams,
+    };
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::pool_factory::{IPoolFactory};
+    use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
+    use vesu::pool_factory::IPoolFactory;
 
     #[storage]
     struct Storage {
         pool_class_hash: felt252,
         v_token_class_hash: felt252,
         v_token_for_asset: Map<(ContractAddress, ContractAddress), ContractAddress>,
-        asset_for_v_token: Map<(ContractAddress, ContractAddress), ContractAddress>
+        asset_for_v_token: Map<(ContractAddress, ContractAddress), ContractAddress>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -81,7 +84,6 @@ mod pool_factory {
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-
         /// Creates a vToken contract for a given collateral asset.
         /// # Arguments
         /// * `pool_id` - id of the pool
@@ -93,15 +95,14 @@ mod pool_factory {
             pool: ContractAddress,
             asset: ContractAddress,
             v_token_name: felt252,
-            v_token_symbol: felt252
+            v_token_symbol: felt252,
         ) {
             assert!(self.v_token_for_asset.read((pool, asset)) == Zero::zero(), "v-token-already-created");
 
             let (v_token, _) = (deploy_syscall(
                 self.v_token_class_hash.read().try_into().unwrap(),
                 0,
-                array![v_token_name, v_token_symbol, pool.into(), get_contract_address().into(), asset.into()]
-                    .span(),
+                array![v_token_name, v_token_symbol, pool.into(), get_contract_address().into(), asset.into()].span(),
                 false,
             ))
                 .unwrap();
@@ -115,7 +116,6 @@ mod pool_factory {
 
     #[abi(embed_v0)]
     impl PoolFactoryImpl of IPoolFactory<ContractState> {
-
         /// Returns the class hash of the pool contract
         /// # Returns
         /// * `pool_class_hash` - class hash of the pool contract
@@ -129,7 +129,7 @@ mod pool_factory {
         fn v_token_class_hash(self: @ContractState) -> felt252 {
             self.v_token_class_hash.read()
         }
-        
+
         /// Returns the vToken address for a given collateral asset
         /// # Arguments
         /// * `pool` - address of the pool
@@ -149,7 +149,7 @@ mod pool_factory {
         fn asset_for_v_token(self: @ContractState, pool: ContractAddress, v_token: ContractAddress) -> ContractAddress {
             self.asset_for_v_token.read((pool, v_token))
         }
-        
+
         /// Creates a new pool
         /// # Arguments
         /// * `name` - name of the pool
@@ -185,17 +185,18 @@ mod pool_factory {
             assert!(asset_params.len() > 0, "empty-asset-params");
             assert!(asset_params.len() == interest_rate_params.len(), "interest-rate-params-mismatch");
             assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
-    
+
             // deploy the pool
             let (pool_address, _) = (deploy_syscall(
                 self.pool_class_hash.read().try_into().unwrap(),
                 0,
                 array![name.into(), owner.into(), curator.into(), oracle.into()].span(),
                 false,
-            )).unwrap();
+            ))
+                .unwrap();
 
             let pool = IPoolDispatcher { contract_address: pool_address };
-    
+
             let mut asset_params_copy = asset_params;
             let mut i = 0;
             while !asset_params_copy.is_empty() {
@@ -203,14 +204,14 @@ mod pool_factory {
                 let asset = asset_params.asset;
                 let interest_rate_config = *interest_rate_params.pop_front().unwrap();
                 pool.add_asset(asset_params, interest_rate_config);
-    
+
                 let v_token_config = *v_token_params.at(i);
                 let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
                 self.create_v_token(pool.contract_address, asset, v_token_name, v_token_symbol);
-    
+
                 i += 1;
             }
-    
+
             // set the liquidation config for each pair
             let mut liquidation_params = liquidation_params;
             while !liquidation_params.is_empty() {
@@ -224,7 +225,7 @@ mod pool_factory {
                         LiquidationConfig { liquidation_factor: params.liquidation_factor },
                     );
             }
-    
+
             // set the debt caps for each pair
             let mut debt_cap_params = debt_cap_params;
             while !debt_cap_params.is_empty() {
@@ -233,14 +234,14 @@ mod pool_factory {
                 let debt_asset = *asset_params.at(params.debt_asset_index).asset;
                 pool.set_debt_cap(collateral_asset, debt_asset, params.debt_cap);
             }
-    
+
             // set the shutdown config
             let ShutdownParams { recovery_period, subscription_period } = shutdown_params;
             pool.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
-    
+
             // set the fee config
             pool.set_fee_recipient(fee_recipient);
-    
+
             pool.contract_address
         }
     }
