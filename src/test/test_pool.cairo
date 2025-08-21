@@ -16,14 +16,15 @@ mod TestPool {
     use vesu::pragma_oracle::OracleConfig;
     use vesu::test::mock_pool_upgrade::{IMockPoolUpgradeDispatcher, IMockPoolUpgradeDispatcherTrait};
     use vesu::test::setup_v2::{
-        Env, LendingTerms, TestConfig, create_pool, deploy_asset, deploy_asset_with_decimals, setup, setup_env,
+        COLL_PRAGMA_KEY, Env, LendingTerms, TestConfig, create_pool, deploy_asset, deploy_asset_with_decimals, setup,
+        setup_env,
     };
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
     use vesu::vendor::pragma::AggregationMode;
 
     fn dummy_oracle_config() -> OracleConfig {
         OracleConfig {
-            pragma_key: 1,
+            pragma_key: COLL_PRAGMA_KEY,
             timeout: 1,
             number_of_sources: 2,
             start_time_offset: 0,
@@ -35,7 +36,7 @@ mod TestPool {
     fn dummy_interest_rate_config() -> InterestRateConfig {
         InterestRateConfig {
             min_target_utilization: 75_000,
-            max_target_utilization: 85_000,
+            max_target_utilization: 88_000,
             target_utilization: 87_500,
             min_full_utilization_rate: 1582470460,
             max_full_utilization_rate: 32150205761,
