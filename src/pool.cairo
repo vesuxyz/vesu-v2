@@ -1270,7 +1270,7 @@ mod Pool {
                 scale,
                 is_legacy: params.is_legacy,
                 last_updated: get_block_timestamp(),
-                last_rate_accumulator: params.initial_rate_accumulator,
+                last_rate_accumulator: SCALE,
                 last_full_utilization_rate: params.initial_full_utilization_rate,
                 fee_rate: params.fee_rate,
                 fee_shares: 0,

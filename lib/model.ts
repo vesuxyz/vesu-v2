@@ -23,7 +23,6 @@ interface UnsignedAmount {
 export interface AssetParams {
   asset: string;
   floor: bigint;
-  initial_rate_accumulator: bigint;
   initial_full_utilization_rate: bigint;
   max_utilization: bigint;
   is_legacy: boolean;

@@ -45,7 +45,6 @@ mod TestPragmaOracle {
         let collateral_asset_params = AssetParams {
             asset: collateral_asset,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: true,
@@ -54,7 +53,6 @@ mod TestPragmaOracle {
         let debt_asset_params = AssetParams {
             asset: debt_asset,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
