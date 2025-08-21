@@ -79,7 +79,6 @@ pub struct AssetPrice {
 pub struct AssetParams {
     pub asset: ContractAddress,
     pub floor: u256, // [SCALE]
-    pub initial_rate_accumulator: u256, // [SCALE]
     pub initial_full_utilization_rate: u256, // [SCALE]
     pub max_utilization: u256, // [SCALE]
     pub is_legacy: bool,
