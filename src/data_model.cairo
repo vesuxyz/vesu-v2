@@ -33,7 +33,6 @@ pub struct AssetConfig { //                                     | slot | packed 
 pub fn assert_asset_config(asset_config: AssetConfig) {
     assert!(asset_config.scale <= pow_10(18), "scale-exceeded");
     assert!(asset_config.max_utilization <= SCALE, "max-utilization-exceeded");
-    assert!(asset_config.last_rate_accumulator >= SCALE, "rate-accumulator-too-low");
     assert!(asset_config.fee_rate <= SCALE, "fee-rate-exceeded");
 }
 
@@ -79,7 +78,6 @@ pub struct AssetPrice {
 pub struct AssetParams {
     pub asset: ContractAddress,
     pub floor: u256, // [SCALE]
-    pub initial_rate_accumulator: u256, // [SCALE]
     pub initial_full_utilization_rate: u256, // [SCALE]
     pub max_utilization: u256, // [SCALE]
     pub is_legacy: bool,

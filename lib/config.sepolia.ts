@@ -1,5 +1,5 @@
 import { CairoCustomEnum } from "starknet";
-import { Config, EnvAssetParams, SCALE, toScale, toUtilizationScale } from ".";
+import { Config, EnvAssetParams, toScale, toUtilizationScale } from ".";
 
 import CONFIG from "vesu_changelog/configurations/config_genesis_sn_sepolia.json" assert { type: "json" };
 import DEPLOYMENT from "vesu_changelog/deployments/deployment_sn_sepolia.json" assert { type: "json" };
@@ -60,7 +60,6 @@ export const config: Config = {
         asset_params: CONFIG.asset_parameters.map((asset: any) => ({
           asset: asset.token.address,
           floor: toScale(asset.floor),
-          initial_rate_accumulator: SCALE,
           initial_full_utilization_rate: toScale(asset.initial_full_utilization_rate),
           max_utilization: toScale(asset.max_utilization),
           is_legacy: asset.token.is_legacy,

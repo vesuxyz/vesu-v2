@@ -251,7 +251,6 @@ pub fn create_pool(
     let collateral_asset_params = AssetParams {
         asset: config.collateral_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: true,
@@ -260,7 +259,6 @@ pub fn create_pool(
     let debt_asset_params = AssetParams {
         asset: config.debt_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: false,
@@ -269,7 +267,6 @@ pub fn create_pool(
     let third_asset_params = AssetParams {
         asset: config.third_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: false,
