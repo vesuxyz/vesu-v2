@@ -101,6 +101,12 @@ pub struct DebtCapParams {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
+pub struct VTokenParams {
+    pub v_token_name: felt252,
+    pub v_token_symbol: felt252,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
 pub struct ModifyPositionParams {
     pub collateral_asset: ContractAddress,
     pub debt_asset: ContractAddress,
@@ -139,11 +145,6 @@ pub struct LiquidationParams {
     pub collateral_asset_index: usize,
     pub debt_asset_index: usize,
     pub liquidation_factor: u64 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct FeeParams {
-    pub fee_recipient: ContractAddress,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
