@@ -6,7 +6,6 @@ pub mod math;
 pub mod oracle;
 pub mod packing;
 pub mod pool;
-pub mod pragma_oracle;
 pub mod units;
 
 pub mod vendor {
