@@ -11,7 +11,7 @@ mod TestPool {
     use starknet::{contract_address_const, get_block_timestamp, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, AssetParams, LTVConfig, LTVParams, ModifyPositionParams};
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::oracle::{IOracleDispatcherTrait, OracleConfig};
+    use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::mock_pool_upgrade::{IMockPoolUpgradeDispatcher, IMockPoolUpgradeDispatcherTrait};
     use vesu::test::setup_v2::{

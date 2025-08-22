@@ -12,7 +12,7 @@ use vesu::data_model::{
 };
 use vesu::interest_rate_model::InterestRateConfig;
 use vesu::math::pow_10;
-use vesu::oracle::{IOracleDispatcher, IOracleDispatcherTrait, OracleConfig};
+use vesu::oracle::{IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig};
 use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
 use vesu::test::mock_oracle::{
     IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
@@ -46,7 +46,7 @@ pub struct LendingTerms {
 #[derive(Copy, Drop, Serde)]
 pub struct Env {
     pub pool: IPoolDispatcher,
-    pub oracle: IOracleDispatcher,
+    pub oracle: IPragmaOracleDispatcher,
     pub config: TestConfig,
     pub users: Users,
 }
@@ -129,7 +129,7 @@ pub fn setup_env(
 
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
-    let oracle = IOracleDispatcher {
+    let oracle = IPragmaOracleDispatcher {
         contract_address: deploy_with_args(
             "Oracle",
             array![
@@ -239,7 +239,7 @@ pub fn test_interest_rate_config() -> InterestRateConfig {
 
 pub fn create_pool(
     pool: IPoolDispatcher,
-    oracle: IOracleDispatcher,
+    oracle: IPragmaOracleDispatcher,
     config: TestConfig,
     owner: ContractAddress,
     curator: ContractAddress,
@@ -474,7 +474,7 @@ pub fn setup_pool(
     third_address: ContractAddress,
     fund_borrower: bool,
     interest_rate_config: Option<InterestRateConfig>,
-) -> (IPoolDispatcher, IOracleDispatcher, TestConfig, Users, LendingTerms) {
+) -> (IPoolDispatcher, IPragmaOracleDispatcher, TestConfig, Users, LendingTerms) {
     let Env {
         pool, oracle, config, users, ..,
     } = setup_env(oracle_address, collateral_address, debt_address, third_address);
@@ -522,6 +522,6 @@ pub fn setup_pool(
     (pool, oracle, config, users, terms)
 }
 
-pub fn setup() -> (IPoolDispatcher, IOracleDispatcher, TestConfig, Users, LendingTerms) {
+pub fn setup() -> (IPoolDispatcher, IPragmaOracleDispatcher, TestConfig, Users, LendingTerms) {
     setup_pool(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::None)
 }

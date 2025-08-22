@@ -6,7 +6,7 @@ mod TestLiquidatePosition {
     use vesu::data_model::{
         Amount, AmountDenomination, LiquidatePositionParams, LiquidationConfig, ModifyPositionParams,
     };
-    use vesu::oracle::IOracleDispatcherTrait;
+    use vesu::oracle::IPragmaOracleDispatcherTrait;
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};

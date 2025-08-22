@@ -9,7 +9,9 @@ mod TestPragmaOracle {
         ShutdownParams,
     };
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::oracle::{IOracleDispatcher, IOracleDispatcherTrait, OracleConfig};
+    use vesu::oracle::{
+        IOracleDispatcher, IOracleDispatcherTrait, IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig,
+    };
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
@@ -24,7 +26,7 @@ mod TestPragmaOracle {
         owner: ContractAddress,
         curator: ContractAddress,
         pool: IPoolDispatcher,
-        oracle: IOracleDispatcher,
+        oracle: IPragmaOracleDispatcher,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         timeout: u64,
@@ -181,8 +183,9 @@ mod TestPragmaOracle {
         let (_, oracle, config, _, _) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
-        let debt_asset_price = oracle.price(debt_asset.contract_address);
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
+        let debt_asset_price = price_oracle.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == SCALE, "Debt asset price not correctly set");
@@ -194,8 +197,9 @@ mod TestPragmaOracle {
     #[should_panic(expected: "oracle-price-invalid")]
     fn test_price_invalid() {
         let (_, oracle, _, _, _) = setup();
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
 
-        oracle.price(Zero::zero());
+        price_oracle.price(Zero::zero());
     }
 
     #[test]
@@ -204,6 +208,7 @@ mod TestPragmaOracle {
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
 
         let max: u128 = Bounded::<u128>::MAX;
         // set collateral asset price
@@ -211,8 +216,8 @@ mod TestPragmaOracle {
         // set debt asset price
         pragma_oracle.set_price(DEBT_PRAGMA_KEY, max);
 
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
-        let debt_asset_price = oracle.price(debt_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
+        let debt_asset_price = price_oracle.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");
@@ -243,17 +248,18 @@ mod TestPragmaOracle {
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
         pragma_oracle.set_last_updated_timestamp(COLL_PRAGMA_KEY, get_block_timestamp());
 
         // called at timeout
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout);
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
 
         // called at timeout - 1
         start_cheat_block_timestamp_global(get_block_timestamp() - 1);
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         assert!(collateral_asset_price.is_valid, "Collateral asset validity should be true");
     }
@@ -277,11 +283,12 @@ mod TestPragmaOracle {
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
         pragma_oracle.set_last_updated_timestamp(COLL_PRAGMA_KEY, get_block_timestamp());
 
         // called at timeout + 1
         start_cheat_block_timestamp_global(get_block_timestamp() + timeout + 1);
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
         // stale price
         assert!(!collateral_asset_price.is_valid, "Collateral asset validity should be false");
@@ -305,18 +312,19 @@ mod TestPragmaOracle {
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
 
         // number of sources == min_number_of_sources + 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
 
         // number of sources == min_number_of_sources
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
     }
@@ -339,11 +347,12 @@ mod TestPragmaOracle {
         );
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
 
         // number of sources == min_number_of_sources - 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources - 1);
 
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
 
         assert!(!collateral_asset_price.is_valid, "Debt asset validity should be false");
     }
@@ -367,6 +376,7 @@ mod TestPragmaOracle {
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
         let pragma_summary = IMockPragmaSummaryDispatcher { contract_address: oracle.pragma_summary() };
+        let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
 
         let max: u128 = Bounded::<u128>::MAX;
         // set collateral asset price
@@ -376,8 +386,8 @@ mod TestPragmaOracle {
         pragma_oracle.set_price(DEBT_PRAGMA_KEY, 1);
         pragma_summary.set_twap(DEBT_PRAGMA_KEY, max, 18);
 
-        let collateral_asset_price = oracle.price(collateral_asset.contract_address);
-        let debt_asset_price = oracle.price(debt_asset.contract_address);
+        let collateral_asset_price = price_oracle.price(collateral_asset.contract_address);
+        let debt_asset_price = price_oracle.price(debt_asset.contract_address);
 
         assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
         assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");

@@ -7,7 +7,7 @@ mod TestDefaultPOV2 {
     use vesu::data_model::{AssetParams, LTVConfig};
     use vesu::data_model::{LiquidationConfig, ShutdownConfig, ShutdownMode};
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::oracle::{IOracleDispatcherTrait, OracleConfig};
+    use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env};
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
