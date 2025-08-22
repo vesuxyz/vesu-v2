@@ -9,9 +9,8 @@ mod TestPragmaOracle {
         ShutdownParams,
     };
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::oracle::{IOracleDispatcher, IOracleDispatcherTrait};
+    use vesu::oracle::{IOracleDispatcher, IOracleDispatcherTrait, OracleConfig};
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
-    use vesu::pragma_oracle::OracleConfig;
     use vesu::test::mock_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
         IMockPragmaSummaryDispatcherTrait,
