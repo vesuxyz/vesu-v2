@@ -21,12 +21,16 @@ pub fn assert_oracle_config(oracle_config: OracleConfig) {
 
 #[starknet::interface]
 pub trait IOracle<TContractState> {
+    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
+}
+
+#[starknet::interface]
+pub trait IPragmaOracle<TContractState> {
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
     fn pragma_summary(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
     fn add_asset(ref self: TContractState, asset: ContractAddress, oracle_config: OracleConfig);
     fn set_oracle_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: felt252);
-    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
 
     fn curator(self: @TContractState) -> ContractAddress;
     fn pending_curator(self: @TContractState) -> ContractAddress;
@@ -56,7 +60,10 @@ mod Oracle {
     };
     use vesu::data_model::AssetPrice;
     use vesu::math::pow_10;
-    use vesu::oracle::{IOracle, IOracleDispatcher, IOracleDispatcherTrait, OracleConfig, assert_oracle_config};
+    use vesu::oracle::{
+        IOracle, IPragmaOracle, IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig,
+        assert_oracle_config,
+    };
     use vesu::packing::{AssetConfigPacking, PositionPacking};
     use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher};
     use vesu::units::SCALE;
@@ -146,7 +153,7 @@ mod Oracle {
     }
 
     #[abi(embed_v0)]
-    impl PragmaOracleImpl of IOracle<ContractState> {
+    impl PragmaOracleImpl of IPragmaOracle<ContractState> {
         /// Returns the address of the pragma oracle contract
         /// # Returns
         /// * `pragma_oracle` - address of the pragma oracle contract
@@ -224,50 +231,6 @@ mod Oracle {
             self.emit(SetOracleParameter { asset, parameter, value });
         }
 
-        /// Returns the current price for an asset and the validity status of the price.
-        /// The price can be invalid if price is too old (stale) or if the number of price sources is too low.
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `AssetPrice` - latest price of the asset and its validity
-        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
-            let OracleConfig {
-                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
-            } = self.oracle_configs.read(asset);
-
-            assert!(pragma_key.is_non_zero(), "oracle-price-invalid");
-
-            let dispatcher = IPragmaABIDispatcher { contract_address: self.pragma_oracle.read() };
-            let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
-
-            // calculate the twap if start_time_offset and time_window are set
-            let price = if start_time_offset == 0 || time_window == 0 {
-                u256_mul_div(response.price.into(), SCALE, pow_10(response.decimals.into()), Rounding::Floor)
-            } else {
-                let summary = ISummaryStatsABIDispatcher { contract_address: self.pragma_summary.read() };
-                let (value, decimals) = summary
-                    .calculate_twap(
-                        DataType::SpotEntry(pragma_key),
-                        aggregation_mode,
-                        time_window,
-                        get_block_timestamp() - start_time_offset,
-                    );
-                u256_mul_div(value.into(), SCALE, pow_10(decimals.into()), Rounding::Floor)
-            };
-
-            // ensure that price is not stale and that the number of sources is sufficient
-            let time_delta = if response.last_updated_timestamp >= get_block_timestamp() {
-                0
-            } else {
-                get_block_timestamp() - response.last_updated_timestamp
-            };
-            let valid = (timeout == 0 || time_delta <= timeout)
-                && (number_of_sources <= response.num_sources_aggregated)
-                && (response.price.into() != 0);
-
-            AssetPrice { value: price, is_valid: valid }
-        }
-
         /// Returns the address of the curator
         /// # Returns
         /// * `curator` - address of the curator
@@ -330,9 +293,56 @@ mod Oracle {
             }
             replace_class_syscall(new_implementation).unwrap_syscall();
             // Check to prevent mistakes when upgrading the contract
-            let new_name = IOracleDispatcher { contract_address: get_contract_address() }.upgrade_name();
+            let new_name = IPragmaOracleDispatcher { contract_address: get_contract_address() }.upgrade_name();
             assert(new_name == self.upgrade_name(), 'invalid upgrade name');
             self.emit(ContractUpgraded { new_implementation });
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl OracleImpl of IOracle<ContractState> {
+        /// Returns the current price for an asset and the validity status of the price.
+        /// The price can be invalid if price is too old (stale) or if the number of price sources is too low.
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `AssetPrice` - latest price of the asset and its validity
+        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
+            let OracleConfig {
+                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
+            } = self.oracle_configs.read(asset);
+
+            assert!(pragma_key.is_non_zero(), "oracle-price-invalid");
+
+            let dispatcher = IPragmaABIDispatcher { contract_address: self.pragma_oracle.read() };
+            let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
+
+            // calculate the twap if start_time_offset and time_window are set
+            let price = if start_time_offset == 0 || time_window == 0 {
+                u256_mul_div(response.price.into(), SCALE, pow_10(response.decimals.into()), Rounding::Floor)
+            } else {
+                let summary = ISummaryStatsABIDispatcher { contract_address: self.pragma_summary.read() };
+                let (value, decimals) = summary
+                    .calculate_twap(
+                        DataType::SpotEntry(pragma_key),
+                        aggregation_mode,
+                        time_window,
+                        get_block_timestamp() - start_time_offset,
+                    );
+                u256_mul_div(value.into(), SCALE, pow_10(decimals.into()), Rounding::Floor)
+            };
+
+            // ensure that price is not stale and that the number of sources is sufficient
+            let time_delta = if response.last_updated_timestamp >= get_block_timestamp() {
+                0
+            } else {
+                get_block_timestamp() - response.last_updated_timestamp
+            };
+            let valid = (timeout == 0 || time_delta <= timeout)
+                && (number_of_sources <= response.num_sources_aggregated)
+                && (response.price.into() != 0);
+
+            AssetPrice { value: price, is_valid: valid }
         }
     }
 }
