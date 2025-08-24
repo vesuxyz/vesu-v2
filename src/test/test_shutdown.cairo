@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestShutdown {
     use core::num::traits::{Bounded, Zero};
-    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
+    use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_block_timestamp_global,
         stop_cheat_caller_address,
