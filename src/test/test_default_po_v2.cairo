@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestDefaultPOV2 {
     use core::num::traits::Zero;
-    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
+    use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
     use vesu::data_model::{AssetParams, LTVConfig};
