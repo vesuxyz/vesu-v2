@@ -25,15 +25,15 @@ pub trait IPoolFactory<TContractState> {
     ) -> ContractAddress;
 }
 
-
 #[starknet::contract]
-mod pool_factory {
+mod PoolFactory {
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::deploy_syscall;
-    use starknet::{ContractAddress, get_contract_address};
+    use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use vesu::data_model::{
         AssetParams, DebtCapParams, LTVParams, LiquidationConfig, LiquidationParams, ShutdownConfig, ShutdownParams,
         VTokenParams,
@@ -41,6 +41,7 @@ mod pool_factory {
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::pool_factory::IPoolFactory;
+    use vesu::units::INFLATION_FEE;
 
     #[storage]
     struct Storage {
@@ -111,6 +112,26 @@ mod pool_factory {
             self.asset_for_v_token.write((pool, v_token), asset);
 
             self.emit(CreateVToken { pool, asset, v_token });
+        }
+
+        fn transfer_inflation_fee(
+            self: @ContractState, pool: ContractAddress, asset: ContractAddress, is_legacy: bool,
+        ) {
+            let erc20 = IERC20Dispatcher { contract_address: asset };
+
+            if is_legacy {
+                assert!(
+                    erc20.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE),
+                    "transferFrom-failed",
+                );
+            } else {
+                assert!(
+                    erc20.transfer_from(get_caller_address(), get_contract_address(), INFLATION_FEE),
+                    "transfer-from-failed",
+                );
+            }
+
+            erc20.approve(pool, INFLATION_FEE);
         }
     }
 
@@ -190,7 +211,7 @@ mod pool_factory {
             let (pool_address, _) = (deploy_syscall(
                 self.pool_class_hash.read().try_into().unwrap(),
                 0,
-                array![name.into(), owner.into(), curator.into(), oracle.into()].span(),
+                array![name.into(), owner.into(), get_contract_address().into(), oracle.into()].span(),
                 false,
             ))
                 .unwrap();
@@ -202,12 +223,16 @@ mod pool_factory {
             while !asset_params_copy.is_empty() {
                 let asset_params = *asset_params_copy.pop_front().unwrap();
                 let asset = asset_params.asset;
+
+                // set allowance for the pool to burn inflation fee
+                self.transfer_inflation_fee(pool.contract_address, asset, asset_params.is_legacy);
+
                 let interest_rate_config = *interest_rate_params.pop_front().unwrap();
                 pool.add_asset(asset_params, interest_rate_config);
 
-                let v_token_config = *v_token_params.at(i);
-                let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
-                self.create_v_token(pool.contract_address, asset, v_token_name, v_token_symbol);
+                // let v_token_config = *v_token_params.at(i);
+                // let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
+                // self.create_v_token(pool.contract_address, asset, v_token_name, v_token_symbol);
 
                 i += 1;
             }
@@ -241,6 +266,9 @@ mod pool_factory {
 
             // set the fee config
             pool.set_fee_recipient(fee_recipient);
+
+            // nominate the curator
+            pool.nominate_curator(curator);
 
             pool.contract_address
         }
