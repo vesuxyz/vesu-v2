@@ -1,8 +1,8 @@
 import { CairoCustomEnum } from "starknet";
 import { Config, EnvAssetParams, toScale, toUtilizationScale } from ".";
 
-import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
-import DEPLOYMENT from "../deployment.json" assert { type: "json" };
+import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" with { type: "json" };
+import DEPLOYMENT from "../deployment.json" with { type: "json" };
 
 const env = CONFIG.asset_parameters.map(
   (asset: any) =>
