@@ -57,7 +57,7 @@ export class Deployer extends BaseDeployer {
     console.log(protocol);
     const contracts = {
       poolFactory: await this.loadContract(protocol.poolFactory!),
-      pool: undefined, // await this.loadContract(protocol.pool!),
+      pool: await this.loadContract(protocol.pool!),
       oracle: await this.loadContract(protocol.oracle!),
       pragma: {
         oracle: await this.loadContract(protocol.pragma.oracle!),
@@ -85,7 +85,7 @@ export class Deployer extends BaseDeployer {
     );
     const [poolFactory, poolFactoryCalls] = await this.deferContract(
       "PoolFactory",
-      CallData.compile({ pool_class_hash: await this.declareCached("Pool") }),
+      CallData.compile({ owner: this.owner.address, pool_class_hash: await this.declareCached("Pool") }),
     );
     return [{ poolFactory, oracle }, [...poolFactoryCalls, ...oracleCalls] ] as const;
   }

@@ -146,7 +146,7 @@ pub fn setup_env(
 
     let pool_class_hash = *declare("Pool").unwrap().contract_class().class_hash;
     let pool_factory = IPoolFactoryDispatcher {
-        contract_address: deploy_with_args("PoolFactory", array![pool_class_hash.into()]),
+        contract_address: deploy_with_args("PoolFactory", array![users.owner.into(), pool_class_hash.into()]),
     };
 
     let pool = IPoolDispatcher {
@@ -374,7 +374,6 @@ pub fn create_pool_via_factory(
         contract_address: pool_factory
             .create_pool(
                 'DefaultPool',
-                owner,
                 curator,
                 oracle.contract_address,
                 curator,

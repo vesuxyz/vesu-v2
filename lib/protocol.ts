@@ -1,4 +1,4 @@
-import { Contract, num, hash } from "starknet";
+import { Contract } from "starknet";
 import { CreatePoolParams, Deployer, Pool, PragmaContracts, ProtocolContracts, PragmaOracleParams, toAddress } from ".";
 
 export class Protocol implements ProtocolContracts {
@@ -51,7 +51,6 @@ export class Protocol implements ProtocolContracts {
     poolFactory.connect(deployer.owner);
     const response = await poolFactory.create_pool(
       params.name,
-      params.owner,
       params.curator,
       oracle.address,
       params.fee_recipient,

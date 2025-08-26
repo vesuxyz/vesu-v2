@@ -11,7 +11,6 @@ pub trait IPoolFactory<TContractState> {
     fn create_pool(
         ref self: TContractState,
         name: felt252,
-        owner: ContractAddress,
         curator: ContractAddress,
         oracle: ContractAddress,
         fee_recipient: ContractAddress,
@@ -28,6 +27,8 @@ pub trait IPoolFactory<TContractState> {
 #[starknet::contract]
 mod PoolFactory {
     use core::num::traits::Zero;
+    use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
@@ -49,6 +50,8 @@ mod PoolFactory {
         v_token_class_hash: felt252,
         v_token_for_asset: Map<(ContractAddress, ContractAddress), ContractAddress>,
         asset_for_v_token: Map<(ContractAddress, ContractAddress), ContractAddress>,
+        #[substorage(v0)]
+        ownable: OwnableComponent::Storage,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -82,12 +85,20 @@ mod PoolFactory {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        #[flat]
+        OwnableEvent: OwnableComponent::Event,
         CreateVToken: CreateVToken,
         CreatePool: CreatePool,
     }
 
+    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+
+    #[abi(embed_v0)]
+    impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
+
     #[constructor]
-    fn constructor(ref self: ContractState, pool_class_hash: felt252) {
+    fn constructor(ref self: ContractState, owner: ContractAddress, pool_class_hash: felt252) {
+        self.ownable.initializer(owner);
         self.pool_class_hash.write(pool_class_hash);
     }
 
@@ -182,7 +193,6 @@ mod PoolFactory {
         /// Creates a new pool
         /// # Arguments
         /// * `name` - name of the pool
-        /// * `owner` - owner of the pool
         /// * `curator` - curator of the pool
         /// * `oracle` - oracle of the pool
         /// * `fee_recipient` - fee recipient of the pool
@@ -198,7 +208,6 @@ mod PoolFactory {
         fn create_pool(
             ref self: ContractState,
             name: felt252,
-            owner: ContractAddress,
             curator: ContractAddress,
             oracle: ContractAddress,
             fee_recipient: ContractAddress,
@@ -214,6 +223,9 @@ mod PoolFactory {
             assert!(asset_params.len() > 0, "empty-asset-params");
             assert!(asset_params.len() == interest_rate_params.len(), "interest-rate-params-mismatch");
             assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
+
+            // default owner of all pools is the owner of the pool factory
+            let owner = self.ownable.owner();
 
             // deploy the pool
             let (pool_address, _) = (deploy_syscall(

@@ -7,7 +7,7 @@ async function writeDeployment(protocol: Protocol) {
   const deployment = {
     poolFactory: protocol.poolFactory.address,
     pool: protocol.pool?.address || "0x0",
-    oracle: protocol.pragma.oracle.address,
+    oracle: protocol.oracle.address,
     assets: protocol.assets.map((asset) => asset.address),
     pragma: {
       oracle: protocol.pragma.oracle.address,
@@ -23,22 +23,23 @@ async function writeDeployment(protocol: Protocol) {
 }
 
 const deployer = await setup("mainnet");
-const protocol = await deployer.deployProtocol();
-// const protocol = await deployer.loadProtocol();
-await protocol.addAssetsToOracle(deployer.config.pools["genesis-pool"].params.pragma_oracle_params);
-await deployer.setApprovals(protocol.poolFactory, protocol.assets);
-const [pool] = await protocol.createPool("genesis-pool");
-await writeDeployment(protocol);
+// const protocol = await deployer.deployProtocol();
+const protocol = await deployer.loadProtocol();
+// await protocol.addAssetsToOracle(deployer.config.pools["genesis-pool"].params.pragma_oracle_params);
+// await deployer.setApprovals(protocol.poolFactory, protocol.assets);
+// const [pool] = await protocol.createPool("genesis-pool");
+// await writeDeployment(protocol);
+
+assert(
+  toAddress(await protocol.pool!.oracle()) === deployer.config.protocol.oracle!.toLowerCase(),
+  "oracle-neq",
+);
+assert(await protocol.pool!.owner() === BigInt(deployer.owner.address), "owner-neq");
 
 // assert(
-//   toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(),
-//   "pragma_oracle-neq",
+//   toAddress((await extension.fee_config()).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
+//   "fee_recipient-neq",
 // );
-// // assert(toAddress(await extension.pool_owner()) === pool.params.owner.toLowerCase(), "pool_owner-neq");
-// // assert(
-// //   toAddress((await extension.fee_config()).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
-// //   "fee_recipient-neq",
-// // );
 // const shutdown_config = await extensionPO.shutdown_config();
 // assert(shutdown_config.recovery_period === pool.params.shutdown_params.recovery_period, "recovery_period-neq");
 // assert(
