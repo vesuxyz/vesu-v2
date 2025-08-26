@@ -1,6 +1,5 @@
 import { assert } from "console";
 import fs from "fs";
-import { shortString } from "starknet";
 import { Protocol, setup, toAddress } from "../lib";
 
 async function writeDeployment(protocol: Protocol) {
@@ -14,7 +13,7 @@ async function writeDeployment(protocol: Protocol) {
       summary_stats: protocol.pragma.summary_stats.address,
     },
   };
-  
+
   fs.writeFileSync(
     // `deployment_${shortString.decodeShortString(await deployer.provider.getChainId()).toLowerCase()}.json`,
     `deployment.json`,
@@ -30,11 +29,8 @@ const protocol = await deployer.loadProtocol();
 // const [pool] = await protocol.createPool("genesis-pool");
 // await writeDeployment(protocol);
 
-assert(
-  toAddress(await protocol.pool!.oracle()) === deployer.config.protocol.oracle!.toLowerCase(),
-  "oracle-neq",
-);
-assert(await protocol.pool!.owner() === BigInt(deployer.owner.address), "owner-neq");
+assert(toAddress(await protocol.pool!.oracle()) === deployer.config.protocol.oracle!.toLowerCase(), "oracle-neq");
+assert((await protocol.pool!.owner()) === BigInt(deployer.owner.address), "owner-neq");
 
 // assert(
 //   toAddress((await extension.fee_config()).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
@@ -112,5 +108,3 @@ assert(await protocol.pool!.owner() === BigInt(deployer.owner.address), "owner-n
 //   assert((await singleton.rate_accumulator_unsafe(asset.address)) > 0n, "rate_accumulator-neq");
 //   assert((await singleton.utilization_unsafe(asset.address)) === 0n, "utilization-neq");
 // }
-
-

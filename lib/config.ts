@@ -74,7 +74,7 @@ function stringifyAddresses(value: any): any {
     return value.map(stringifyAddresses);
   }
   if (value === undefined) {
-    return '';
+    return "";
   }
   return value.address ? value.address : value.oracle.address;
 }

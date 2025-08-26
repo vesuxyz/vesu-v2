@@ -81,13 +81,13 @@ export class Deployer extends BaseDeployer {
   async deferProtocol() {
     const [oracle, oracleCalls] = await this.deferOracle(
       await this.loadContract(this.config.protocol.pragma.oracle!),
-      await this.loadContract(this.config.protocol.pragma.summary_stats!)
+      await this.loadContract(this.config.protocol.pragma.summary_stats!),
     );
     const [poolFactory, poolFactoryCalls] = await this.deferContract(
       "PoolFactory",
       CallData.compile({ owner: this.owner.address, pool_class_hash: await this.declareCached("Pool") }),
     );
-    return [{ poolFactory, oracle }, [...poolFactoryCalls, ...oracleCalls] ] as const;
+    return [{ poolFactory, oracle }, [...poolFactoryCalls, ...oracleCalls]] as const;
   }
 
   async deployEnv() {
@@ -100,7 +100,10 @@ export class Deployer extends BaseDeployer {
   async deferEnv() {
     const [assets, assetCalls] = await this.deferMockAssets(this.lender.address);
     const [pragma_oracle, summary_stats, pragmaOracleCalls] = await this.deferPragmaOracle();
-    return [{ assets, pragma: { oracle: pragma_oracle, summary_stats } }, [...assetCalls, ...pragmaOracleCalls]] as const;
+    return [
+      { assets, pragma: { oracle: pragma_oracle, summary_stats } },
+      [...assetCalls, ...pragmaOracleCalls],
+    ] as const;
   }
 
   async deferMockAssets(recipient: string) {
@@ -133,18 +136,20 @@ export class Deployer extends BaseDeployer {
       owner: this.owner.address,
       curator: this.owner.address,
       oracle_address: pragma_oracle.address,
-      summary_address: summary_stats.address
+      summary_address: summary_stats.address,
     });
     const [oracle, oracleCalls] = await this.deferContract("Oracle", calldata);
     return [oracle, [...oracleCalls]] as const;
   }
 
   async setApprovals(contract: Contract, assets: Contract[]) {
-    const approvalCalls = await Promise.all(assets.map(async (asset, index) => {
-      // const { initial_supply } = this.config.env![index].erc20Params();
-      console.log(await asset.balanceOf(this.owner.address));
-      return asset.populateTransaction.approve(contract.address, 2000);
-    }));
+    const approvalCalls = await Promise.all(
+      assets.map(async (asset, index) => {
+        // const { initial_supply } = this.config.env![index].erc20Params();
+        console.log(await asset.balanceOf(this.owner.address));
+        return asset.populateTransaction.approve(contract.address, 2000);
+      }),
+    );
     let response = await this.owner.execute(approvalCalls);
     await this.waitForTransaction(response.transaction_hash);
     // response = await this.lender.execute(approvalCalls);

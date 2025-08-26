@@ -28,7 +28,7 @@ export const config: Config = {
     pragma: {
       oracle: DEPLOYMENT.pragma.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
       summary_stats: DEPLOYMENT.pragma.summary_stats || CONFIG.asset_parameters[0].pragma.summary_stats || "0x0",
-    }
+    },
   },
   env,
   pools: {
@@ -103,7 +103,7 @@ export const config: Config = {
             (asset: any) => asset.asset_name === pair.debt_asset_name,
           );
           return { collateral_asset_index, debt_asset_index, debt_cap: toScale(pair.debt_cap) };
-        })
+        }),
       },
     },
   },

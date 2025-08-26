@@ -1,5 +1,5 @@
 import { Contract } from "starknet";
-import { CreatePoolParams, Deployer, Pool, PragmaContracts, ProtocolContracts, PragmaOracleParams, toAddress } from ".";
+import { CreatePoolParams, Deployer, Pool, PragmaContracts, PragmaOracleParams, ProtocolContracts, toAddress } from ".";
 
 export class Protocol implements ProtocolContracts {
   constructor(
@@ -33,14 +33,13 @@ export class Protocol implements ProtocolContracts {
     oracle.connect(deployer.owner);
     for (const param of params) {
       const response = await oracle.add_asset(param.asset, {
-          pragma_key: param.pragma_key,
-          timeout: param.timeout,
-          number_of_sources: param.number_of_sources,
-          start_time_offset: param.start_time_offset,
-          time_window: param.time_window,
-          aggregation_mode: param.aggregation_mode,
-        }
-      );
+        pragma_key: param.pragma_key,
+        timeout: param.timeout,
+        number_of_sources: param.number_of_sources,
+        start_time_offset: param.start_time_offset,
+        time_window: param.time_window,
+        aggregation_mode: param.aggregation_mode,
+      });
       await deployer.waitForTransaction(response.transaction_hash);
     }
   }
@@ -60,12 +59,12 @@ export class Protocol implements ProtocolContracts {
       params.ltv_params,
       params.interest_rate_configs,
       params.liquidation_params,
-      params.debt_caps_params
+      params.debt_caps_params,
     );
     const receipt = await deployer.waitForTransaction(response.transaction_hash);
     const events = poolFactory.parseEvents(receipt);
     const createPoolSig = "vesu::pool_factory::PoolFactory::CreatePool";
-    const createPoolEvent = events.find((event) => (event[createPoolSig] != undefined));
+    const createPoolEvent = events.find((event) => event[createPoolSig] != undefined);
     this.pool = await this.deployer.loadContract(toAddress(createPoolEvent?.[createPoolSig]?.pool! as BigInt));
     const pool = new Pool(this, params);
     return [pool, response] as const;
