@@ -59,6 +59,10 @@ mod PoolFactory {
         asset: ContractAddress,
         #[key]
         v_token: ContractAddress,
+        #[key]
+        v_token_name: felt252,
+        #[key]
+        v_token_symbol: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -66,9 +70,13 @@ mod PoolFactory {
         #[key]
         pool: ContractAddress,
         #[key]
+        name: felt252,
+        #[key]
         owner: ContractAddress,
         #[key]
         curator: ContractAddress,
+        #[key]
+        oracle: ContractAddress,
     }
 
     #[event]
@@ -111,7 +119,7 @@ mod PoolFactory {
             self.v_token_for_asset.write((pool, asset), v_token);
             self.asset_for_v_token.write((pool, v_token), asset);
 
-            self.emit(CreateVToken { pool, asset, v_token });
+            self.emit(CreateVToken { pool, asset, v_token, v_token_name, v_token_symbol });
         }
 
         fn transfer_inflation_fee(
@@ -269,6 +277,8 @@ mod PoolFactory {
 
             // nominate the curator
             pool.nominate_curator(curator);
+
+            self.emit(CreatePool { pool: pool.contract_address, name, owner, curator, oracle });
 
             pool.contract_address
         }

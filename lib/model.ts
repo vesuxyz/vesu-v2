@@ -31,6 +31,7 @@ export interface AssetParams {
 }
 
 export interface PragmaOracleParams {
+  asset: string;
   pragma_key: BigNumberish;
   timeout: bigint;
   number_of_sources: bigint;
@@ -90,16 +91,25 @@ export interface FeeParams {
   fee_recipient: string;
 }
 
+export interface VTokenParams {
+  v_token_name: string;
+  v_token_symbol: string;
+}
+
 export interface CreatePoolParams {
+  name: string;
+  owner: string;
+  curator: string;
+  // oracle: string;
+  fee_recipient: string;
+  shutdown_params: ShutdownParams;
   asset_params: AssetParams[];
+  v_token_params: VTokenParams[];
   ltv_params: LTVParams[];
   interest_rate_configs: InterestRateConfig[];
   pragma_oracle_params: PragmaOracleParams[];
   liquidation_params: LiquidationParams[];
   debt_caps_params: DebtCapParams[];
-  shutdown_params: ShutdownParams;
-  fee_params: FeeParams;
-  owner: string;
 }
 
 export interface ModifyPositionParams {

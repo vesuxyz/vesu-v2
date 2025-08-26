@@ -1,18 +1,12 @@
 import { Account, RpcProvider } from "starknet";
 import { Deployer, logAddresses } from ".";
-import { config as devnetConfig } from "./config.devnet";
 import { config as mainnetConfig } from "./config.mainnet";
-import { config as sepoliaConfig } from "./config.sepolia";
 
 export async function setup(network: string | undefined) {
   if (process.env.NETWORK != network) throw new Error("NETWORK env var does not match network argument");
 
   const config = (() => {
-    if (network == undefined || network === "devnet") {
-      return devnetConfig;
-    } else if (network === "sepolia") {
-      return sepoliaConfig;
-    } else if (network === "mainnet") {
+    if (network === "mainnet") {
       return mainnetConfig;
     } else {
       throw new Error("Invalid network");
