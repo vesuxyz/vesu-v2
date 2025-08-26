@@ -1,5 +1,5 @@
 use core::num::traits::{Bounded, Zero};
-use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
     start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
@@ -12,10 +12,9 @@ use vesu::data_model::{
 };
 use vesu::interest_rate_model::InterestRateConfig;
 use vesu::math::pow_10;
-use vesu::oracle::{IOracleDispatcher, IOracleDispatcherTrait};
+use vesu::oracle::{IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig};
 use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
 use vesu::pool_factory::{IPoolFactoryDispatcher, IPoolFactoryDispatcherTrait};
-use vesu::pragma_oracle::OracleConfig;
 use vesu::test::mock_oracle::{
     IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
 };
@@ -49,7 +48,7 @@ pub struct LendingTerms {
 pub struct Env {
     pub pool_factory: IPoolFactoryDispatcher,
     pub pool: IPoolDispatcher,
-    pub oracle: IOracleDispatcher,
+    pub oracle: IPragmaOracleDispatcher,
     pub config: TestConfig,
     pub users: Users,
 }
@@ -132,13 +131,11 @@ pub fn setup_env(
 
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
-    let oracle = IOracleDispatcher {
+    let oracle = IPragmaOracleDispatcher {
         contract_address: deploy_with_args(
             "Oracle",
             array![
-                users.owner.into(),
-                users.curator.into(),
-                mock_pragma_oracle.contract_address.into(),
+                users.owner.into(), users.curator.into(), mock_pragma_oracle.contract_address.into(),
                 mock_pragma_summary.contract_address.into(),
             ],
         ),
@@ -250,7 +247,7 @@ pub fn test_interest_rate_config() -> InterestRateConfig {
 
 pub fn create_pool_via_factory(
     pool_factory: IPoolFactoryDispatcher,
-    oracle: IOracleDispatcher,
+    oracle: IPragmaOracleDispatcher,
     config: TestConfig,
     owner: ContractAddress,
     curator: ContractAddress,
@@ -261,7 +258,6 @@ pub fn create_pool_via_factory(
     let collateral_asset_params = AssetParams {
         asset: config.collateral_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: true,
@@ -270,7 +266,6 @@ pub fn create_pool_via_factory(
     let debt_asset_params = AssetParams {
         asset: config.debt_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: false,
@@ -279,7 +274,6 @@ pub fn create_pool_via_factory(
     let third_asset_params = AssetParams {
         asset: config.third_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: false,
@@ -405,7 +399,7 @@ pub fn create_pool_via_factory(
 
 pub fn create_pool(
     pool: IPoolDispatcher,
-    oracle: IOracleDispatcher,
+    oracle: IPragmaOracleDispatcher,
     config: TestConfig,
     owner: ContractAddress,
     curator: ContractAddress,
@@ -416,7 +410,6 @@ pub fn create_pool(
     let collateral_asset_params = AssetParams {
         asset: config.collateral_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: true,
@@ -425,7 +418,6 @@ pub fn create_pool(
     let debt_asset_params = AssetParams {
         asset: config.debt_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: false,
@@ -434,7 +426,6 @@ pub fn create_pool(
     let third_asset_params = AssetParams {
         asset: config.third_asset.contract_address,
         floor: SCALE / 10_000,
-        initial_rate_accumulator: SCALE,
         initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
         max_utilization: SCALE,
         is_legacy: false,
@@ -640,7 +631,7 @@ pub fn setup_pool(
     third_address: ContractAddress,
     fund_borrower: bool,
     interest_rate_config: Option<InterestRateConfig>,
-) -> (IPoolDispatcher, IOracleDispatcher, TestConfig, Users, LendingTerms) {
+) -> (IPoolDispatcher, IPragmaOracleDispatcher, TestConfig, Users, LendingTerms) {
     let Env {
         pool, oracle, config, users, ..,
     } = setup_env(oracle_address, collateral_address, debt_address, third_address);
@@ -688,6 +679,6 @@ pub fn setup_pool(
     (pool, oracle, config, users, terms)
 }
 
-pub fn setup() -> (IPoolDispatcher, IOracleDispatcher, TestConfig, Users, LendingTerms) {
+pub fn setup() -> (IPoolDispatcher, IPragmaOracleDispatcher, TestConfig, Users, LendingTerms) {
     setup_pool(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::None)
 }

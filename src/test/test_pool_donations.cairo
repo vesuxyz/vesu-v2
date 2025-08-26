@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestPoolDonation {
     use alexandria_math::i257::I257Trait;
-    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{
         CheatSpan, ContractClass, ContractClassTrait, cheat_caller_address, get_class_hash,
         start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,

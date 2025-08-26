@@ -1,15 +1,14 @@
 #[cfg(test)]
 mod TestDefaultPOV2 {
     use core::num::traits::Zero;
-    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
+    use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
     use vesu::data_model::{AssetParams, LTVConfig};
     use vesu::data_model::{LiquidationConfig, ShutdownConfig, ShutdownMode};
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::oracle::IOracleDispatcherTrait;
+    use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
-    use vesu::pragma_oracle::OracleConfig;
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env};
     use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
     use vesu::vendor::pragma::AggregationMode;
@@ -48,7 +47,6 @@ mod TestDefaultPOV2 {
         let asset_params = AssetParams {
             asset: asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -79,7 +77,6 @@ mod TestDefaultPOV2 {
         let asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -118,7 +115,6 @@ mod TestDefaultPOV2 {
         let asset_params = AssetParams {
             asset: asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -169,7 +165,6 @@ mod TestDefaultPOV2 {
         let asset_params = AssetParams {
             asset: asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -205,7 +200,6 @@ mod TestDefaultPOV2 {
         let asset_params = AssetParams {
             asset: asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,

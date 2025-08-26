@@ -134,7 +134,7 @@ mod Pool {
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
-    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use openzeppelin::utils::math::{Rounding, u256_mul_div};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
@@ -1270,7 +1270,7 @@ mod Pool {
                 scale,
                 is_legacy: params.is_legacy,
                 last_updated: get_block_timestamp(),
-                last_rate_accumulator: params.initial_rate_accumulator,
+                last_rate_accumulator: SCALE,
                 last_full_utilization_rate: params.initial_full_utilization_rate,
                 fee_rate: params.fee_rate,
                 fee_shares: 0,

@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod TestPool {
     use core::num::traits::Zero;
-    use openzeppelin::access::ownable::interface::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
-    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
+    use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
+    use openzeppelin::interfaces::ownable::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
     use snforge_std::{
         CheatSpan, DeclareResultTrait, cheat_caller_address, declare, start_cheat_block_timestamp_global,
         start_cheat_caller_address, stop_cheat_caller_address,
@@ -11,9 +11,8 @@ mod TestPool {
     use starknet::{contract_address_const, get_block_timestamp, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, AssetParams, LTVConfig, LTVParams, ModifyPositionParams};
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::oracle::IOracleDispatcherTrait;
+    use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
-    use vesu::pragma_oracle::OracleConfig;
     use vesu::test::mock_pool_upgrade::{IMockPoolUpgradeDispatcher, IMockPoolUpgradeDispatcherTrait};
     use vesu::test::setup_v2::{
         COLL_PRAGMA_KEY, Env, LendingTerms, TestConfig, create_pool, deploy_asset, deploy_asset_with_decimals, setup,
@@ -65,7 +64,6 @@ mod TestPool {
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -94,7 +92,6 @@ mod TestPool {
         let collateral_asset_params = AssetParams {
             asset: collateral_asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -106,7 +103,6 @@ mod TestPool {
         let debt_asset_params = AssetParams {
             asset: debt_asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -168,7 +164,6 @@ mod TestPool {
         let collateral_asset_params = AssetParams {
             asset: asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -194,35 +189,8 @@ mod TestPool {
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE + 1,
-            is_legacy: false,
-            fee_rate: 0,
-        };
-
-        // store all asset configurations
-        let interest_rate_config = dummy_interest_rate_config();
-        let oracle_config = dummy_oracle_config();
-
-        cheat_caller_address(oracle.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        oracle.add_asset(asset: collateral_asset_params.asset, :oracle_config);
-
-        cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        pool.add_asset(params: collateral_asset_params, :interest_rate_config);
-    }
-
-    #[test]
-    #[should_panic(expected: "rate-accumulator-too-low")]
-    fn test_create_pool_assert_asset_config_rate_accumulator_too_low() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        let collateral_asset_params = AssetParams {
-            asset: config.collateral_asset.contract_address,
-            floor: SCALE / 10_000,
-            initial_rate_accumulator: 1,
-            initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
-            max_utilization: SCALE,
             is_legacy: false,
             fee_rate: 0,
         };
@@ -246,7 +214,6 @@ mod TestPool {
         let collateral_asset_params = AssetParams {
             asset: config.collateral_asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -276,7 +243,6 @@ mod TestPool {
         let asset_params = AssetParams {
             asset: asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,
@@ -298,7 +264,6 @@ mod TestPool {
         let asset_params = AssetParams {
             asset: asset.contract_address,
             floor: SCALE / 10_000,
-            initial_rate_accumulator: SCALE,
             initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
             max_utilization: SCALE,
             is_legacy: false,

@@ -1,15 +1,36 @@
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::AssetPrice;
-use vesu::pragma_oracle::OracleConfig;
+use vesu::vendor::pragma::AggregationMode;
+
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
+pub struct OracleConfig {
+    pub pragma_key: felt252,
+    pub timeout: u64, // [seconds]
+    pub number_of_sources: u32, // [0, 255]
+    pub start_time_offset: u64, // [seconds]
+    pub time_window: u64, // [seconds]
+    pub aggregation_mode: AggregationMode,
+}
+
+pub fn assert_oracle_config(oracle_config: OracleConfig) {
+    assert!(oracle_config.pragma_key != 0, "pragma-key-must-be-set");
+    assert!(
+        oracle_config.time_window <= oracle_config.start_time_offset, "time-window-must-be-less-than-start-time-offset",
+    );
+}
 
 #[starknet::interface]
 pub trait IOracle<TContractState> {
+    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
+}
+
+#[starknet::interface]
+pub trait IPragmaOracle<TContractState> {
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
     fn pragma_summary(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, asset: ContractAddress) -> OracleConfig;
     fn add_asset(ref self: TContractState, asset: ContractAddress, oracle_config: OracleConfig);
     fn set_oracle_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: felt252);
-    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
 
     fn curator(self: @TContractState) -> ContractAddress;
     fn pending_curator(self: @TContractState) -> ContractAddress;
@@ -29,27 +50,55 @@ mod Oracle {
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
-    use starknet::storage::{StorageMapReadAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
+    use openzeppelin::utils::math::{Rounding, u256_mul_div};
+    use starknet::storage::{
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
     use starknet::syscalls::replace_class_syscall;
-    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_contract_address};
+    use starknet::{
+        ClassHash, ContractAddress, SyscallResultTrait, get_block_timestamp, get_caller_address, get_contract_address,
+    };
     use vesu::data_model::AssetPrice;
-    use vesu::oracle::{IOracle, IOracleDispatcher, IOracleDispatcherTrait};
+    use vesu::math::pow_10;
+    use vesu::oracle::{
+        IOracle, IPragmaOracle, IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig,
+        assert_oracle_config,
+    };
     use vesu::packing::{AssetConfigPacking, PositionPacking};
     use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher};
-    use vesu::pragma_oracle::pragma_oracle_component::PragmaOracleTrait;
-    use vesu::pragma_oracle::{OracleConfig, pragma_oracle_component};
+    use vesu::units::SCALE;
+    use vesu::vendor::pragma::{
+        AggregationMode, DataType, IPragmaABIDispatcher, IPragmaABIDispatcherTrait, ISummaryStatsABIDispatcher,
+        ISummaryStatsABIDispatcherTrait,
+    };
 
     #[storage]
     struct Storage {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
-        // storage for the pragma oracle component
-        #[substorage(v0)]
-        pragma_oracle: pragma_oracle_component::Storage,
+        // The address of the pragma oracle contract
+        pragma_oracle: ContractAddress,
+        // The address of the pragma summary contract
+        pragma_summary: ContractAddress,
+        // asset -> oracle configuration
+        oracle_configs: Map<ContractAddress, OracleConfig>,
         // The owner of the pool
         curator: ContractAddress,
         // The pending curator
         pending_curator: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct SetOracleConfig {
+        asset: ContractAddress,
+        oracle_config: OracleConfig,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct SetOracleParameter {
+        asset: ContractAddress,
+        parameter: felt252,
+        value: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -74,14 +123,14 @@ mod Oracle {
     enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
-        PragmaOracleEvents: pragma_oracle_component::Event,
+        SetOracleConfig: SetOracleConfig,
+        SetOracleParameter: SetOracleParameter,
         ContractUpgraded: ContractUpgraded,
         SetCurator: SetCurator,
         NominateCurator: NominateCurator,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
-    component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -91,32 +140,32 @@ mod Oracle {
         ref self: ContractState,
         owner: ContractAddress,
         curator: ContractAddress,
-        oracle_address: ContractAddress,
-        summary_address: ContractAddress,
+        pragma_oracle: ContractAddress,
+        pragma_summary: ContractAddress,
     ) {
         self.ownable.initializer(owner);
         assert!(curator.is_non_zero(), "invalid-zero-curator");
         self.curator.write(curator);
         self.pending_curator.write(Zero::zero());
 
-        self.pragma_oracle.set_oracle(oracle_address);
-        self.pragma_oracle.set_summary_address(summary_address);
+        self.pragma_oracle.write(pragma_oracle);
+        self.pragma_summary.write(pragma_summary);
     }
 
     #[abi(embed_v0)]
-    impl OracleV2Impl of IOracle<ContractState> {
+    impl PragmaOracleImpl of IPragmaOracle<ContractState> {
         /// Returns the address of the pragma oracle contract
         /// # Returns
-        /// * `oracle_address` - address of the pragma oracle contract
+        /// * `pragma_oracle` - address of the pragma oracle contract
         fn pragma_oracle(self: @ContractState) -> ContractAddress {
-            self.pragma_oracle.oracle_address()
+            self.pragma_oracle.read()
         }
 
         /// Returns the address of the pragma summary contract
         /// # Returns
-        /// * `summary_address` - address of the pragma summary contract
+        /// * `pragma_summary` - address of the pragma summary contract
         fn pragma_summary(self: @ContractState) -> ContractAddress {
-            self.pragma_oracle.summary_address()
+            self.pragma_summary.read()
         }
 
         /// Returns the oracle configuration for a given asset
@@ -125,7 +174,7 @@ mod Oracle {
         /// # Returns
         /// * `oracle_config` - oracle configuration
         fn oracle_config(self: @ContractState, asset: ContractAddress) -> OracleConfig {
-            self.pragma_oracle.oracle_configs.read(asset)
+            self.oracle_configs.read(asset)
         }
 
         /// Sets oracle config for an asset
@@ -134,9 +183,13 @@ mod Oracle {
         /// * `oracle_config` - oracle configuration
         fn add_asset(ref self: ContractState, asset: ContractAddress, oracle_config: OracleConfig) {
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            assert!(self.pragma_oracle.oracle_configs.read(asset).pragma_key.is_zero(), "oracle-already-set");
+            assert!(self.oracle_configs.read(asset).pragma_key.is_zero(), "oracle-already-set");
 
-            self.pragma_oracle.set_oracle_config(asset, oracle_config);
+            assert_oracle_config(oracle_config);
+
+            self.oracle_configs.write(asset, oracle_config);
+
+            self.emit(SetOracleConfig { asset, oracle_config });
         }
 
         /// Sets a parameter for a given oracle configuration of an asset
@@ -146,17 +199,36 @@ mod Oracle {
         /// * `value` - value of the parameter
         fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            self.pragma_oracle.set_oracle_parameter(asset, parameter, value);
-        }
 
-        /// Returns the price for a given asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `AssetPrice` - latest price of the asset and its validity
-        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
-            let (value, is_valid) = self.pragma_oracle.price(asset);
-            AssetPrice { value, is_valid }
+            let mut oracle_config = self.oracle_configs.read(asset);
+            assert!(oracle_config.pragma_key != 0, "oracle-config-not-set");
+
+            if parameter == 'pragma_key' {
+                oracle_config.pragma_key = value;
+            } else if parameter == 'timeout' {
+                oracle_config.timeout = value.try_into().unwrap();
+            } else if parameter == 'number_of_sources' {
+                oracle_config.number_of_sources = value.try_into().unwrap();
+            } else if parameter == 'start_time_offset' {
+                oracle_config.start_time_offset = value.try_into().unwrap();
+            } else if parameter == 'time_window' {
+                oracle_config.time_window = value.try_into().unwrap();
+            } else if parameter == 'aggregation_mode' {
+                if value == 'Median' {
+                    oracle_config.aggregation_mode = AggregationMode::Median;
+                } else if value == 'Mean' {
+                    oracle_config.aggregation_mode = AggregationMode::Mean;
+                } else {
+                    assert!(false, "invalid-aggregation-mode");
+                }
+            } else {
+                assert!(false, "invalid-oracle-parameter");
+            }
+
+            assert_oracle_config(oracle_config);
+            self.oracle_configs.write(asset, oracle_config);
+
+            self.emit(SetOracleParameter { asset, parameter, value });
         }
 
         /// Returns the address of the curator
@@ -221,9 +293,56 @@ mod Oracle {
             }
             replace_class_syscall(new_implementation).unwrap_syscall();
             // Check to prevent mistakes when upgrading the contract
-            let new_name = IOracleDispatcher { contract_address: get_contract_address() }.upgrade_name();
+            let new_name = IPragmaOracleDispatcher { contract_address: get_contract_address() }.upgrade_name();
             assert(new_name == self.upgrade_name(), 'invalid upgrade name');
             self.emit(ContractUpgraded { new_implementation });
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl OracleImpl of IOracle<ContractState> {
+        /// Returns the current price for an asset and the validity status of the price.
+        /// The price can be invalid if price is too old (stale) or if the number of price sources is too low.
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `AssetPrice` - latest price of the asset and its validity
+        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
+            let OracleConfig {
+                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
+            } = self.oracle_configs.read(asset);
+
+            assert!(pragma_key.is_non_zero(), "oracle-price-invalid");
+
+            let dispatcher = IPragmaABIDispatcher { contract_address: self.pragma_oracle.read() };
+            let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
+
+            // calculate the twap if start_time_offset and time_window are set
+            let price = if start_time_offset == 0 || time_window == 0 {
+                u256_mul_div(response.price.into(), SCALE, pow_10(response.decimals.into()), Rounding::Floor)
+            } else {
+                let summary = ISummaryStatsABIDispatcher { contract_address: self.pragma_summary.read() };
+                let (value, decimals) = summary
+                    .calculate_twap(
+                        DataType::SpotEntry(pragma_key),
+                        aggregation_mode,
+                        time_window,
+                        get_block_timestamp() - start_time_offset,
+                    );
+                u256_mul_div(value.into(), SCALE, pow_10(decimals.into()), Rounding::Floor)
+            };
+
+            // ensure that price is not stale and that the number of sources is sufficient
+            let time_delta = if response.last_updated_timestamp >= get_block_timestamp() {
+                0
+            } else {
+                get_block_timestamp() - response.last_updated_timestamp
+            };
+            let valid = (timeout == 0 || time_delta <= timeout)
+                && (number_of_sources <= response.num_sources_aggregated)
+                && (response.price.into() != 0);
+
+            AssetPrice { value: price, is_valid: valid }
         }
     }
 }
