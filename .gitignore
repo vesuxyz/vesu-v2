@@ -14,6 +14,5 @@ yarn-error.log
 artifacts
 !deployments/artifacts
 dist
-deployment*
 
 .vscode

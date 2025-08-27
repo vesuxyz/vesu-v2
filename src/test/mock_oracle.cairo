@@ -29,8 +29,8 @@ mod MockPragmaSummary {
         ) -> (u128, u32) {
             match data_type {
                 DataType::SpotEntry(key) => { (self.twaps.read(key), self.decimals.read()) },
-                DataType::FutureEntry => { (0, 0) },
-                DataType::GenericEntry => { (0, 0) },
+                DataType::FutureEntry(_) => { (0, 0) },
+                DataType::GenericEntry(_) => { (0, 0) },
             }
         }
 
@@ -131,7 +131,7 @@ mod MockPragmaOracle {
                         expiration_timestamp: Option::None,
                     }
                 },
-                DataType::FutureEntry => {
+                DataType::FutureEntry(_) => {
                     PragmaPricesResponse {
                         price: 0,
                         decimals: 0,
@@ -140,7 +140,7 @@ mod MockPragmaOracle {
                         expiration_timestamp: Option::None,
                     }
                 },
-                DataType::GenericEntry => {
+                DataType::GenericEntry(_) => {
                     PragmaPricesResponse {
                         price: 0,
                         decimals: 0,

@@ -29,7 +29,7 @@ mod PoolFactory {
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
-    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
