@@ -16,17 +16,94 @@ pub trait IFlashLoanReceiver<TContractState> {
 #[starknet::interface]
 pub trait IPool<TContractState> {
     fn pool_name(self: @TContractState) -> felt252;
-    fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
-    fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
+
+    fn context(
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+    ) -> Context;
     fn position(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     ) -> (Position, u256, u256);
     fn check_collateralization(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     ) -> (bool, u256, u256);
+
+    // Entrypoints
+    fn modify_position(ref self: TContractState, params: ModifyPositionParams) -> UpdatePositionResponse;
+    fn liquidate_position(ref self: TContractState, params: LiquidatePositionParams) -> UpdatePositionResponse;
+    fn flash_loan(
+        ref self: TContractState,
+        receiver: ContractAddress,
+        asset: ContractAddress,
+        amount: u256,
+        is_legacy: bool,
+        data: Span<felt252>,
+    );
+    fn modify_delegation(ref self: TContractState, delegatee: ContractAddress, delegation: bool);
+    fn delegation(self: @TContractState, delegator: ContractAddress, delegatee: ContractAddress) -> bool;
+    fn donate_to_reserve(ref self: TContractState, asset: ContractAddress, amount: u256);
+
+    // Asset Configuration
+    fn add_asset(ref self: TContractState, params: AssetParams, interest_rate_config: InterestRateConfig);
+    fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
+    fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
+
+    // Oracle
+    fn oracle(self: @TContractState) -> ContractAddress;
+
+    // Fees
+    fn set_fee_recipient(ref self: TContractState, fee_recipient: ContractAddress);
+    fn fee_recipient(self: @TContractState) -> ContractAddress;
+    fn claim_fees(ref self: TContractState, asset: ContractAddress);
+    fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
+
+    // Interest Rate Model
     fn rate_accumulator(self: @TContractState, asset: ContractAddress) -> u256;
     fn utilization(self: @TContractState, asset: ContractAddress) -> u256;
-    fn delegation(self: @TContractState, delegator: ContractAddress, delegatee: ContractAddress) -> bool;
+    fn interest_rate(
+        self: @TContractState,
+        asset: ContractAddress,
+        utilization: u256,
+        last_updated: u64,
+        last_full_utilization_rate: u256,
+    ) -> u256;
+    fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
+    fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
+
+
+    // Pair Configuration
+    fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
+    fn set_ltv_config(
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
+    );
+    fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
+    fn set_debt_cap(
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
+    );
+    fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
+    fn set_liquidation_config(
+        ref self: TContractState,
+        collateral_asset: ContractAddress,
+        debt_asset: ContractAddress,
+        liquidation_config: LiquidationConfig,
+    );
+    fn liquidation_config(
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+    ) -> LiquidationConfig;
+
+    // Shutdown Functions
+    fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
+    fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
+    fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
+    fn shutdown_config(self: @TContractState) -> ShutdownConfig;
+    fn set_shutdown_mode(ref self: TContractState, new_shutdown_mode: ShutdownMode);
+    fn update_shutdown_status(
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+    ) -> ShutdownMode;
+    fn shutdown_status(
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+    ) -> ShutdownStatus;
+
+    // Utility Functions
     fn calculate_debt(self: @TContractState, nominal_debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256;
     fn calculate_nominal_debt(self: @TContractState, debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256;
     fn calculate_collateral_shares(self: @TContractState, asset: ContractAddress, collateral: i257) -> u256;
@@ -45,75 +122,19 @@ pub trait IPool<TContractState> {
         user: ContractAddress,
         debt: Amount,
     ) -> (i257, i257);
-    fn context(
-        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
-    ) -> Context;
-    fn modify_position(ref self: TContractState, params: ModifyPositionParams) -> UpdatePositionResponse;
-    fn liquidate_position(ref self: TContractState, params: LiquidatePositionParams) -> UpdatePositionResponse;
-    fn flash_loan(
-        ref self: TContractState,
-        receiver: ContractAddress,
-        asset: ContractAddress,
-        amount: u256,
-        is_legacy: bool,
-        data: Span<felt252>,
-    );
-    fn modify_delegation(ref self: TContractState, delegatee: ContractAddress, delegation: bool);
-    fn donate_to_reserve(ref self: TContractState, asset: ContractAddress, amount: u256);
-    fn add_asset(ref self: TContractState, params: AssetParams, interest_rate_config: InterestRateConfig);
-    fn set_ltv_config(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
-    );
-    fn set_asset_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
-    fn claim_fees(ref self: TContractState, asset: ContractAddress);
-    fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
-    fn fee_recipient(self: @TContractState) -> ContractAddress;
-    fn set_fee_recipient(ref self: TContractState, fee_recipient: ContractAddress);
-    fn interest_rate(
-        self: @TContractState,
-        asset: ContractAddress,
-        utilization: u256,
-        last_updated: u64,
-        last_full_utilization_rate: u256,
-    ) -> u256;
-    fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
-    fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
-    fn shutdown_mode_agent(self: @TContractState) -> ContractAddress;
-    fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
-    fn oracle(self: @TContractState) -> ContractAddress;
+
+    // Curator
     fn curator(self: @TContractState) -> ContractAddress;
     fn pending_curator(self: @TContractState) -> ContractAddress;
     fn nominate_curator(ref self: TContractState, pending_curator: ContractAddress);
     fn accept_curator_ownership(ref self: TContractState);
 
-    fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
-    fn liquidation_config(
-        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> LiquidationConfig;
-    fn shutdown_config(self: @TContractState) -> ShutdownConfig;
-    fn shutdown_status(
-        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> ShutdownStatus;
-    fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
-    fn set_debt_cap(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
-    );
-    fn set_liquidation_config(
-        ref self: TContractState,
-        collateral_asset: ContractAddress,
-        debt_asset: ContractAddress,
-        liquidation_config: LiquidationConfig,
-    );
-    fn set_shutdown_config(ref self: TContractState, shutdown_config: ShutdownConfig);
-    fn set_shutdown_mode(ref self: TContractState, new_shutdown_mode: ShutdownMode);
-    fn update_shutdown_status(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> ShutdownMode;
-
+    // Admin Functions
     fn pause(ref self: TContractState);
     fn unpause(ref self: TContractState);
     fn is_paused(self: @TContractState) -> bool;
 
+    // Upgrade Functions
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(
         ref self: TContractState,
@@ -831,37 +852,34 @@ mod Pool {
             self.pool_name.read()
         }
 
-        /// Returns the configuration / state of an asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `asset_config` - asset configuration
-        fn asset_config(self: @ContractState, asset: ContractAddress) -> AssetConfig {
-            let mut asset_config = self.asset_configs.read(asset);
-            // Check that the asset is registered.
-            assert_asset_config_exists(asset_config);
-
-            if asset_config.last_updated != get_block_timestamp() {
-                let new_asset_config = self.new_rate_accumulator(asset, asset_config);
-                let fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
-                asset_config = new_asset_config;
-                asset_config.total_collateral_shares += fee_shares;
-                asset_config.fee_shares += fee_shares;
-            }
-
-            asset_config
-        }
-
-        /// Returns the loan-to-value configuration between two assets (pair)
+        /// Loads the contextual state for a given user. This includes the state of the
+        /// collateral and debt assets, loan-to-value configurations and the state of the position.
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
+        /// * `user` - address of the position's owner
         /// # Returns
-        /// * `ltv_config` - ltv configuration
-        fn ltv_config(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> LTVConfig {
-            self.ltv_configs.read((collateral_asset, debt_asset))
+        /// * `context` - contextual state
+        fn context(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+        ) -> Context {
+            assert!(collateral_asset != debt_asset, "identical-assets");
+
+            let collateral_asset_config = self.asset_config(collateral_asset);
+            let debt_asset_config = self.asset_config(debt_asset);
+
+            let oracle = IOracleDispatcher { contract_address: self.oracle.read() };
+            Context {
+                collateral_asset,
+                debt_asset,
+                collateral_asset_config,
+                debt_asset_config,
+                collateral_asset_price: oracle.price(collateral_asset),
+                debt_asset_price: oracle.price(debt_asset),
+                max_ltv: self.ltv_configs.read((collateral_asset, debt_asset)).max_ltv,
+                user,
+                position: self.positions.read((collateral_asset, debt_asset, user)),
+            }
         }
 
         /// Returns the current state of a position
@@ -896,152 +914,6 @@ mod Pool {
             let context = self.context(collateral_asset, debt_asset, user);
             let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
             (is_collateralized(collateral_value, debt_value, context.max_ltv.into()), collateral_value, debt_value)
-        }
-
-        /// Calculates the current (using the current block's timestamp) rate accumulator for a given asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `rate_accumulator` - computed rate accumulator [SCALE]
-        fn rate_accumulator(self: @ContractState, asset: ContractAddress) -> u256 {
-            let asset_config = self.asset_config(asset);
-            asset_config.last_rate_accumulator
-        }
-
-        /// Calculates the current utilization of an asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `utilization` - computed utilization [SCALE]
-        fn utilization(self: @ContractState, asset: ContractAddress) -> u256 {
-            let asset_config = self.asset_config(asset);
-            utilization(asset_config)
-        }
-
-        /// Returns the delegation status of a delegator to a delegatee
-        /// # Arguments
-        /// * `delegator` - address of the delegator
-        /// * `delegatee` - address of the delegatee
-        /// # Returns
-        /// * `delegation` - delegation status (true = delegate, false = undelegate)
-        fn delegation(self: @ContractState, delegator: ContractAddress, delegatee: ContractAddress) -> bool {
-            self.delegations.read((delegator, delegatee))
-        }
-
-        /// Calculates the debt for a given amount of nominal debt, the current rate accumulator and debt asset's scale
-        /// # Arguments
-        /// * `nominal_debt` - amount of nominal debt [asset scale]
-        /// * `rate_accumulator` - current rate accumulator [SCALE]
-        /// * `asset_scale` - debt asset's scale
-        /// # Returns
-        /// * `debt` - computed debt [asset scale]
-        fn calculate_debt(self: @ContractState, nominal_debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
-            calculate_debt(nominal_debt.abs(), rate_accumulator, asset_scale, nominal_debt.is_negative())
-        }
-
-        /// Calculates the nominal debt for a given amount of debt, the current rate accumulator and debt asset's scale
-        /// # Arguments
-        /// * `debt` - amount of debt [asset scale]
-        /// * `rate_accumulator` - current rate accumulator [SCALE]
-        /// * `asset_scale` - debt asset's scale
-        /// # Returns
-        /// * `nominal_debt` - computed nominal debt [asset scale]
-        fn calculate_nominal_debt(self: @ContractState, debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
-            calculate_nominal_debt(debt.abs(), rate_accumulator, asset_scale, !debt.is_negative())
-        }
-
-        /// Calculates the number of collateral shares (that would be e.g. minted) for a given amount of collateral
-        /// assets # Arguments
-        /// * `asset` - address of the asset
-        /// * `collateral` - amount of collateral [asset scale]
-        /// # Returns
-        /// * `collateral_shares` - computed collateral shares [SCALE]
-        fn calculate_collateral_shares(self: @ContractState, asset: ContractAddress, collateral: i257) -> u256 {
-            let asset_config = self.asset_config(asset);
-            calculate_collateral_shares(collateral.abs(), asset_config, collateral.is_negative())
-        }
-
-        /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral
-        /// shares # Arguments
-        /// * `asset` - address of the asset
-        /// * `collateral_shares` - amount of collateral shares
-        /// # Returns
-        /// * `collateral` - computed collateral [asset scale]
-        fn calculate_collateral(self: @ContractState, asset: ContractAddress, collateral_shares: i257) -> u256 {
-            let asset_config = self.asset_config(asset);
-            calculate_collateral(collateral_shares.abs(), asset_config, !collateral_shares.is_negative())
-        }
-
-        /// Deconstructs the collateral amount into collateral delta, collateral shares delta and it's sign
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `user` - address of the position's owner
-        /// * `collateral` - amount of collateral
-        /// # Returns
-        /// * `collateral_delta` - computed collateral delta [asset scale]
-        /// * `collateral_shares_delta` - computed collateral shares delta [SCALE]
-        fn deconstruct_collateral_amount(
-            self: @ContractState,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            user: ContractAddress,
-            collateral: Amount,
-        ) -> (i257, i257) {
-            let context = self.context(collateral_asset, debt_asset, user);
-            deconstruct_collateral_amount(collateral, context.collateral_asset_config)
-        }
-
-        /// Deconstructs the debt amount into debt delta, nominal debt delta and it's sign
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `user` - address of the position's owner
-        /// * `debt` - amount of debt
-        /// # Returns
-        /// * `debt_delta` - computed debt delta [asset scale]
-        /// * `nominal_debt_delta` - computed nominal debt delta [SCALE]
-        fn deconstruct_debt_amount(
-            self: @ContractState,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            user: ContractAddress,
-            debt: Amount,
-        ) -> (i257, i257) {
-            let context = self.context(collateral_asset, debt_asset, user);
-            deconstruct_debt_amount(
-                debt, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale,
-            )
-        }
-
-        /// Loads the contextual state for a given user. This includes the state of the
-        /// collateral and debt assets, loan-to-value configurations and the state of the position.
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `user` - address of the position's owner
-        /// # Returns
-        /// * `context` - contextual state
-        fn context(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
-        ) -> Context {
-            assert!(collateral_asset != debt_asset, "identical-assets");
-
-            let collateral_asset_config = self.asset_config(collateral_asset);
-            let debt_asset_config = self.asset_config(debt_asset);
-
-            let oracle = IOracleDispatcher { contract_address: self.oracle.read() };
-            Context {
-                collateral_asset,
-                debt_asset,
-                collateral_asset_config,
-                debt_asset_config,
-                collateral_asset_price: oracle.price(collateral_asset),
-                debt_asset_price: oracle.price(debt_asset),
-                max_ltv: self.ltv_configs.read((collateral_asset, debt_asset)).max_ltv,
-                user,
-                position: self.positions.read((collateral_asset, debt_asset, user)),
-            }
         }
 
         /// Adjusts a positions collateral and debt balances
@@ -1206,6 +1078,16 @@ mod Pool {
             self.emit(ModifyDelegation { delegator: get_caller_address(), delegatee, delegation });
         }
 
+        /// Returns the delegation status of a delegator to a delegatee
+        /// # Arguments
+        /// * `delegator` - address of the delegator
+        /// * `delegatee` - address of the delegatee
+        /// # Returns
+        /// * `delegation` - delegation status (true = delegate, false = undelegate)
+        fn delegation(self: @ContractState, delegator: ContractAddress, delegatee: ContractAddress) -> bool {
+            self.delegations.read((delegator, delegatee))
+        }
+
         /// Donates an amount of an asset to the pool's reserve
         /// # Arguments
         /// * `asset` - address of the asset
@@ -1222,28 +1104,6 @@ mod Pool {
             transfer_asset(asset, get_caller_address(), get_contract_address(), amount, asset_config.is_legacy);
 
             self.emit(Donate { asset, amount });
-        }
-
-        /// Sets the loan-to-value configuration between two assets (pair) in the pool
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `ltv_config` - ltv configuration
-        fn set_ltv_config(
-            ref self: ContractState,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            ltv_config: LTVConfig,
-        ) {
-            self.assert_not_paused();
-
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            assert!(collateral_asset != debt_asset, "identical-assets");
-            assert_ltv_config(ltv_config);
-
-            self.ltv_configs.write((collateral_asset, debt_asset), ltv_config);
-
-            self.emit(SetLTVConfig { collateral_asset, debt_asset, ltv_config });
         }
 
         /// Adds a new asset to the pool
@@ -1323,6 +1183,52 @@ mod Pool {
             self.emit(SetAssetParameter { asset, parameter, value });
         }
 
+        /// Returns the configuration / state of an asset
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `asset_config` - asset configuration
+        fn asset_config(self: @ContractState, asset: ContractAddress) -> AssetConfig {
+            let mut asset_config = self.asset_configs.read(asset);
+            // Check that the asset is registered.
+            assert_asset_config_exists(asset_config);
+
+            if asset_config.last_updated != get_block_timestamp() {
+                let new_asset_config = self.new_rate_accumulator(asset, asset_config);
+                let fee_shares = calculate_fee_shares(asset_config, new_asset_config.last_rate_accumulator);
+                asset_config = new_asset_config;
+                asset_config.total_collateral_shares += fee_shares;
+                asset_config.fee_shares += fee_shares;
+            }
+
+            asset_config
+        }
+
+        /// Returns the address of the oracle
+        /// # Returns
+        /// * `oracle` - address of the oracle
+        fn oracle(self: @ContractState) -> ContractAddress {
+            self.oracle.read()
+        }
+
+        /// Sets the address to which fees are sent.
+        /// # Arguments
+        /// * `fee_recipient` - new fee address
+        fn set_fee_recipient(ref self: ContractState, fee_recipient: ContractAddress) {
+            self.assert_not_paused();
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+
+            self.fee_recipient.write(fee_recipient);
+            self.emit(SetFeeRecipient { fee_recipient });
+        }
+
+        /// Returns the address to which fees are sent
+        /// # Returns
+        /// fee recipient address
+        fn fee_recipient(self: @ContractState) -> ContractAddress {
+            self.fee_recipient.read()
+        }
+
         /// Claims the fees accrued in the pool for a given asset and sends them to the fee recipient
         /// # Arguments
         /// * `asset` - address of the asset
@@ -1360,22 +1266,24 @@ mod Pool {
             (fee_shares, amount)
         }
 
-        /// Returns the address to which fees are sent
+        /// Calculates the current (using the current block's timestamp) rate accumulator for a given asset
+        /// # Arguments
+        /// * `asset` - address of the asset
         /// # Returns
-        /// fee recipient address
-        fn fee_recipient(self: @ContractState) -> ContractAddress {
-            self.fee_recipient.read()
+        /// * `rate_accumulator` - computed rate accumulator [SCALE]
+        fn rate_accumulator(self: @ContractState, asset: ContractAddress) -> u256 {
+            let asset_config = self.asset_config(asset);
+            asset_config.last_rate_accumulator
         }
 
-        /// Sets the address to which fees are sent.
+        /// Calculates the current utilization of an asset
         /// # Arguments
-        /// * `fee_recipient` - new fee address
-        fn set_fee_recipient(ref self: ContractState, fee_recipient: ContractAddress) {
-            self.assert_not_paused();
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-
-            self.fee_recipient.write(fee_recipient);
-            self.emit(SetFeeRecipient { fee_recipient });
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `utilization` - computed utilization [SCALE]
+        fn utilization(self: @ContractState, asset: ContractAddress) -> u256 {
+            let asset_config = self.asset_config(asset);
+            utilization(asset_config)
         }
 
         /// Returns the current interest rate for a given asset, given it's utilization
@@ -1399,15 +1307,6 @@ mod Pool {
             interest_rate
         }
 
-        /// Returns the interest rate configuration for a given asset
-        /// # Arguments
-        /// * `asset` - address of the asset
-        /// # Returns
-        /// * `interest_rate_config` - interest rate configuration
-        fn interest_rate_config(self: @ContractState, asset: ContractAddress) -> InterestRateConfig {
-            self.interest_rate_model.interest_rate_configs.read(asset)
-        }
-
         /// Sets a parameter for a given interest rate configuration for an asset
         /// # Arguments
         /// * `asset` - address of the asset
@@ -1424,52 +1323,13 @@ mod Pool {
             self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
         }
 
-        /// Returns the address of the shutdown mode agent
-        /// # Returns
-        /// * `shutdown_mode_agent` - address of the shutdown mode agent
-        fn shutdown_mode_agent(self: @ContractState) -> ContractAddress {
-            self.shutdown_mode_agent.read()
-        }
-
-        /// Sets the shutdown mode agent
+        /// Returns the interest rate configuration for a given asset
         /// # Arguments
-        /// * `shutdown_mode_agent` - address of the shutdown mode agent
-        fn set_shutdown_mode_agent(ref self: ContractState, shutdown_mode_agent: ContractAddress) {
-            self.assert_not_paused();
-
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            self.shutdown_mode_agent.write(shutdown_mode_agent);
-            self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
-        }
-
-        /// Returns the debt cap for a given asset
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
+        /// * `asset` - address of the asset
         /// # Returns
-        /// * `debt_cap` - debt cap
-        fn debt_caps(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256 {
-            self.debt_caps.read((collateral_asset, debt_asset))
-        }
-
-        /// Returns the liquidation configuration for a given pairing of assets
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// # Returns
-        /// * `liquidation_config` - liquidation configuration
-        fn liquidation_config(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> LiquidationConfig {
-            self.liquidation_configs.read((collateral_asset, debt_asset))
-        }
-
-        /// Returns the shutdown configuration
-        /// # Returns
-        /// * `recovery_period` - recovery period
-        /// * `subscription_period` - subscription period
-        fn shutdown_config(self: @ContractState) -> ShutdownConfig {
-            self.shutdown_config.read()
+        /// * `interest_rate_config` - interest rate configuration
+        fn interest_rate_config(self: @ContractState, asset: ContractAddress) -> InterestRateConfig {
+            self.interest_rate_model.interest_rate_configs.read(asset)
         }
 
         /// Returns the total (sum of all positions) collateral shares and nominal debt balances for a given pair
@@ -1481,6 +1341,40 @@ mod Pool {
         /// * `total_nominal_debt` - total nominal debt
         fn pairs(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair {
             self.pairs.read((collateral_asset, debt_asset))
+        }
+
+        /// Sets the loan-to-value configuration between two assets (pair) in the pool
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// * `ltv_config` - ltv configuration
+        fn set_ltv_config(
+            ref self: ContractState,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            ltv_config: LTVConfig,
+        ) {
+            self.assert_not_paused();
+
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+            assert!(collateral_asset != debt_asset, "identical-assets");
+            assert_ltv_config(ltv_config);
+
+            self.ltv_configs.write((collateral_asset, debt_asset), ltv_config);
+
+            self.emit(SetLTVConfig { collateral_asset, debt_asset, ltv_config });
+        }
+
+        /// Returns the loan-to-value configuration between two assets (pair)
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `ltv_config` - ltv configuration
+        fn ltv_config(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ) -> LTVConfig {
+            self.ltv_configs.read((collateral_asset, debt_asset))
         }
 
         /// Sets the debt cap for a given asset
@@ -1496,6 +1390,16 @@ mod Pool {
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             self.debt_caps.write((collateral_asset, debt_asset), debt_cap);
             self.emit(SetDebtCap { collateral_asset, debt_asset, debt_cap });
+        }
+
+        /// Returns the debt cap for a given asset
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `debt_cap` - debt cap
+        fn debt_caps(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256 {
+            self.debt_caps.read((collateral_asset, debt_asset))
         }
 
         /// Sets the liquidation config for a given pair
@@ -1530,6 +1434,36 @@ mod Pool {
             self.emit(SetLiquidationConfig { collateral_asset, debt_asset, liquidation_config });
         }
 
+        /// Returns the liquidation configuration for a given pairing of assets
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `liquidation_config` - liquidation configuration
+        fn liquidation_config(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ) -> LiquidationConfig {
+            self.liquidation_configs.read((collateral_asset, debt_asset))
+        }
+
+        /// Sets the shutdown mode agent
+        /// # Arguments
+        /// * `shutdown_mode_agent` - address of the shutdown mode agent
+        fn set_shutdown_mode_agent(ref self: ContractState, shutdown_mode_agent: ContractAddress) {
+            self.assert_not_paused();
+
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+            self.shutdown_mode_agent.write(shutdown_mode_agent);
+            self.emit(SetShutdownModeAgent { agent: shutdown_mode_agent });
+        }
+
+        /// Returns the address of the shutdown mode agent
+        /// # Returns
+        /// * `shutdown_mode_agent` - address of the shutdown mode agent
+        fn shutdown_mode_agent(self: @ContractState) -> ContractAddress {
+            self.shutdown_mode_agent.read()
+        }
+
         /// Sets the shutdown config
         /// # Arguments
         /// * `shutdown_config` - shutdown config
@@ -1539,6 +1473,14 @@ mod Pool {
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             self.shutdown_config.write(shutdown_config);
             self.emit(SetShutdownConfig { shutdown_config });
+        }
+
+        /// Returns the shutdown configuration
+        /// # Returns
+        /// * `recovery_period` - recovery period
+        /// * `subscription_period` - subscription period
+        fn shutdown_config(self: @ContractState) -> ShutdownConfig {
+            self.shutdown_config.read()
         }
 
         /// Sets the shutdown mode and overwrites the inferred shutdown mode
@@ -1605,25 +1547,6 @@ mod Pool {
             self.emit(SetShutdownMode { shutdown_mode: new_shutdown_mode, last_updated: shutdown_state.last_updated });
         }
 
-        /// Returns the shutdown mode for a specific pair.
-        /// To check the shutdown status of the pool, the shutdown mode for all pairs must be checked.
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// # Returns
-        /// * `shutdown_mode` - shutdown mode
-        /// * `violation` - whether the pair currently violates any of the invariants (transitioned to recovery mode)
-        /// * `previous_violation_timestamp` - timestamp at which the pair previously violated the invariants
-        /// (transitioned to recovery mode)
-        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs violated the invariants at that
-        /// timestamp
-        fn shutdown_status(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> ShutdownStatus {
-            let context = self.context(collateral_asset, debt_asset, Zero::zero());
-            self._shutdown_status(context)
-        }
-
         /// Updates the shutdown mode for a specific pair.
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
@@ -1645,11 +1568,109 @@ mod Pool {
             self._update_shutdown_status(context)
         }
 
-        /// Returns the address of the oracle
+        /// Returns the shutdown mode for a specific pair.
+        /// To check the shutdown status of the pool, the shutdown mode for all pairs must be checked.
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
         /// # Returns
-        /// * `oracle` - address of the oracle
-        fn oracle(self: @ContractState) -> ContractAddress {
-            self.oracle.read()
+        /// * `shutdown_mode` - shutdown mode
+        /// * `violation` - whether the pair currently violates any of the invariants (transitioned to recovery mode)
+        /// * `previous_violation_timestamp` - timestamp at which the pair previously violated the invariants
+        /// (transitioned to recovery mode)
+        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs violated the invariants at that
+        /// timestamp
+        fn shutdown_status(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ) -> ShutdownStatus {
+            let context = self.context(collateral_asset, debt_asset, Zero::zero());
+            self._shutdown_status(context)
+        }
+
+        /// Calculates the debt for a given amount of nominal debt, the current rate accumulator and debt asset's scale
+        /// # Arguments
+        /// * `nominal_debt` - amount of nominal debt [asset scale]
+        /// * `rate_accumulator` - current rate accumulator [SCALE]
+        /// * `asset_scale` - debt asset's scale
+        /// # Returns
+        /// * `debt` - computed debt [asset scale]
+        fn calculate_debt(self: @ContractState, nominal_debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
+            calculate_debt(nominal_debt.abs(), rate_accumulator, asset_scale, nominal_debt.is_negative())
+        }
+
+        /// Calculates the nominal debt for a given amount of debt, the current rate accumulator and debt asset's scale
+        /// # Arguments
+        /// * `debt` - amount of debt [asset scale]
+        /// * `rate_accumulator` - current rate accumulator [SCALE]
+        /// * `asset_scale` - debt asset's scale
+        /// # Returns
+        /// * `nominal_debt` - computed nominal debt [asset scale]
+        fn calculate_nominal_debt(self: @ContractState, debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
+            calculate_nominal_debt(debt.abs(), rate_accumulator, asset_scale, !debt.is_negative())
+        }
+
+        /// Calculates the number of collateral shares (that would be e.g. minted) for a given amount of collateral
+        /// assets # Arguments
+        /// * `asset` - address of the asset
+        /// * `collateral` - amount of collateral [asset scale]
+        /// # Returns
+        /// * `collateral_shares` - computed collateral shares [SCALE]
+        fn calculate_collateral_shares(self: @ContractState, asset: ContractAddress, collateral: i257) -> u256 {
+            let asset_config = self.asset_config(asset);
+            calculate_collateral_shares(collateral.abs(), asset_config, collateral.is_negative())
+        }
+
+        /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral
+        /// shares # Arguments
+        /// * `asset` - address of the asset
+        /// * `collateral_shares` - amount of collateral shares
+        /// # Returns
+        /// * `collateral` - computed collateral [asset scale]
+        fn calculate_collateral(self: @ContractState, asset: ContractAddress, collateral_shares: i257) -> u256 {
+            let asset_config = self.asset_config(asset);
+            calculate_collateral(collateral_shares.abs(), asset_config, !collateral_shares.is_negative())
+        }
+
+        /// Deconstructs the collateral amount into collateral delta, collateral shares delta and it's sign
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// * `user` - address of the position's owner
+        /// * `collateral` - amount of collateral
+        /// # Returns
+        /// * `collateral_delta` - computed collateral delta [asset scale]
+        /// * `collateral_shares_delta` - computed collateral shares delta [SCALE]
+        fn deconstruct_collateral_amount(
+            self: @ContractState,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            user: ContractAddress,
+            collateral: Amount,
+        ) -> (i257, i257) {
+            let context = self.context(collateral_asset, debt_asset, user);
+            deconstruct_collateral_amount(collateral, context.collateral_asset_config)
+        }
+
+        /// Deconstructs the debt amount into debt delta, nominal debt delta and it's sign
+        /// # Arguments
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
+        /// * `user` - address of the position's owner
+        /// * `debt` - amount of debt
+        /// # Returns
+        /// * `debt_delta` - computed debt delta [asset scale]
+        /// * `nominal_debt_delta` - computed nominal debt delta [SCALE]
+        fn deconstruct_debt_amount(
+            self: @ContractState,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            user: ContractAddress,
+            debt: Amount,
+        ) -> (i257, i257) {
+            let context = self.context(collateral_asset, debt_asset, user);
+            deconstruct_debt_amount(
+                debt, context.debt_asset_config.last_rate_accumulator, context.debt_asset_config.scale,
+            )
         }
 
         /// Returns the address of the curator

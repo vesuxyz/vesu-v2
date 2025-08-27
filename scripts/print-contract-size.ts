@@ -11,5 +11,4 @@ function getContractSize(contractName: string): number {
 }
 // Max contract bytecode size at https://docs.starknet.io/chain-info/
 console.log(`MAX SIZE:      81290`);
-console.log(`DefaultExtensionPOV2:  ${getContractSize("DefaultExtensionPOV2")}`);
-console.log(`SingletonV2:  ${getContractSize("SingletonV2")}`);
+console.log(`Pool:  ${getContractSize("Pool")}`);
