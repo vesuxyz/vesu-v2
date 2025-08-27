@@ -1,7 +1,7 @@
 use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
-    Amount, AssetConfig, AssetParams, Context, LTVConfig, LiquidatePositionParams, LiquidationConfig,
+    Amount, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams, LiquidationConfig,
     ModifyPositionParams, Pair, Position, ShutdownConfig, ShutdownMode, ShutdownStatus, UpdatePositionResponse,
 };
 use vesu::interest_rate_model::InterestRateConfig;
@@ -49,6 +49,7 @@ pub trait IPool<TContractState> {
 
     // Oracle
     fn oracle(self: @TContractState) -> ContractAddress;
+    fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
 
     // Fees
     fn set_fee_recipient(ref self: TContractState, fee_recipient: ContractAddress);
@@ -1209,6 +1210,15 @@ mod Pool {
         /// * `oracle` - address of the oracle
         fn oracle(self: @ContractState) -> ContractAddress {
             self.oracle.read()
+        }
+
+        /// Returns the price of an asset
+        /// # Arguments
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `price` - price of the asset
+        fn price(self: @ContractState, asset: ContractAddress) -> AssetPrice {
+            IOracleDispatcher { contract_address: self.oracle.read() }.price(asset)
         }
 
         /// Sets the address to which fees are sent.

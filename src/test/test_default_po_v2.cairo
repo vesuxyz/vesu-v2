@@ -447,8 +447,8 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-curator")]
-    fn test_set_oracle_parameter_caller_not_owner() {
+    #[should_panic(expected: "caller-not-manager")]
+    fn test_set_oracle_parameter_caller_not_manager() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
@@ -712,54 +712,54 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    fn test_oracle_set_curator() {
+    fn test_oracle_set_manager() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        oracle.nominate_curator(users.lender);
+        oracle.nominate_manager(users.lender);
 
-        assert(oracle.pending_curator() == users.lender, 'Nominated curator not set');
-        assert(oracle.curator() == users.curator, 'Curator was set');
+        assert(oracle.pending_manager() == users.lender, 'Nominated manager not set');
+        assert(oracle.manager() == users.curator, 'Curator was set');
 
         cheat_caller_address(oracle.contract_address, users.lender, CheatSpan::TargetCalls(1));
-        oracle.accept_curator_ownership();
+        oracle.accept_manager_ownership();
 
-        assert(oracle.pending_curator() == Zero::zero(), 'Nominated curator not reset');
-        assert(oracle.curator() == users.lender, 'Curator not set');
+        assert(oracle.pending_manager() == Zero::zero(), 'Nominated manager not reset');
+        assert(oracle.manager() == users.lender, 'Curator not set');
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-curator")]
-    fn test_oracle_nominate_curator_caller_not_curator() {
+    #[should_panic(expected: "caller-not-manager")]
+    fn test_oracle_nominate_manager_caller_not_manager() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
-        oracle.nominate_curator(users.lender);
+        oracle.nominate_manager(users.lender);
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-new-curator")]
-    fn test_oracle_accept_zero_curator_different_caller() {
+    #[should_panic(expected: "caller-not-new-manager")]
+    fn test_oracle_accept_zero_manager_different_caller() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, users.lender, CheatSpan::TargetCalls(1));
-        oracle.accept_curator_ownership();
+        oracle.accept_manager_ownership();
     }
 
     #[test]
-    #[should_panic(expected: "invalid-zero-curator-address")]
-    fn test_oracle_accept_zero_curator() {
+    #[should_panic(expected: "invalid-zero-manager-address")]
+    fn test_oracle_accept_zero_manager() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, Zero::zero(), CheatSpan::TargetCalls(1));
-        oracle.accept_curator_ownership();
+        oracle.accept_manager_ownership();
     }
 
     #[test]

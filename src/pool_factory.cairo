@@ -36,8 +36,8 @@ mod PoolFactory {
     use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use vesu::data_model::{
-        AssetParams, DebtCapParams, LTVParams, LiquidationConfig, LiquidationParams, ShutdownConfig, ShutdownParams,
-        VTokenParams,
+        AssetParams, DebtCapParams, LTVConfig, LTVParams, LiquidationConfig, LiquidationParams, ShutdownConfig,
+        ShutdownParams, VTokenParams,
     };
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -255,6 +255,14 @@ mod PoolFactory {
                 // self.create_v_token(pool.contract_address, asset, v_token_name, v_token_symbol);
 
                 i += 1;
+            }
+
+            // set the loan-to-value config for each asset pair
+            while !ltv_params.is_empty() {
+                let params = *ltv_params.pop_front().unwrap();
+                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                pool.set_ltv_config(collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
             }
 
             // set the liquidation config for each pair
