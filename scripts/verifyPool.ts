@@ -32,7 +32,7 @@ for (const [index, asset] of config.asset_params.entries()) {
   assert(oracle_config.time_window === config.pragma_oracle_params[index].time_window, "time_window-neq");
   assert(
     JSON.stringify(oracle_config.aggregation_mode) ===
-      JSON.stringify(pool.params.pragma_oracle_params[index].aggregation_mode),
+      JSON.stringify(config.pragma_oracle_params[index].aggregation_mode),
     "aggregation_mode-neq",
   );
 

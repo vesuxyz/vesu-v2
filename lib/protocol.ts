@@ -57,7 +57,6 @@ export class Protocol implements ProtocolContracts {
       params.asset_params,
       params.v_token_params,
       params.interest_rate_configs,
-      params.pragma_oracle_params,
       params.pair_params,
     );
     const receipt = await deployer.waitForTransaction(response.transaction_hash);

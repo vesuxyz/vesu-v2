@@ -1,6 +1,6 @@
 use core::traits::DivRem;
 use starknet::storage_access::StorePacking;
-use vesu::data_model::{AssetConfig, Position, assert_asset_config_exists};
+use vesu::data_model::{AssetConfig, Pair, PairConfig, Position, assert_asset_config_exists};
 use vesu::math::{log_10_or_0, pow_10_or_0};
 use vesu::units::PERCENT;
 
@@ -15,6 +15,23 @@ pub impl PositionPacking of StorePacking<Position, felt252> {
     fn unpack(value: felt252) -> Position {
         let (nominal_debt, collateral_shares) = split_128(value.into());
         Position { collateral_shares: collateral_shares.into(), nominal_debt: nominal_debt.into() }
+    }
+}
+
+pub impl PairPacking of StorePacking<Pair, felt252> {
+    fn pack(value: Pair) -> felt252 {
+        let total_collateral_shares: u128 = value
+            .total_collateral_shares
+            .try_into()
+            .expect('pack-total_collateral-shares');
+        let total_nominal_debt: u128 = value.total_nominal_debt.try_into().expect('pack-total_nominal-debt');
+        let total_nominal_debt = into_u123(total_nominal_debt, 'pack-total_nominal-debt-u123');
+        total_collateral_shares.into() + total_nominal_debt * SHIFT_128
+    }
+
+    fn unpack(value: felt252) -> Pair {
+        let (total_nominal_debt, total_collateral_shares) = split_128(value.into());
+        Pair { total_collateral_shares: total_collateral_shares.into(), total_nominal_debt: total_nominal_debt.into() }
     }
 }
 
@@ -110,6 +127,32 @@ pub fn assert_storable_asset_config(asset_config: AssetConfig) {
     assert!(asset_config.floor == unpacked.floor, "floor-precision-loss");
     assert!(asset_config.scale == unpacked.scale, "scale-precision-loss");
     assert!(asset_config.fee_rate == unpacked.fee_rate, "fee-rate-precision-loss");
+}
+
+pub impl PairConfigPacking of StorePacking<PairConfig, felt252> {
+    fn pack(value: PairConfig) -> felt252 {
+        let max_ltv: u64 = value.max_ltv.try_into().expect('pack-max-ltv');
+        let liquidation_factor: u64 = value.liquidation_factor.try_into().expect('pack-liquidation-factor');
+        let debt_cap: u128 = value.debt_cap.try_into().expect('pack-debt-cap');
+        let debt_cap = into_u123(debt_cap, 'pack-debt-cap-u123');
+        max_ltv.into() + liquidation_factor.into() * SHIFT_64 + debt_cap.into() * SHIFT_64 * SHIFT_64
+    }
+
+    fn unpack(value: felt252) -> PairConfig {
+        let (rest, max_ltv) = split_64(value.into());
+        let (rest, liquidation_factor) = split_64(rest);
+        let (rest, debt_cap) = split_128(rest);
+        assert!(rest == 0, "pair-config-excess-data");
+        PairConfig { max_ltv: max_ltv.into(), liquidation_factor: liquidation_factor.into(), debt_cap: debt_cap.into() }
+    }
+}
+
+pub fn assert_storable_pair_config(pair_config: PairConfig) {
+    let packed = PairConfigPacking::pack(pair_config);
+    let unpacked = PairConfigPacking::unpack(packed);
+    assert!(pair_config.max_ltv == unpacked.max_ltv, "max-ltv-precision-loss");
+    assert!(pair_config.liquidation_factor == unpacked.liquidation_factor, "liquidation-factor-precision-loss");
+    assert!(pair_config.debt_cap == unpacked.debt_cap, "debt-cap-precision-loss");
 }
 
 pub const SHIFT_8: felt252 = 0x100;

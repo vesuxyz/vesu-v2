@@ -64,7 +64,6 @@ mod Oracle {
         IOracle, IPragmaOracle, IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig,
         assert_oracle_config,
     };
-    use vesu::packing::{AssetConfigPacking, PositionPacking};
     use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher};
     use vesu::units::SCALE;
     use vesu::vendor::pragma::{

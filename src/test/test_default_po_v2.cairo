@@ -339,26 +339,6 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "debt-cap-exceeded")]
-    fn test_set_pair_config_debt_cap_exceeded() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        start_cheat_caller_address(pool.contract_address, users.curator);
-        pool
-            .set_pair_config(
-                config.collateral_asset.contract_address,
-                config.debt_asset.contract_address,
-                PairConfig {
-                    max_ltv: (40 * PERCENT).try_into().unwrap(),
-                    liquidation_factor: 0,
-                    debt_cap: (SCALE + 1).try_into().unwrap(),
-                },
-            );
-    }
-
-    #[test]
     fn test_set_pair_config() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
@@ -464,24 +444,6 @@ mod TestDefaultPOV2 {
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
                 'liquidation_factor',
-                (SCALE + 1).try_into().unwrap(),
-            );
-        stop_cheat_caller_address(pool.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: "debt-cap-exceeded")]
-    fn test_set_pair_parameter_debt_cap_exceeded() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        start_cheat_caller_address(pool.contract_address, users.curator);
-        pool
-            .set_pair_parameter(
-                config.collateral_asset.contract_address,
-                config.debt_asset.contract_address,
-                'debt_cap',
                 (SCALE + 1).try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);

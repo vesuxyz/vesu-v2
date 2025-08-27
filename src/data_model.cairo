@@ -1,8 +1,6 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
-use starknet::storage_access::StorePacking;
 use vesu::math::pow_10;
-use vesu::packing::{SHIFT_128, into_u123, split_128};
 use vesu::units::SCALE;
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -50,7 +48,6 @@ pub struct PairConfig {
 pub fn assert_pair_config(pair_config: PairConfig) {
     assert!(pair_config.max_ltv.into() <= SCALE, "max-ltv-exceeded");
     assert!(pair_config.liquidation_factor.into() <= SCALE, "liquidation-factor-exceeded");
-    assert!(pair_config.debt_cap.into() <= SCALE, "debt-cap-exceeded");
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -147,23 +144,6 @@ pub struct ShutdownConfig {
 pub struct Pair {
     pub total_collateral_shares: u256, // packed as u128 [SCALE]
     pub total_nominal_debt: u256 // packed as u123 [SCALE]
-}
-
-impl PairPacking of StorePacking<Pair, felt252> {
-    fn pack(value: Pair) -> felt252 {
-        let total_collateral_shares: u128 = value
-            .total_collateral_shares
-            .try_into()
-            .expect('pack-total_collateral-shares');
-        let total_nominal_debt: u128 = value.total_nominal_debt.try_into().expect('pack-total_nominal-debt');
-        let total_nominal_debt = into_u123(total_nominal_debt, 'pack-total_nominal-debt-u123');
-        total_collateral_shares.into() + total_nominal_debt * SHIFT_128
-    }
-
-    fn unpack(value: felt252) -> Pair {
-        let (total_nominal_debt, total_collateral_shares) = split_128(value.into());
-        Pair { total_collateral_shares: total_collateral_shares.into(), total_nominal_debt: total_nominal_debt.into() }
-    }
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default, starknet::Store)]

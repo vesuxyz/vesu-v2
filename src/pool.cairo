@@ -175,7 +175,9 @@ mod Pool {
     use vesu::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
     use vesu::math::pow_10;
     use vesu::oracle::{IOracleDispatcher, IOracleDispatcherTrait};
-    use vesu::packing::{AssetConfigPacking, PositionPacking, assert_storable_asset_config};
+    use vesu::packing::{
+        AssetConfigPacking, PairPacking, PositionPacking, assert_storable_asset_config, assert_storable_pair_config,
+    };
     use vesu::pool::{
         IEICDispatcherTrait, IEICLibraryDispatcher, IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait,
         IPool, IPoolDispatcher, IPoolDispatcherTrait,
@@ -537,6 +539,49 @@ mod Pool {
             assert!(debt_value == 0 || debt_value > context.debt_asset_config.floor, "dusty-debt-balance");
         }
 
+        /// Updates the tracked total collateral shares and the total nominal debt assigned to a specific pair.
+        /// # Arguments
+        /// * `context` - contextual state of the user (position owner)
+        /// * `collateral_shares_delta` - collateral shares balance delta of the position
+        /// * `nominal_debt_delta` - nominal debt balance delta of the position
+        fn assert_debt_cap_and_update_pair(
+            ref self: ContractState, context: Context, collateral_shares_delta: i257, nominal_debt_delta: i257,
+        ) {
+            // update the balances of the pair of the modified position
+            let Pair {
+                mut total_collateral_shares, mut total_nominal_debt,
+            } = self.pairs.read((context.collateral_asset, context.debt_asset));
+            if collateral_shares_delta > Zero::zero() {
+                total_collateral_shares = total_collateral_shares + collateral_shares_delta.abs();
+            } else if collateral_shares_delta < Zero::zero() {
+                total_collateral_shares = total_collateral_shares - collateral_shares_delta.abs();
+            }
+            if nominal_debt_delta > Zero::zero() {
+                total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs();
+                let PairConfig {
+                    debt_cap, ..,
+                } = self.pair_configs.read((context.collateral_asset, context.debt_asset));
+                if debt_cap != 0 {
+                    let total_debt = calculate_debt(
+                        total_nominal_debt,
+                        context.debt_asset_config.last_rate_accumulator,
+                        context.debt_asset_config.scale,
+                        true,
+                    );
+                    assert!(total_debt <= debt_cap.into(), "debt-cap-exceeded");
+                }
+            } else if nominal_debt_delta < Zero::zero() {
+                total_nominal_debt = total_nominal_debt - nominal_debt_delta.abs();
+            }
+
+            self
+                .pairs
+                .write(
+                    (context.collateral_asset, context.debt_asset),
+                    Pair { total_collateral_shares, total_nominal_debt },
+                );
+        }
+
         /// Settles all intermediate outstanding collateral and debt deltas for a position / user
         fn settle_position(
             ref self: ContractState,
@@ -627,48 +672,6 @@ mod Pool {
             asset_config.last_updated = get_block_timestamp();
 
             asset_config
-        }
-
-        /// Updates the tracked total collateral shares and the total nominal debt assigned to a specific pair.
-        /// # Arguments
-        /// * `context` - contextual state of the user (position owner)
-        /// * `collateral_shares_delta` - collateral shares balance delta of the position
-        /// * `nominal_debt_delta` - nominal debt balance delta of the position
-        fn update_pair(
-            ref self: ContractState, context: Context, collateral_shares_delta: i257, nominal_debt_delta: i257,
-        ) {
-            // update the balances of the pair of the modified position
-            let Pair {
-                mut total_collateral_shares, mut total_nominal_debt,
-            } = self.pairs.read((context.collateral_asset, context.debt_asset));
-            if collateral_shares_delta > Zero::zero() {
-                total_collateral_shares = total_collateral_shares + collateral_shares_delta.abs();
-            } else if collateral_shares_delta < Zero::zero() {
-                total_collateral_shares = total_collateral_shares - collateral_shares_delta.abs();
-            }
-            if nominal_debt_delta > Zero::zero() {
-                total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs();
-                let PairConfig {
-                    debt_cap, ..,
-                } = self.pair_configs.read((context.collateral_asset, context.debt_asset));
-                if debt_cap != 0 {
-                    let total_debt = calculate_debt(
-                        total_nominal_debt,
-                        context.debt_asset_config.last_rate_accumulator,
-                        context.debt_asset_config.scale,
-                        true,
-                    );
-                    assert!(total_debt <= debt_cap.into(), "debt-cap-exceeded");
-                }
-            } else if nominal_debt_delta < Zero::zero() {
-                total_nominal_debt = total_nominal_debt - nominal_debt_delta.abs();
-            }
-            self
-                .pairs
-                .write(
-                    (context.collateral_asset, context.debt_asset),
-                    Pair { total_collateral_shares, total_nominal_debt },
-                );
         }
 
         /// Transitions into recovery mode if a pair is violating the constraints
@@ -916,7 +919,7 @@ mod Pool {
             // verify invariants
             self.assert_position_invariants(context, collateral_delta, debt_delta);
 
-            self.update_pair(context, collateral_shares_delta, nominal_debt_delta);
+            self.assert_debt_cap_and_update_pair(context, collateral_shares_delta, nominal_debt_delta);
 
             let shutdown_mode = self._update_shutdown_status(context);
 
@@ -994,7 +997,7 @@ mod Pool {
                 mut collateral_delta, mut collateral_shares_delta, debt_delta, nominal_debt_delta, bad_debt,
             } = response;
 
-            self.update_pair(context, collateral_shares_delta, nominal_debt_delta);
+            self.assert_debt_cap_and_update_pair(context, collateral_shares_delta, nominal_debt_delta);
 
             self
                 .emit(
@@ -1301,8 +1304,8 @@ mod Pool {
             ref self: ContractState, asset: ContractAddress, parameter: felt252, value: u256,
         ) {
             self.assert_not_paused();
-
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+            // update rate accumulator before updating the interest rate parameter
             let asset_config = self.asset_config(asset);
             self.asset_configs.write(asset, asset_config);
             self.interest_rate_model.set_interest_rate_parameter(asset, parameter, value);
@@ -1343,6 +1346,7 @@ mod Pool {
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             assert!(collateral_asset != debt_asset, "identical-assets");
             assert_pair_config(pair_config);
+            assert_storable_pair_config(pair_config);
             self.pair_configs.write((collateral_asset, debt_asset), pair_config);
         }
 
@@ -1379,6 +1383,7 @@ mod Pool {
                 panic!("invalid-pair-parameter");
             }
             assert_pair_config(pair_config);
+            assert_storable_pair_config(pair_config);
             self.pair_configs.write((collateral_asset, debt_asset), pair_config);
             self.emit(SetPairConfig { collateral_asset, debt_asset, pair_config });
         }
