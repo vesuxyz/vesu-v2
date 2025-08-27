@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestLiquidatePosition {
     use alexandria_math::i257::I257Trait;
-    use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
     use vesu::data_model::{
         Amount, AmountDenomination, LiquidatePositionParams, LiquidationConfig, ModifyPositionParams,

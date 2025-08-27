@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod TestPool {
     use core::num::traits::Zero;
-    use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
-    use openzeppelin::interfaces::ownable::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
+    use openzeppelin::access::ownable::interface::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait};
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         CheatSpan, DeclareResultTrait, cheat_caller_address, declare, start_cheat_block_timestamp_global,
         start_cheat_caller_address, stop_cheat_caller_address,

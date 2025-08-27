@@ -1,5 +1,5 @@
 use core::num::traits::{Bounded, Zero};
-use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
 use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
     start_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
@@ -133,7 +133,9 @@ pub fn setup_env(
         contract_address: deploy_with_args(
             "Oracle",
             array![
-                users.owner.into(), users.curator.into(), mock_pragma_oracle.contract_address.into(),
+                users.owner.into(),
+                users.curator.into(),
+                mock_pragma_oracle.contract_address.into(),
                 mock_pragma_summary.contract_address.into(),
             ],
         ),
