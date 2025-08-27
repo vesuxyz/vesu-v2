@@ -95,20 +95,13 @@ mod Oracle {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct SetOracleParameter {
-        asset: ContractAddress,
-        parameter: felt252,
-        value: felt252,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SetManager {
         #[key]
         manager: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct Nominatemanager {
+    struct NominateManager {
         #[key]
         pending_manager: ContractAddress,
     }
@@ -124,10 +117,9 @@ mod Oracle {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         SetOracleConfig: SetOracleConfig,
-        SetOracleParameter: SetOracleParameter,
         ContractUpgraded: ContractUpgraded,
         SetManager: SetManager,
-        Nominatemanager: Nominatemanager,
+        NominateManager: NominateManager,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -228,7 +220,7 @@ mod Oracle {
             assert_oracle_config(oracle_config);
             self.oracle_configs.write(asset, oracle_config);
 
-            self.emit(SetOracleParameter { asset, parameter, value });
+            self.emit(SetOracleConfig { asset, oracle_config });
         }
 
         /// Returns the address of the manager
@@ -254,7 +246,7 @@ mod Oracle {
             assert!(get_caller_address() == self.manager.read(), "caller-not-manager");
 
             self.pending_manager.write(pending_manager);
-            self.emit(Nominatemanager { pending_manager });
+            self.emit(NominateManager { pending_manager });
         }
 
         /// Accept the manager address.

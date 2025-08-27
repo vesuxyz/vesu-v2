@@ -56,10 +56,9 @@ export class Protocol implements ProtocolContracts {
       params.shutdown_params,
       params.asset_params,
       params.v_token_params,
-      params.ltv_params,
       params.interest_rate_configs,
-      params.liquidation_params,
-      params.debt_caps_params,
+      params.pragma_oracle_params,
+      params.pair_params,
     );
     const receipt = await deployer.waitForTransaction(response.transaction_hash);
     const events = poolFactory.parseEvents(receipt);

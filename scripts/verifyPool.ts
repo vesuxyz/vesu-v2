@@ -25,16 +25,16 @@ for (const [index, asset] of config.asset_params.entries()) {
     oracle_config.number_of_sources === config.pragma_oracle_params[index].number_of_sources,
     "number_of_sources-neq",
   );
-  // assert(
-  //   oracle_config.start_time_offset === pool.params.pragma_oracle_params[index].start_time_offset,
-  //   "start_time_offset-neq",
-  // );
-  // assert(oracle_config.time_window === pool.params.pragma_oracle_params[index].time_window, "time_window-neq");
-  // assert(
-  //   JSON.stringify(oracle_config.aggregation_mode) ===
-  //     JSON.stringify(pool.params.pragma_oracle_params[index].aggregation_mode),
-  //   "aggregation_mode-neq",
-  // );
+  assert(
+    oracle_config.start_time_offset === config.pragma_oracle_params[index].start_time_offset,
+    "start_time_offset-neq",
+  );
+  assert(oracle_config.time_window === config.pragma_oracle_params[index].time_window, "time_window-neq");
+  assert(
+    JSON.stringify(oracle_config.aggregation_mode) ===
+      JSON.stringify(pool.params.pragma_oracle_params[index].aggregation_mode),
+    "aggregation_mode-neq",
+  );
 
   const interest_rate_config = await pool.interest_rate_config(asset.asset);
   assert(
@@ -83,31 +83,16 @@ for (const [index, asset] of config.asset_params.entries()) {
   assert(asset_config.last_full_utilization_rate > 0n, "last_full_utilization_rate-neq");
   assert(asset_config.fee_rate === config.asset_params[index].fee_rate, "fee_rate-neq");
 
-  // assert((await pool.price(asset.asset)).value > 0n, "price-neq");
+  assert((await pool.price(asset.asset)).value > 0n, "price-neq");
   assert((await pool.rate_accumulator(asset.asset)) > 0n, "rate_accumulator-neq");
   assert((await pool.utilization(asset.asset)) === 0n, "utilization-neq");
 }
 
-for (const [, asset] of config.ltv_params.entries()) {
+for (const [, asset] of config.pair_params.entries()) {
   let collateral_asset = config.asset_params[asset.collateral_asset_index];
   let debt_asset = config.asset_params[asset.debt_asset_index];
-  let ltv_config = await pool.ltv_config(collateral_asset.asset, debt_asset.asset);
-  console.log(collateral_asset.asset, debt_asset.asset, ltv_config, asset.max_ltv);
-  assert(ltv_config.max_ltv === asset.max_ltv, "max_ltv-neq");
-}
-
-for (const [, asset] of config.liquidation_params.entries()) {
-  let collateral_asset = config.asset_params[asset.collateral_asset_index];
-  let debt_asset = config.asset_params[asset.debt_asset_index];
-  let liquidation_config = await pool.liquidation_config(collateral_asset.asset, debt_asset.asset);
-  assert(liquidation_config.liquidation_factor === asset.liquidation_factor, "liquidation_factor-neq");
-}
-
-for (const [, asset] of config.debt_caps_params.entries()) {
-  let collateral_asset = config.asset_params[asset.collateral_asset_index];
-  let debt_asset = config.asset_params[asset.debt_asset_index];
-  assert(
-    (await pool.debt_caps(collateral_asset.asset, debt_asset.asset)) === asset.debt_cap,
-    "debt_cap-neq",
-  );
+  let pair_config = await pool.pair_config(collateral_asset.asset, debt_asset.asset);
+  assert(pair_config.max_ltv === asset.max_ltv, "max_ltv-neq");
+  assert(pair_config.liquidation_factor === asset.liquidation_factor, "liquidation_factor-neq");
+  assert(pair_config.debt_cap === asset.debt_cap, "debt_cap-neq");
 }

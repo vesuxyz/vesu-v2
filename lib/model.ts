@@ -50,20 +50,14 @@ export interface InterestRateConfig {
   target_rate_percent: bigint;
 }
 
-export interface LiquidationParams extends AssetIndexes {
-  liquidation_factor: bigint;
-}
-
 export interface AssetIndexes {
   collateral_asset_index: number;
   debt_asset_index: number;
 }
 
-export interface LTVParams extends AssetIndexes {
+export interface PairParams extends AssetIndexes {
   max_ltv: bigint;
-}
-
-export interface DebtCapParams extends AssetIndexes {
+  liquidation_factor: bigint;
   debt_cap: bigint;
 }
 
@@ -104,11 +98,9 @@ export interface CreatePoolParams {
   shutdown_params: ShutdownParams;
   asset_params: AssetParams[];
   v_token_params: VTokenParams[];
-  ltv_params: LTVParams[];
   interest_rate_configs: InterestRateConfig[];
   pragma_oracle_params: PragmaOracleParams[];
-  liquidation_params: LiquidationParams[];
-  debt_caps_params: DebtCapParams[];
+  pair_params: PairParams[];
 }
 
 export interface ModifyPositionParams {

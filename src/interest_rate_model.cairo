@@ -184,6 +184,8 @@ pub mod interest_rate_model_component {
 
             assert_interest_rate_config(interest_rate_config);
             self.interest_rate_configs.write(asset, interest_rate_config);
+
+            self.emit(SetInterestRateConfig { asset, interest_rate_config });
         }
 
         /// Returns the utilization based interest rate and the interest rate at full utilization

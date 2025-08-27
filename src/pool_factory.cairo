@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use vesu::data_model::{AssetParams, DebtCapParams, LTVParams, LiquidationParams, ShutdownParams, VTokenParams};
+use vesu::data_model::{AssetParams, PairParams, ShutdownParams, VTokenParams};
 use vesu::interest_rate_model::InterestRateConfig;
 
 #[starknet::interface]
@@ -17,10 +17,8 @@ pub trait IPoolFactory<TContractState> {
         shutdown_params: ShutdownParams,
         asset_params: Span<AssetParams>,
         v_token_params: Span<VTokenParams>,
-        ltv_params: Span<LTVParams>,
         interest_rate_params: Span<InterestRateConfig>,
-        liquidation_params: Span<LiquidationParams>,
-        debt_cap_params: Span<DebtCapParams>,
+        pair_params: Span<PairParams>,
     ) -> ContractAddress;
 }
 
@@ -35,10 +33,7 @@ mod PoolFactory {
     };
     use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use vesu::data_model::{
-        AssetParams, DebtCapParams, LTVConfig, LTVParams, LiquidationConfig, LiquidationParams, ShutdownConfig,
-        ShutdownParams, VTokenParams,
-    };
+    use vesu::data_model::{AssetParams, PairConfig, PairParams, ShutdownConfig, ShutdownParams, VTokenParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::pool_factory::IPoolFactory;
@@ -199,10 +194,8 @@ mod PoolFactory {
         /// * `shutdown_params` - shutdown parameters
         /// * `asset_params` - asset parameters
         /// * `v_token_params` - vToken parameters
-        /// * `ltv_params` - loan-to-value parameters
         /// * `interest_rate_params` - interest rate model parameters
-        /// * `liquidation_params` - liquidation parameters
-        /// * `debt_cap_params` - debt cap parameters
+        /// * `pair_params` - pair parameters
         /// # Returns
         /// * `pool_id` - id of the pool
         fn create_pool(
@@ -214,10 +207,8 @@ mod PoolFactory {
             shutdown_params: ShutdownParams,
             mut asset_params: Span<AssetParams>,
             mut v_token_params: Span<VTokenParams>,
-            mut ltv_params: Span<LTVParams>,
             mut interest_rate_params: Span<InterestRateConfig>,
-            mut liquidation_params: Span<LiquidationParams>,
-            mut debt_cap_params: Span<DebtCapParams>,
+            mut pair_params: Span<PairParams>,
         ) -> ContractAddress {
             // assert that arrays have equal length
             assert!(asset_params.len() > 0, "empty-asset-params");
@@ -257,35 +248,20 @@ mod PoolFactory {
                 i += 1;
             }
 
-            // set the loan-to-value config for each asset pair
-            while !ltv_params.is_empty() {
-                let params = *ltv_params.pop_front().unwrap();
-                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                pool.set_ltv_config(collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
-            }
-
-            // set the liquidation config for each pair
-            let mut liquidation_params = liquidation_params;
-            while !liquidation_params.is_empty() {
-                let params = *liquidation_params.pop_front().unwrap();
+            while !pair_params.is_empty() {
+                let params = *pair_params.pop_front().unwrap();
                 let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
                 let debt_asset = *asset_params.at(params.debt_asset_index).asset;
                 pool
-                    .set_liquidation_config(
+                    .set_pair_config(
                         collateral_asset,
                         debt_asset,
-                        LiquidationConfig { liquidation_factor: params.liquidation_factor },
+                        PairConfig {
+                            max_ltv: params.max_ltv,
+                            liquidation_factor: params.liquidation_factor,
+                            debt_cap: params.debt_cap,
+                        },
                     );
-            }
-
-            // set the debt caps for each pair
-            let mut debt_cap_params = debt_cap_params;
-            while !debt_cap_params.is_empty() {
-                let params = *debt_cap_params.pop_front().unwrap();
-                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                pool.set_debt_cap(collateral_asset, debt_asset, params.debt_cap);
             }
 
             // set the shutdown config

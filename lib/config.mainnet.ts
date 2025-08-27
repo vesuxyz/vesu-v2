@@ -55,15 +55,6 @@ export const config: Config = {
           v_token_name: asset.v_token.v_token_name,
           v_token_symbol: asset.v_token.v_token_symbol,
         })),
-        ltv_params: CONFIG.pair_parameters.map((pair: any) => {
-          const collateral_asset_index = CONFIG.asset_parameters.findIndex(
-            (asset: any) => asset.asset_name === pair.collateral_asset_name,
-          );
-          const debt_asset_index = CONFIG.asset_parameters.findIndex(
-            (asset: any) => asset.asset_name === pair.debt_asset_name,
-          );
-          return { collateral_asset_index, debt_asset_index, max_ltv: toScale(pair.max_ltv) };
-        }),
         interest_rate_configs: CONFIG.asset_parameters.map((asset: any) => ({
           min_target_utilization: toUtilizationScale(asset.min_target_utilization),
           max_target_utilization: toUtilizationScale(asset.max_target_utilization),
@@ -86,23 +77,20 @@ export const config: Config = {
               ? new CairoCustomEnum({ Median: {}, Mean: undefined, Error: undefined })
               : new CairoCustomEnum({ Median: undefined, Mean: {}, Error: undefined }),
         })),
-        liquidation_params: CONFIG.pair_parameters.map((pair: any) => {
+        pair_params: CONFIG.pair_parameters.map((pair: any) => {
           const collateral_asset_index = CONFIG.asset_parameters.findIndex(
             (asset: any) => asset.asset_name === pair.collateral_asset_name,
           );
           const debt_asset_index = CONFIG.asset_parameters.findIndex(
             (asset: any) => asset.asset_name === pair.debt_asset_name,
           );
-          return { collateral_asset_index, debt_asset_index, liquidation_factor: toScale(pair.liquidation_discount) };
-        }),
-        debt_caps_params: CONFIG.pair_parameters.map((pair: any) => {
-          const collateral_asset_index = CONFIG.asset_parameters.findIndex(
-            (asset: any) => asset.asset_name === pair.collateral_asset_name,
-          );
-          const debt_asset_index = CONFIG.asset_parameters.findIndex(
-            (asset: any) => asset.asset_name === pair.debt_asset_name,
-          );
-          return { collateral_asset_index, debt_asset_index, debt_cap: toScale(pair.debt_cap) };
+          return {
+            collateral_asset_index,
+            debt_asset_index,
+            max_ltv: toScale(pair.max_ltv),
+            liquidation_factor: toScale(pair.liquidation_discount),
+            debt_cap: toScale(pair.debt_cap),
+          };
         }),
       },
     },

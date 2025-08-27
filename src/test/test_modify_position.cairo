@@ -1146,8 +1146,8 @@ mod TestModifyPosition {
         pool.modify_position(params);
         stop_cheat_caller_address(pool.contract_address);
 
-        let ltv_config = pool.ltv_config(third_asset.contract_address, collateral_asset.contract_address);
-        assert(ltv_config.max_ltv == 0, 'Pair should not exist');
+        let pair_config = pool.pair_config(third_asset.contract_address, collateral_asset.contract_address);
+        assert(pair_config.max_ltv == 0, 'Pair should not exist');
 
         let params = ModifyPositionParams {
             collateral_asset: third_asset.contract_address,

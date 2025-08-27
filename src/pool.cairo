@@ -1,8 +1,8 @@
 use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
-    Amount, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams, LiquidationConfig,
-    ModifyPositionParams, Pair, Position, ShutdownConfig, ShutdownMode, ShutdownStatus, UpdatePositionResponse,
+    Amount, AssetConfig, AssetParams, AssetPrice, Context, LiquidatePositionParams, ModifyPositionParams, Pair,
+    PairConfig, Position, ShutdownConfig, ShutdownMode, ShutdownStatus, UpdatePositionResponse,
 };
 use vesu::interest_rate_model::InterestRateConfig;
 
@@ -70,26 +70,22 @@ pub trait IPool<TContractState> {
     fn set_interest_rate_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: u256);
     fn interest_rate_config(self: @TContractState, asset: ContractAddress) -> InterestRateConfig;
 
-
     // Pair Configuration
     fn pairs(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> Pair;
-    fn set_ltv_config(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, ltv_config: LTVConfig,
-    );
-    fn ltv_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> LTVConfig;
-    fn set_debt_cap(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
-    );
-    fn debt_caps(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256;
-    fn set_liquidation_config(
+    fn set_pair_config(
         ref self: TContractState,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
-        liquidation_config: LiquidationConfig,
+        pair_config: PairConfig,
     );
-    fn liquidation_config(
-        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> LiquidationConfig;
+    fn set_pair_parameter(
+        ref self: TContractState,
+        collateral_asset: ContractAddress,
+        debt_asset: ContractAddress,
+        parameter: felt252,
+        value: u128,
+    );
+    fn pair_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> PairConfig;
 
     // Shutdown Functions
     fn set_shutdown_mode_agent(ref self: TContractState, shutdown_mode_agent: ContractAddress);
@@ -171,9 +167,9 @@ mod Pool {
         calculate_utilization, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
     };
     use vesu::data_model::{
-        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LTVConfig, LiquidatePositionParams,
-        LiquidationConfig, ModifyPositionParams, Pair, Position, ShutdownConfig, ShutdownMode, ShutdownState,
-        ShutdownStatus, UpdatePositionResponse, assert_asset_config, assert_asset_config_exists, assert_ltv_config,
+        Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LiquidatePositionParams,
+        ModifyPositionParams, Pair, PairConfig, Position, ShutdownConfig, ShutdownMode, ShutdownState, ShutdownStatus,
+        UpdatePositionResponse, assert_asset_config, assert_asset_config_exists, assert_pair_config,
     };
     use vesu::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
@@ -190,42 +186,37 @@ mod Pool {
     struct Storage {
         // tracks the name
         pool_name: felt252,
-        // The owner of the pool
-        curator: ContractAddress,
-        // The pending curator
-        pending_curator: ContractAddress,
-        // Indicates whether the contract is paused
-        paused: bool,
-        // tracks the configuration / state of each asset
-        // asset -> asset configuration
-        asset_configs: Map<ContractAddress, AssetConfig>,
-        // tracks the max. allowed loan-to-value ratio for each asset pairing
-        // (collateral_asset, debt_asset) -> ltv configuration
-        ltv_configs: Map<(ContractAddress, ContractAddress), LTVConfig>,
         // tracks the state of each position
         // (collateral_asset, debt_asset, user) -> position
         positions: Map<(ContractAddress, ContractAddress, ContractAddress), Position>,
         // tracks the delegation status for each delegator to a delegatee
         // (delegator, delegatee) -> delegation
         delegations: Map<(ContractAddress, ContractAddress), bool>,
+        // tracks the configuration / state of each asset
+        // asset -> asset configuration
+        asset_configs: Map<ContractAddress, AssetConfig>,
+        // Oracle contract address
+        oracle: ContractAddress,
         // fee recipient
         fee_recipient: ContractAddress,
+        // tracks the configuration / state of each pair
+        // (collateral_asset, debt_asset) -> pair configuration
+        pair_configs: Map<(ContractAddress, ContractAddress), PairConfig>,
+        // tracks the total collateral shares and the total nominal debt for each pair
+        // (collateral asset, debt asset) -> pair configuration
+        pairs: Map<(ContractAddress, ContractAddress), Pair>,
         // tracks the address that can transition the shutdown mode
         shutdown_mode_agent: ContractAddress,
         // contains the shutdown configuration
         shutdown_config: ShutdownConfig,
         // contains the current shutdown mode
         fixed_shutdown_mode: ShutdownState,
-        // contains the liquidation configuration for each pair
-        // (collateral_asset, debt_asset) -> liquidation configuration
-        liquidation_configs: Map<(ContractAddress, ContractAddress), LiquidationConfig>,
-        // tracks the total collateral shares and the total nominal debt for each pair
-        // (collateral asset, debt asset) -> pair configuration
-        pairs: Map<(ContractAddress, ContractAddress), Pair>,
-        // tracks the debt caps for each asset
-        debt_caps: Map<(ContractAddress, ContractAddress), u256>,
-        // Oracle contract address
-        oracle: ContractAddress,
+        // The owner of the pool
+        curator: ContractAddress,
+        // The pending curator
+        pending_curator: ContractAddress,
+        // Indicates whether the contract is paused
+        paused: bool,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         // storage for the interest rate model component
@@ -304,42 +295,18 @@ mod Pool {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetLTVConfig {
+    struct SetPairConfig {
         #[key]
         collateral_asset: ContractAddress,
         #[key]
         debt_asset: ContractAddress,
-        ltv_config: LTVConfig,
+        pair_config: PairConfig,
     }
 
     #[derive(Drop, starknet::Event)]
     struct SetAssetConfig {
         #[key]
         asset: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct SetAssetParameter {
-        #[key]
-        asset: ContractAddress,
-        #[key]
-        parameter: felt252,
-        value: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct ContractPaused {
-        account: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct ContractUnpaused {
-        account: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct ContractUpgraded {
-        new_implementation: ClassHash,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -357,18 +324,18 @@ mod Pool {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetShutdownModeAgent {
-        #[key]
-        agent: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct SetLiquidationConfig {
+    pub struct SetDebtCap {
         #[key]
         collateral_asset: ContractAddress,
         #[key]
         debt_asset: ContractAddress,
-        liquidation_config: LiquidationConfig,
+        debt_cap: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct SetShutdownModeAgent {
+        #[key]
+        agent: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -383,15 +350,6 @@ mod Pool {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct SetDebtCap {
-        #[key]
-        collateral_asset: ContractAddress,
-        #[key]
-        debt_asset: ContractAddress,
-        debt_cap: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SetCurator {
         #[key]
         curator: ContractAddress,
@@ -403,33 +361,46 @@ mod Pool {
         pending_curator: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct ContractPaused {
+        account: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct ContractUnpaused {
+        account: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct ContractUpgraded {
+        new_implementation: ClassHash,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
+        UpdateContext: UpdateContext,
         ModifyPosition: ModifyPosition,
         LiquidatePosition: LiquidatePosition,
-        UpdateContext: UpdateContext,
         Flashloan: Flashloan,
         ModifyDelegation: ModifyDelegation,
         Donate: Donate,
-        SetLTVConfig: SetLTVConfig,
         SetAssetConfig: SetAssetConfig,
-        SetAssetParameter: SetAssetParameter,
+        SetPairConfig: SetPairConfig,
+        ClaimFees: ClaimFees,
+        SetFeeRecipient: SetFeeRecipient,
+        SetDebtCap: SetDebtCap,
+        SetShutdownModeAgent: SetShutdownModeAgent,
+        SetShutdownConfig: SetShutdownConfig,
+        SetShutdownMode: SetShutdownMode,
+        SetCurator: SetCurator,
+        NominateCurator: NominateCurator,
         ContractPaused: ContractPaused,
         ContractUnpaused: ContractUnpaused,
         ContractUpgraded: ContractUpgraded,
-        ClaimFees: ClaimFees,
-        SetFeeRecipient: SetFeeRecipient,
-        SetShutdownModeAgent: SetShutdownModeAgent,
-        SetLiquidationConfig: SetLiquidationConfig,
-        SetShutdownConfig: SetShutdownConfig,
-        SetShutdownMode: SetShutdownMode,
-        SetDebtCap: SetDebtCap,
-        SetCurator: SetCurator,
-        NominateCurator: NominateCurator,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -677,7 +648,9 @@ mod Pool {
             }
             if nominal_debt_delta > Zero::zero() {
                 total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs();
-                let debt_cap = self.debt_caps.read((context.collateral_asset, context.debt_asset));
+                let PairConfig {
+                    debt_cap, ..,
+                } = self.pair_configs.read((context.collateral_asset, context.debt_asset));
                 if debt_cap != 0 {
                     let total_debt = calculate_debt(
                         total_nominal_debt,
@@ -685,7 +658,7 @@ mod Pool {
                         context.debt_asset_config.scale,
                         true,
                     );
-                    assert!(total_debt <= debt_cap, "debt-cap-exceeded");
+                    assert!(total_debt <= debt_cap.into(), "debt-cap-exceeded");
                 }
             } else if nominal_debt_delta < Zero::zero() {
                 total_nominal_debt = total_nominal_debt - nominal_debt_delta.abs();
@@ -777,13 +750,13 @@ mod Pool {
             );
 
             // if the liquidation factor is not set, then set it to 100%
-            let liquidation_config: LiquidationConfig = self
-                .liquidation_configs
-                .read((context.collateral_asset, context.debt_asset));
-            let liquidation_factor = if liquidation_config.liquidation_factor == 0 {
+            let PairConfig {
+                liquidation_factor, ..,
+            } = self.pair_configs.read((context.collateral_asset, context.debt_asset));
+            let liquidation_factor = if liquidation_factor == 0 {
                 SCALE
             } else {
-                liquidation_config.liquidation_factor.into()
+                liquidation_factor.into()
             };
 
             // limit debt to repay by the position's outstanding debt
@@ -869,6 +842,8 @@ mod Pool {
             let collateral_asset_config = self.asset_config(collateral_asset);
             let debt_asset_config = self.asset_config(debt_asset);
 
+            let PairConfig { max_ltv, .. } = self.pair_configs.read((collateral_asset, debt_asset));
+
             let oracle = IOracleDispatcher { contract_address: self.oracle.read() };
             Context {
                 collateral_asset,
@@ -877,7 +852,7 @@ mod Pool {
                 debt_asset_config,
                 collateral_asset_price: oracle.price(collateral_asset),
                 debt_asset_price: oracle.price(debt_asset),
-                max_ltv: self.ltv_configs.read((collateral_asset, debt_asset)).max_ltv,
+                max_ltv,
                 user,
                 position: self.positions.read((collateral_asset, debt_asset, user)),
             }
@@ -1181,7 +1156,7 @@ mod Pool {
             assert_storable_asset_config(asset_config);
             self.asset_configs.write(asset, asset_config);
 
-            self.emit(SetAssetParameter { asset, parameter, value });
+            self.emit(SetAssetConfig { asset });
         }
 
         /// Returns the configuration / state of an asset
@@ -1353,107 +1328,71 @@ mod Pool {
             self.pairs.read((collateral_asset, debt_asset))
         }
 
-        /// Sets the loan-to-value configuration between two assets (pair) in the pool
+        /// Sets the configuration for a given pair
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
-        /// * `ltv_config` - ltv configuration
-        fn set_ltv_config(
+        /// * `pair_config` - pair configuration
+        fn set_pair_config(
             ref self: ContractState,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            ltv_config: LTVConfig,
+            pair_config: PairConfig,
         ) {
             self.assert_not_paused();
-
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             assert!(collateral_asset != debt_asset, "identical-assets");
-            assert_ltv_config(ltv_config);
-
-            self.ltv_configs.write((collateral_asset, debt_asset), ltv_config);
-
-            self.emit(SetLTVConfig { collateral_asset, debt_asset, ltv_config });
+            assert_pair_config(pair_config);
+            self.pair_configs.write((collateral_asset, debt_asset), pair_config);
         }
 
-        /// Returns the loan-to-value configuration between two assets (pair)
+        /// Sets a parameter for a given pair configuration
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
-        /// # Returns
-        /// * `ltv_config` - ltv configuration
-        fn ltv_config(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> LTVConfig {
-            self.ltv_configs.read((collateral_asset, debt_asset))
-        }
-
-        /// Sets the debt cap for a given asset
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `debt_cap` - debt cap
-        fn set_debt_cap(
-            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, debt_cap: u256,
-        ) {
-            self.assert_not_paused();
-
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            self.debt_caps.write((collateral_asset, debt_asset), debt_cap);
-            self.emit(SetDebtCap { collateral_asset, debt_asset, debt_cap });
-        }
-
-        /// Returns the debt cap for a given asset
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// # Returns
-        /// * `debt_cap` - debt cap
-        fn debt_caps(self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> u256 {
-            self.debt_caps.read((collateral_asset, debt_asset))
-        }
-
-        /// Sets the liquidation config for a given pair
-        /// # Arguments
-        /// * `collateral_asset` - address of the collateral asset
-        /// * `debt_asset` - address of the debt asset
-        /// * `liquidation_config` - liquidation config
-        fn set_liquidation_config(
+        /// * `parameter` - parameter name
+        /// * `value` - value of the parameter
+        fn set_pair_parameter(
             ref self: ContractState,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            liquidation_config: LiquidationConfig,
+            parameter: felt252,
+            value: u128,
         ) {
             self.assert_not_paused();
-
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
-
-            self
-                .liquidation_configs
-                .write(
-                    (collateral_asset, debt_asset),
-                    LiquidationConfig {
-                        liquidation_factor: if liquidation_config.liquidation_factor == 0 {
+            assert!(collateral_asset != debt_asset, "identical-assets");
+            let mut pair_config = self.pair_configs.read((collateral_asset, debt_asset));
+            if parameter == 'max_ltv' {
+                pair_config.max_ltv = value.try_into().unwrap();
+            } else if parameter == 'liquidation_factor' {
+                pair_config
+                    .liquidation_factor =
+                        if value == 0 {
                             SCALE.try_into().unwrap()
                         } else {
-                            liquidation_config.liquidation_factor
-                        },
-                    },
-                );
-
-            self.emit(SetLiquidationConfig { collateral_asset, debt_asset, liquidation_config });
+                            value.try_into().unwrap()
+                        };
+            } else if parameter == 'debt_cap' {
+                pair_config.debt_cap = value;
+            } else {
+                panic!("invalid-pair-parameter");
+            }
+            assert_pair_config(pair_config);
+            self.pair_configs.write((collateral_asset, debt_asset), pair_config);
+            self.emit(SetPairConfig { collateral_asset, debt_asset, pair_config });
         }
 
-        /// Returns the liquidation configuration for a given pairing of assets
+        /// Returns the configuration for a given pair
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
         /// # Returns
-        /// * `liquidation_config` - liquidation configuration
-        fn liquidation_config(
+        /// * `pair_config` - pair configuration
+        fn pair_config(
             self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> LiquidationConfig {
-            self.liquidation_configs.read((collateral_asset, debt_asset))
+        ) -> PairConfig {
+            self.pair_configs.read((collateral_asset, debt_asset))
         }
 
         /// Sets the shutdown mode agent

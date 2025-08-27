@@ -3,9 +3,7 @@ mod TestLiquidatePosition {
     use alexandria_math::i257::I257Trait;
     use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
-    use vesu::data_model::{
-        Amount, AmountDenomination, LiquidatePositionParams, LiquidationConfig, ModifyPositionParams,
-    };
+    use vesu::data_model::{Amount, AmountDenomination, LiquidatePositionParams, ModifyPositionParams};
     use vesu::oracle::IPragmaOracleDispatcherTrait;
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
@@ -656,10 +654,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -762,10 +761,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -868,10 +868,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -974,10 +975,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -1083,10 +1085,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 

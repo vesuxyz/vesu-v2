@@ -41,12 +41,41 @@ pub fn assert_asset_config_exists(asset_config: AssetConfig) {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct LTVConfig {
-    pub max_ltv: u64 // [SCALE]
+pub struct PairConfig {
+    pub max_ltv: u64, // [SCALE]
+    pub liquidation_factor: u64, // [SCALE]
+    pub debt_cap: u128 // [asset scale]
 }
 
-pub fn assert_ltv_config(ltv_config: LTVConfig) {
-    assert!(ltv_config.max_ltv.into() <= SCALE, "invalid-ltv-config");
+pub fn assert_pair_config(pair_config: PairConfig) {
+    assert!(pair_config.max_ltv.into() <= SCALE, "max-ltv-exceeded");
+    assert!(pair_config.liquidation_factor.into() <= SCALE, "liquidation-factor-exceeded");
+    assert!(pair_config.debt_cap.into() <= SCALE, "debt-cap-exceeded");
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct PairParams {
+    pub collateral_asset_index: usize,
+    pub debt_asset_index: usize,
+    pub max_ltv: u64, // [SCALE]
+    pub liquidation_factor: u64, // [SCALE]
+    pub debt_cap: u128 // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct AssetParams {
+    pub asset: ContractAddress,
+    pub floor: u256, // [SCALE]
+    pub initial_full_utilization_rate: u256, // [SCALE]
+    pub max_utilization: u256, // [SCALE]
+    pub is_legacy: bool,
+    pub fee_rate: u256 // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct VTokenParams {
+    pub v_token_name: felt252,
+    pub v_token_symbol: felt252,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default)]
@@ -72,36 +101,6 @@ pub struct UnsignedAmount {
 pub struct AssetPrice {
     pub value: u256,
     pub is_valid: bool,
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct AssetParams {
-    pub asset: ContractAddress,
-    pub floor: u256, // [SCALE]
-    pub initial_full_utilization_rate: u256, // [SCALE]
-    pub max_utilization: u256, // [SCALE]
-    pub is_legacy: bool,
-    pub fee_rate: u256 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct LTVParams {
-    pub collateral_asset_index: usize,
-    pub debt_asset_index: usize,
-    pub max_ltv: u64 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct DebtCapParams {
-    pub collateral_asset_index: usize,
-    pub debt_asset_index: usize,
-    pub debt_cap: u256 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct VTokenParams {
-    pub v_token_name: felt252,
-    pub v_token_symbol: felt252,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -138,22 +137,10 @@ pub struct ShutdownParams {
     pub subscription_period: u64 // [seconds]
 }
 
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct LiquidationParams {
-    pub collateral_asset_index: usize,
-    pub debt_asset_index: usize,
-    pub liquidation_factor: u64 // [SCALE]
-}
-
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 pub struct ShutdownConfig {
     pub recovery_period: u64, // [seconds]
     pub subscription_period: u64 // [seconds]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct LiquidationConfig {
-    pub liquidation_factor: u64 // [SCALE]
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]

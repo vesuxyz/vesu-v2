@@ -4,8 +4,8 @@ mod TestDefaultPOV2 {
     use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
-    use vesu::data_model::{AssetParams, LTVConfig};
-    use vesu::data_model::{LiquidationConfig, ShutdownConfig, ShutdownMode};
+    use vesu::data_model::{AssetParams, PairConfig};
+    use vesu::data_model::{ShutdownConfig, ShutdownMode};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
@@ -21,9 +21,9 @@ mod TestDefaultPOV2 {
 
         let TestConfig { collateral_asset, debt_asset, .. } = config;
 
-        let ltv = pool.ltv_config(debt_asset.contract_address, collateral_asset.contract_address).max_ltv;
+        let ltv = pool.pair_config(debt_asset.contract_address, collateral_asset.contract_address).max_ltv;
         assert!(ltv > 0, "Not set");
-        let ltv = pool.ltv_config(collateral_asset.contract_address, debt_asset.contract_address).max_ltv;
+        let ltv = pool.pair_config(collateral_asset.contract_address, debt_asset.contract_address).max_ltv;
         assert!(ltv > 0, "Not set");
 
         let asset_config = pool.asset_config(collateral_asset.contract_address);
@@ -273,74 +273,252 @@ mod TestDefaultPOV2 {
 
     #[test]
     #[should_panic(expected: "caller-not-curator")]
-    fn test_set_ltv_config_caller_not_owner() {
+    fn test_set_pair_config_caller_not_owner() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool
-            .set_ltv_config(
+            .set_pair_config(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
-                LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() },
+                PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
             );
     }
 
     #[test]
-    fn test_set_ltv_config() {
+    #[should_panic(expected: "identical-assets")]
+    fn test_set_pair_config_identical_assets() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
-        let ltv_config = LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() };
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_config(
+                config.collateral_asset.contract_address,
+                config.collateral_asset.contract_address,
+                PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: "max-ltv-exceeded")]
+    fn test_set_pair_config_max_ltv_exceeded() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.set_ltv_config(config.collateral_asset.contract_address, config.debt_asset.contract_address, ltv_config);
+        pool
+            .set_pair_config(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                PairConfig { max_ltv: (SCALE + 1).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: "liquidation-factor-exceeded")]
+    fn test_set_pair_config_liquidation_factor_exceeded() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_config(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                PairConfig {
+                    max_ltv: (40 * PERCENT).try_into().unwrap(),
+                    liquidation_factor: (SCALE + 1).try_into().unwrap(),
+                    debt_cap: 0,
+                },
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: "debt-cap-exceeded")]
+    fn test_set_pair_config_debt_cap_exceeded() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_config(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                PairConfig {
+                    max_ltv: (40 * PERCENT).try_into().unwrap(),
+                    liquidation_factor: 0,
+                    debt_cap: (SCALE + 1).try_into().unwrap(),
+                },
+            );
+    }
+
+    #[test]
+    fn test_set_pair_config() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        let pair_config = PairConfig {
+            max_ltv: (40 * PERCENT).try_into().unwrap(),
+            liquidation_factor: (10 * PERCENT).try_into().unwrap(),
+            debt_cap: 10000_u128,
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_pair_config(config.collateral_asset.contract_address, config.debt_asset.contract_address, pair_config);
         stop_cheat_caller_address(pool.contract_address);
 
-        let ltv_config_ = pool.ltv_config(config.collateral_asset.contract_address, config.debt_asset.contract_address);
-
-        assert(ltv_config_.max_ltv == ltv_config.max_ltv, 'LTV config not set');
+        let pair_config_ = pool
+            .pair_config(config.collateral_asset.contract_address, config.debt_asset.contract_address);
+        assert(pair_config_.max_ltv == pair_config.max_ltv, 'LTV config not set');
+        assert(pair_config_.liquidation_factor == pair_config.liquidation_factor, 'Liquidation factor not set');
+        assert(pair_config_.debt_cap == pair_config.debt_cap, 'Debt cap not set');
     }
 
     #[test]
     #[should_panic(expected: "caller-not-curator")]
-    fn test_set_liquidation_config_caller_not_curator() {
+    fn test_set_pair_parameter_caller_not_curator() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
-        let liquidation_factor = 10 * PERCENT;
-
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'max_ltv',
+                (40 * PERCENT).try_into().unwrap(),
             );
     }
 
     #[test]
-    fn test_set_liquidation_config() {
+    #[should_panic(expected: "identical-assets")]
+    fn test_set_pair_parameter_identical_assets() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
-        let liquidation_factor = 10 * PERCENT;
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_parameter(
+                config.collateral_asset.contract_address,
+                config.collateral_asset.contract_address,
+                'max_ltv',
+                (40 * PERCENT).try_into().unwrap(),
+            );
+        stop_cheat_caller_address(pool.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: "invalid-pair-parameter")]
+    fn test_set_pair_parameter_invalid_pair_parameter() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'a',
+                (40 * PERCENT).try_into().unwrap(),
+            );
+        stop_cheat_caller_address(pool.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: "max-ltv-exceeded")]
+    fn test_set_pair_parameter_max_ltv_exceeded() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_parameter(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                'max_ltv',
+                (SCALE + 1).try_into().unwrap(),
+            );
+        stop_cheat_caller_address(pool.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: "liquidation-factor-exceeded")]
+    fn test_set_pair_parameter_liquidation_factor_exceeded() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_parameter(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                'liquidation_factor',
+                (SCALE + 1).try_into().unwrap(),
+            );
+        stop_cheat_caller_address(pool.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: "debt-cap-exceeded")]
+    fn test_set_pair_parameter_debt_cap_exceeded() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_parameter(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                'debt_cap',
+                (SCALE + 1).try_into().unwrap(),
+            );
+        stop_cheat_caller_address(pool.contract_address);
+    }
+
+    #[test]
+    fn test_set_pair_parameter() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_parameter(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                'max_ltv',
+                (40 * PERCENT).try_into().unwrap(),
+            );
+        pool
+            .set_pair_parameter(
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                'liquidation_factor',
+                (10 * PERCENT).try_into().unwrap(),
+            );
+        pool
+            .set_pair_parameter(
+                config.collateral_asset.contract_address, config.debt_asset.contract_address, 'debt_cap', 10000_u128,
             );
         stop_cheat_caller_address(pool.contract_address);
 
-        let liquidation_config = pool
-            .liquidation_config(config.collateral_asset.contract_address, config.debt_asset.contract_address);
-
-        assert(liquidation_config.liquidation_factor.into() == liquidation_factor, 'liquidation factor not set');
+        let pair_config = pool
+            .pair_config(config.collateral_asset.contract_address, config.debt_asset.contract_address);
+        assert(pair_config.max_ltv == (40 * PERCENT).try_into().unwrap(), 'LTV config not set');
+        assert(pair_config.liquidation_factor == pair_config.liquidation_factor, 'Liquidation factor not set');
+        assert(pair_config.debt_cap == pair_config.debt_cap, 'Debt cap not set');
     }
 
     #[test]
@@ -609,31 +787,6 @@ mod TestDefaultPOV2 {
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         pool.set_fee_recipient(users.lender);
-    }
-
-    #[test]
-    fn test_set_debt_cap() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
-        stop_cheat_caller_address(pool.contract_address);
-
-        assert!(pool.debt_caps(config.collateral_asset.contract_address, config.debt_asset.contract_address) == 1000);
-    }
-
-    #[test]
-    #[should_panic(expected: "caller-not-curator")]
-    fn test_set_debt_cap_caller_not_owner() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        pool.set_debt_cap(config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000);
-
-        assert!(pool.debt_caps(config.collateral_asset.contract_address, config.debt_asset.contract_address) == 1000);
     }
 
     #[test]
