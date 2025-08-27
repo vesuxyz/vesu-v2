@@ -1,11 +1,11 @@
-# VESU Contracts V1
+# Vesu V2 Contracts
 
-This repository contains the Cairo contracts for VESU V1.
+This repository contains the Cairo contracts for the Vesu V2 lending protocol.
 
 ## Overview
 
 <p align="center">
-  <img width="800" alt="Screenshot 2024-05-21 at 16 26 34" src="https://github.com/vesuxyz/protocol/assets/45110941/5a5d90d0-6b6f-443c-a916-f9862ffc7d17">
+  <img width="4352" height="2049" alt="vesu-v2-architecture" src="https://github.com/user-attachments/assets/07ff9f0b-d5b4-4bbe-b529-2cbe496ae770" />
 </p>
 
 ## Setup
