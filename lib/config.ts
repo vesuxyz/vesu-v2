@@ -9,14 +9,12 @@ export const FRACTION = 10n ** 13n;
 export const YEAR_IN_SECONDS = 360 * 24 * 60 * 60;
 
 interface ProtocolConfig {
-  singleton: string | undefined;
-  extensionPO: string | undefined;
+  poolFactory: string | undefined;
+  pool: string | undefined;
+  oracle: string | undefined;
   pragma: {
     oracle: string | undefined;
     summary_stats: string | undefined;
-  };
-  ekubo: {
-    core: string | undefined;
   };
 }
 
@@ -44,8 +42,6 @@ export class EnvAssetParams {
 }
 
 export interface PoolConfig {
-  description: string;
-  type: string;
   params: CreatePoolParams;
 }
 
@@ -77,7 +73,10 @@ function stringifyAddresses(value: any): any {
   if (isArray(value)) {
     return value.map(stringifyAddresses);
   }
-  return value?.address ? value.address : value.oracle.address;
+  if (value === undefined) {
+    return "";
+  }
+  return value.address ? value.address : value.oracle.address;
 }
 
 export function mapAssetPairs<T>(

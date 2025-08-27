@@ -32,10 +32,10 @@ pub trait IPragmaOracle<TContractState> {
     fn add_asset(ref self: TContractState, asset: ContractAddress, oracle_config: OracleConfig);
     fn set_oracle_parameter(ref self: TContractState, asset: ContractAddress, parameter: felt252, value: felt252);
 
-    fn curator(self: @TContractState) -> ContractAddress;
-    fn pending_curator(self: @TContractState) -> ContractAddress;
-    fn nominate_curator(ref self: TContractState, pending_curator: ContractAddress);
-    fn accept_curator_ownership(ref self: TContractState);
+    fn manager(self: @TContractState) -> ContractAddress;
+    fn pending_manager(self: @TContractState) -> ContractAddress;
+    fn nominate_manager(ref self: TContractState, pending_manager: ContractAddress);
+    fn accept_manager_ownership(ref self: TContractState);
 
     fn upgrade_name(self: @TContractState) -> felt252;
     fn upgrade(
@@ -64,7 +64,6 @@ mod Oracle {
         IOracle, IPragmaOracle, IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig,
         assert_oracle_config,
     };
-    use vesu::packing::{AssetConfigPacking, PositionPacking};
     use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher};
     use vesu::units::SCALE;
     use vesu::vendor::pragma::{
@@ -83,9 +82,9 @@ mod Oracle {
         // asset -> oracle configuration
         oracle_configs: Map<ContractAddress, OracleConfig>,
         // The owner of the pool
-        curator: ContractAddress,
-        // The pending curator
-        pending_curator: ContractAddress,
+        manager: ContractAddress,
+        // The pending manager
+        pending_manager: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -95,22 +94,15 @@ mod Oracle {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct SetOracleParameter {
-        asset: ContractAddress,
-        parameter: felt252,
-        value: felt252,
+    struct SetManager {
+        #[key]
+        manager: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetCurator {
+    struct NominateManager {
         #[key]
-        curator: ContractAddress,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct NominateCurator {
-        #[key]
-        pending_curator: ContractAddress,
+        pending_manager: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -124,10 +116,9 @@ mod Oracle {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         SetOracleConfig: SetOracleConfig,
-        SetOracleParameter: SetOracleParameter,
         ContractUpgraded: ContractUpgraded,
-        SetCurator: SetCurator,
-        NominateCurator: NominateCurator,
+        SetManager: SetManager,
+        NominateManager: NominateManager,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -139,14 +130,14 @@ mod Oracle {
     fn constructor(
         ref self: ContractState,
         owner: ContractAddress,
-        curator: ContractAddress,
+        manager: ContractAddress,
         pragma_oracle: ContractAddress,
         pragma_summary: ContractAddress,
     ) {
         self.ownable.initializer(owner);
-        assert!(curator.is_non_zero(), "invalid-zero-curator");
-        self.curator.write(curator);
-        self.pending_curator.write(Zero::zero());
+        assert!(manager.is_non_zero(), "invalid-zero-manager");
+        self.manager.write(manager);
+        self.pending_manager.write(Zero::zero());
 
         self.pragma_oracle.write(pragma_oracle);
         self.pragma_summary.write(pragma_summary);
@@ -182,7 +173,7 @@ mod Oracle {
         /// * `asset` - address of the asset
         /// * `oracle_config` - oracle configuration
         fn add_asset(ref self: ContractState, asset: ContractAddress, oracle_config: OracleConfig) {
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+            assert!(get_caller_address() == self.manager.read(), "caller-not-manager");
             assert!(self.oracle_configs.read(asset).pragma_key.is_zero(), "oracle-already-set");
 
             assert_oracle_config(oracle_config);
@@ -198,7 +189,7 @@ mod Oracle {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_oracle_parameter(ref self: ContractState, asset: ContractAddress, parameter: felt252, value: felt252) {
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+            assert!(get_caller_address() == self.manager.read(), "caller-not-manager");
 
             let mut oracle_config = self.oracle_configs.read(asset);
             assert!(oracle_config.pragma_key != 0, "oracle-config-not-set");
@@ -228,45 +219,45 @@ mod Oracle {
             assert_oracle_config(oracle_config);
             self.oracle_configs.write(asset, oracle_config);
 
-            self.emit(SetOracleParameter { asset, parameter, value });
+            self.emit(SetOracleConfig { asset, oracle_config });
         }
 
-        /// Returns the address of the curator
+        /// Returns the address of the manager
         /// # Returns
-        /// * `curator` - address of the curator
-        fn curator(self: @ContractState) -> ContractAddress {
-            self.curator.read()
+        /// * `manager` - address of the manager
+        fn manager(self: @ContractState) -> ContractAddress {
+            self.manager.read()
         }
 
-        /// Returns the address of the pending curator
+        /// Returns the address of the pending manager
         /// # Returns
-        /// * `pending_curator` - address of the pending curator
-        fn pending_curator(self: @ContractState) -> ContractAddress {
-            self.pending_curator.read()
+        /// * `pending_manager` - address of the pending manager
+        fn pending_manager(self: @ContractState) -> ContractAddress {
+            self.pending_manager.read()
         }
 
         /// Initiate transferring ownership of the pool.
-        /// The nominated curator should invoke `accept_curator_ownership` to complete the transfer.
-        /// At that point, the original curator will be removed and replaced with the nominated curator.
+        /// The nominated manager should invoke `accept_manager_ownership` to complete the transfer.
+        /// At that point, the original manager will be removed and replaced with the nominated manager.
         /// # Arguments
-        /// * `curator` - address of the new curator
-        fn nominate_curator(ref self: ContractState, pending_curator: ContractAddress) {
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+        /// * `manager` - address of the new manager
+        fn nominate_manager(ref self: ContractState, pending_manager: ContractAddress) {
+            assert!(get_caller_address() == self.manager.read(), "caller-not-manager");
 
-            self.pending_curator.write(pending_curator);
-            self.emit(NominateCurator { pending_curator });
+            self.pending_manager.write(pending_manager);
+            self.emit(NominateManager { pending_manager });
         }
 
-        /// Accept the curator address.
-        /// At this point, the original curator will be removed and replaced with the nominated curator.
-        fn accept_curator_ownership(ref self: ContractState) {
-            let new_curator = self.pending_curator.read();
-            assert!(get_caller_address() == new_curator, "caller-not-new-curator");
-            assert!(new_curator.is_non_zero(), "invalid-zero-curator-address");
+        /// Accept the manager address.
+        /// At this point, the original manager will be removed and replaced with the nominated manager.
+        fn accept_manager_ownership(ref self: ContractState) {
+            let new_manager = self.pending_manager.read();
+            assert!(get_caller_address() == new_manager, "caller-not-new-manager");
+            assert!(new_manager.is_non_zero(), "invalid-zero-manager-address");
 
-            self.pending_curator.write(Zero::zero());
-            self.curator.write(new_curator);
-            self.emit(SetCurator { curator: new_curator });
+            self.pending_manager.write(Zero::zero());
+            self.manager.write(new_manager);
+            self.emit(SetManager { manager: new_manager });
         }
 
         /// Returns the name of the contract

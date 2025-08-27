@@ -14,8 +14,9 @@ export interface PragmaContracts {
 }
 
 export interface ProtocolContracts {
-  singleton: Contract;
-  extensionPO: Contract;
+  poolFactory: Contract;
+  pool: Contract | undefined;
+  oracle: Contract;
   pragma: PragmaContracts;
   assets: Contract[];
 }
@@ -35,16 +36,15 @@ export class Deployer extends BaseDeployer {
   async deployEnvAndProtocol(): Promise<Protocol> {
     assert(this.config.env, "Test environment not defined, use loadProtocol for existing networks");
     const [envContracts, envCalls] = await this.deferEnv();
-    const pragma = {
-      oracle: envContracts.pragma.oracle.address,
-      summary_stats: envContracts.pragma.summary_stats.address,
-    };
-    const [protocolContracts, protocolCalls] = await this.deferProtocol(pragma);
+    // const pragma = {
+    //   oracle: envContracts.pragma.oracle.address,
+    //   summary_stats: envContracts.pragma.summary_stats.address,
+    // };
+    const [protocolContracts, protocolCalls] = await this.deferProtocol();
     let response = await this.execute([...envCalls, ...protocolCalls]);
     await this.waitForTransaction(response.transaction_hash);
-    const contracts = { ...protocolContracts, ...envContracts };
-    await this.setApprovals(contracts.singleton, contracts.assets);
-    await this.setApprovals(contracts.extensionPO, contracts.assets);
+    const contracts = { ...protocolContracts, ...envContracts, pool: undefined };
+    await this.setApprovals(contracts.poolFactory, contracts.assets);
     logAddresses("Deployed:", contracts);
     return Protocol.from(contracts, this);
   }
@@ -56,8 +56,9 @@ export class Deployer extends BaseDeployer {
       .map(this.loadContract.bind(this));
     console.log(protocol);
     const contracts = {
-      singleton: await this.loadContract(protocol.singleton!),
-      extensionPO: await this.loadContract(protocol.extensionPO!),
+      poolFactory: await this.loadContract(protocol.poolFactory!),
+      pool: await this.loadContract(protocol.pool!),
+      oracle: await this.loadContract(protocol.oracle!),
       pragma: {
         oracle: await this.loadContract(protocol.pragma.oracle!),
         summary_stats: await this.loadContract(protocol.pragma.summary_stats!),
@@ -68,30 +69,25 @@ export class Deployer extends BaseDeployer {
     return Protocol.from(contracts, this);
   }
 
-  async deployProtocol(pragma: PragmaConfig) {
-    const [contracts, calls] = await this.deferProtocol(pragma);
+  async deployProtocol() {
+    const [contracts, calls] = await this.deferProtocol();
     const response = await this.execute([...calls]);
     await this.waitForTransaction(response.transaction_hash);
-    return [contracts, response] as const;
+    this.config.protocol.poolFactory = contracts.poolFactory.address;
+    this.config.protocol.oracle = contracts.oracle.address;
+    return await this.loadProtocol();
   }
 
-  async deployExtensions(singleton: string, pragma: PragmaConfig) {
-    const [extensionPO, extensionCalls] = await this.deferExtensions(singleton, pragma);
-    const response = await this.execute([...extensionCalls]);
-    await this.waitForTransaction(response.transaction_hash);
-    return [extensionPO, response] as const;
-  }
-
-  async deferProtocol(pragma: PragmaConfig) {
-    const [singleton, singletonCalls] = await this.deferContract(
-      "SingletonV2",
-      CallData.compile({
-        name: "Genesis Pool",
-        owner: this.owner.address,
-      }),
+  async deferProtocol() {
+    const [oracle, oracleCalls] = await this.deferOracle(
+      await this.loadContract(this.config.protocol.pragma.oracle!),
+      await this.loadContract(this.config.protocol.pragma.summary_stats!),
     );
-    const [extensionPO, extensionCalls] = await this.deferExtensions(singleton.address, pragma);
-    return [{ singleton, extensionPO }, [...singletonCalls, ...extensionCalls]] as const;
+    const [poolFactory, poolFactoryCalls] = await this.deferContract(
+      "PoolFactory",
+      CallData.compile({ owner: this.owner.address, pool_class_hash: await this.declareCached("Pool") }),
+    );
+    return [{ poolFactory, oracle }, [...poolFactoryCalls, ...oracleCalls]] as const;
   }
 
   async deployEnv() {
@@ -103,8 +99,11 @@ export class Deployer extends BaseDeployer {
 
   async deferEnv() {
     const [assets, assetCalls] = await this.deferMockAssets(this.lender.address);
-    const [oracle, summary_stats, pragmaCalls] = await this.deferPragmaOracle();
-    return [{ assets, pragma: { oracle, summary_stats } }, [...assetCalls, ...pragmaCalls]] as const;
+    const [pragma_oracle, summary_stats, pragmaOracleCalls] = await this.deferPragmaOracle();
+    return [
+      { assets, pragma: { oracle: pragma_oracle, summary_stats } },
+      [...assetCalls, ...pragmaOracleCalls],
+    ] as const;
   }
 
   async deferMockAssets(recipient: string) {
@@ -124,43 +123,45 @@ export class Deployer extends BaseDeployer {
   }
 
   async deferPragmaOracle() {
-    const [oracle, oracleCalls] = await this.deferContract("MockPragmaOracle");
+    const [pragma, pragmaCalls] = await this.deferContract("MockPragmaOracle");
     const [summary_stats, summaryStatsCalls] = await this.deferContract("MockPragmaSummary");
     const setupCalls = this.config.env!.map(({ pragmaKey, price }) =>
-      oracle.populateTransaction.set_price(pragmaKey, price),
+      pragma.populateTransaction.set_price(pragmaKey, price),
     );
-    return [oracle, summary_stats, [...oracleCalls, ...summaryStatsCalls, ...setupCalls]] as const;
+    return [pragma, summary_stats, [...pragmaCalls, ...summaryStatsCalls, ...setupCalls]] as const;
   }
 
-  async deferExtensions(singleton: string, pragma: PragmaConfig) {
-    const calldataPO = CallData.compile({
-      singleton: singleton,
-      oracle_address: pragma.oracle!,
-      summary_stats_address: pragma.summary_stats!,
-      extension_utils_class_hash: await this.declareCached("DefaultExtensionPOV2Utils"),
+  async deferOracle(pragma_oracle: Contract, summary_stats: Contract) {
+    const calldata = CallData.compile({
+      owner: this.owner.address,
+      curator: this.owner.address,
+      oracle_address: pragma_oracle.address,
+      summary_address: summary_stats.address,
     });
-    const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPOV2", calldataPO);
-    return [extensionPO, [...calls2]] as const;
+    const [oracle, oracleCalls] = await this.deferContract("Oracle", calldata);
+    return [oracle, [...oracleCalls]] as const;
   }
 
   async setApprovals(contract: Contract, assets: Contract[]) {
-    const approvalCalls = assets.map((asset, index) => {
-      const { initial_supply } = this.config.env![index].erc20Params();
-      return asset.populateTransaction.approve(contract.address, initial_supply);
-    });
-
+    const approvalCalls = await Promise.all(
+      assets.map(async (asset, index) => {
+        // const { initial_supply } = this.config.env![index].erc20Params();
+        console.log(await asset.balanceOf(this.owner.address));
+        return asset.populateTransaction.approve(contract.address, 2000);
+      }),
+    );
     let response = await this.owner.execute(approvalCalls);
     await this.waitForTransaction(response.transaction_hash);
-    response = await this.lender.execute(approvalCalls);
-    await this.waitForTransaction(response.transaction_hash);
-    response = await this.borrower.execute(approvalCalls);
-    await this.waitForTransaction(response.transaction_hash);
+    // response = await this.lender.execute(approvalCalls);
+    // await this.waitForTransaction(response.transaction_hash);
+    // response = await this.borrower.execute(approvalCalls);
+    // await this.waitForTransaction(response.transaction_hash);
 
-    // transfer INFLATION_FEE to owner
-    const transferCalls = assets.map((asset, index) => {
-      return asset.populateTransaction.transfer(this.owner.address, 2000);
-    });
-    response = await this.lender.execute(transferCalls);
-    await this.waitForTransaction(response.transaction_hash);
+    // // transfer INFLATION_FEE to owner
+    // const transferCalls = assets.map((asset, index) => {
+    //   return asset.populateTransaction.transfer(this.owner.address, 2000);
+    // });
+    // response = await this.lender.execute(transferCalls);
+    // await this.waitForTransaction(response.transaction_hash);
   }
 }

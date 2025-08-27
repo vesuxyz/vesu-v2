@@ -1,18 +1,19 @@
 import { Contract } from "starknet";
-import { CreatePoolParams, Deployer, Pool, PragmaContracts, ProtocolContracts } from ".";
+import { CreatePoolParams, Deployer, Pool, PragmaContracts, PragmaOracleParams, ProtocolContracts, toAddress } from ".";
 
 export class Protocol implements ProtocolContracts {
   constructor(
-    public singleton: Contract,
-    public extensionPO: Contract,
+    public poolFactory: Contract,
+    public pool: Contract | undefined,
+    public oracle: Contract,
     public pragma: PragmaContracts,
     public assets: Contract[],
     public deployer: Deployer,
   ) {}
 
   static from(contracts: ProtocolContracts, deployer: Deployer) {
-    const { singleton, extensionPO, pragma, assets } = contracts;
-    return new Protocol(singleton, extensionPO, pragma, assets, deployer);
+    const { poolFactory, pool, oracle, pragma, assets } = contracts;
+    return new Protocol(poolFactory, pool, oracle, pragma, assets, deployer);
   }
 
   async createPool(name: string, { devnetEnv = false, printParams = false } = {}) {
@@ -27,25 +28,43 @@ export class Protocol implements ProtocolContracts {
     return this.createPoolFromParams(params);
   }
 
+  async addAssetsToOracle(params: PragmaOracleParams[]) {
+    const { oracle, deployer } = this;
+    oracle.connect(deployer.owner);
+    for (const param of params) {
+      const response = await oracle.add_asset(param.asset, {
+        pragma_key: param.pragma_key,
+        timeout: param.timeout,
+        number_of_sources: param.number_of_sources,
+        start_time_offset: param.start_time_offset,
+        time_window: param.time_window,
+        aggregation_mode: param.aggregation_mode,
+      });
+      await deployer.waitForTransaction(response.transaction_hash);
+    }
+  }
+
   async createPoolFromParams(params: CreatePoolParams) {
-    const { extensionPO, deployer } = this;
+    const { poolFactory, oracle, deployer } = this;
 
-    extensionPO.connect(deployer.owner);
-    const response = await extensionPO.create_pool(
-      params.asset_params,
-      params.ltv_params,
-      params.interest_rate_configs,
-      params.pragma_oracle_params,
-      params.liquidation_params,
-      params.debt_caps_params,
+    poolFactory.connect(deployer.owner);
+    const response = await poolFactory.create_pool(
+      params.name,
+      params.curator,
+      oracle.address,
+      params.fee_recipient,
       params.shutdown_params,
-      params.fee_params,
-      params.owner,
+      params.asset_params,
+      params.v_token_params,
+      params.interest_rate_configs,
+      params.pair_params,
     );
-    await deployer.waitForTransaction(response.transaction_hash);
-
+    const receipt = await deployer.waitForTransaction(response.transaction_hash);
+    const events = poolFactory.parseEvents(receipt);
+    const createPoolSig = "vesu::pool_factory::PoolFactory::CreatePool";
+    const createPoolEvent = events.find((event) => event[createPoolSig] != undefined);
+    this.pool = await this.deployer.loadContract(toAddress(createPoolEvent?.[createPoolSig]?.pool! as BigInt));
     const pool = new Pool(this, params);
-
     return [pool, response] as const;
   }
 
@@ -58,13 +77,12 @@ export class Protocol implements ProtocolContracts {
     return new Pool(this, poolConfig.params);
   }
 
-  patchPoolParamsWithEnv({ asset_params, fee_params, owner, ...others }: CreatePoolParams): CreatePoolParams {
+  patchPoolParamsWithEnv({ asset_params, owner, ...others }: CreatePoolParams): CreatePoolParams {
     asset_params = asset_params.map(({ asset, ...rest }, index) => ({
       asset: this.assets[index].address,
       ...rest,
     }));
-    fee_params = { fee_recipient: this.deployer.owner.address };
     owner = this.deployer.owner.address;
-    return { asset_params, fee_params, owner, ...others };
+    return { asset_params, owner, ...others };
   }
 }

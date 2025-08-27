@@ -4,10 +4,7 @@ mod TestPragmaOracle {
     use snforge_std::{CheatSpan, cheat_caller_address, map_entry_address, start_cheat_block_timestamp_global, store};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::is_collateralized;
-    use vesu::data_model::{
-        AssetParams, DebtCapParams, LTVConfig, LTVParams, LiquidationConfig, LiquidationParams, ShutdownConfig,
-        ShutdownParams,
-    };
+    use vesu::data_model::{AssetParams, PairConfig, PairParams, ShutdownConfig, ShutdownParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{
         IOracleDispatcher, IOracleDispatcherTrait, IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig,
@@ -66,7 +63,7 @@ mod TestPragmaOracle {
             number_of_sources: number_of_sources,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(()),
+            aggregation_mode: AggregationMode::Median,
         };
         let debt_oracle_config = OracleConfig {
             pragma_key: DEBT_PRAGMA_KEY,
@@ -74,27 +71,24 @@ mod TestPragmaOracle {
             number_of_sources: number_of_sources,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(()),
-        };
-        // create ltv config for collateral and borrow assets
-        let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-        let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
+            aggregation_mode: AggregationMode::Median,
         };
 
-        let collateral_asset_liquidation_params = LiquidationParams {
-            collateral_asset_index: 0, debt_asset_index: 1, liquidation_factor: 0,
-        };
-        let debt_asset_liquidation_params = LiquidationParams {
-            collateral_asset_index: 1, debt_asset_index: 0, liquidation_factor: 0,
+        let pair_params_0 = PairParams {
+            collateral_asset_index: 0,
+            debt_asset_index: 1,
+            max_ltv: (80 * PERCENT).try_into().unwrap(),
+            liquidation_factor: 0,
+            debt_cap: 0,
         };
 
-        let collateral_asset_debt_cap_params = DebtCapParams {
-            collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0,
+        let pair_params_1 = PairParams {
+            collateral_asset_index: 1,
+            debt_asset_index: 0,
+            max_ltv: (80 * PERCENT).try_into().unwrap(),
+            liquidation_factor: 0,
+            debt_cap: 0,
         };
-        let debt_asset_debt_cap_params = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
 
         let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
 
@@ -109,17 +103,18 @@ mod TestPragmaOracle {
         cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
         pool.add_asset(params: debt_asset_params, interest_rate_config: interest_rate_config);
 
-        // Set liquidation config.
         let collateral_asset = collateral_asset_params.asset;
         let debt_asset = debt_asset_params.asset;
 
         cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
         pool
-            .set_liquidation_config(
-                :collateral_asset,
-                :debt_asset,
-                liquidation_config: LiquidationConfig {
-                    liquidation_factor: collateral_asset_liquidation_params.liquidation_factor,
+            .set_pair_config(
+                collateral_asset,
+                debt_asset,
+                PairConfig {
+                    max_ltv: pair_params_0.max_ltv,
+                    liquidation_factor: pair_params_0.liquidation_factor,
+                    debt_cap: pair_params_0.debt_cap,
                 },
             );
 
@@ -128,45 +123,14 @@ mod TestPragmaOracle {
 
         cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
         pool
-            .set_liquidation_config(
-                :collateral_asset,
-                :debt_asset,
-                liquidation_config: LiquidationConfig {
-                    liquidation_factor: debt_asset_liquidation_params.liquidation_factor,
+            .set_pair_config(
+                collateral_asset,
+                debt_asset,
+                PairConfig {
+                    max_ltv: pair_params_1.max_ltv,
+                    liquidation_factor: pair_params_1.liquidation_factor,
+                    debt_cap: pair_params_1.debt_cap,
                 },
-            );
-
-        // set the debt caps for each pair.
-
-        let collateral_asset = collateral_asset_params.asset;
-        let debt_asset = debt_asset_params.asset;
-
-        cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
-        pool.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: collateral_asset_debt_cap_params.debt_cap);
-
-        let collateral_asset = debt_asset_params.asset;
-        let debt_asset = collateral_asset_params.asset;
-
-        cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
-        pool.set_debt_cap(:collateral_asset, :debt_asset, debt_cap: debt_asset_debt_cap_params.debt_cap);
-
-        // Set lvt config.
-        let collateral_asset = debt_asset_params.asset;
-        let debt_asset = collateral_asset_params.asset;
-
-        cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
-        pool
-            .set_ltv_config(
-                :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
-            );
-
-        let collateral_asset = collateral_asset_params.asset;
-        let debt_asset = debt_asset_params.asset;
-
-        cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
-        pool
-            .set_ltv_config(
-                :collateral_asset, :debt_asset, ltv_config: LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
             );
 
         // set the shutdown config

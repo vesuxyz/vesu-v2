@@ -3,9 +3,7 @@ mod TestLiquidatePosition {
     use alexandria_math::i257::I257Trait;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
-    use vesu::data_model::{
-        Amount, AmountDenomination, LiquidatePositionParams, LiquidationConfig, ModifyPositionParams,
-    };
+    use vesu::data_model::{Amount, AmountDenomination, LiquidatePositionParams, ModifyPositionParams};
     use vesu::oracle::IPragmaOracleDispatcherTrait;
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
@@ -62,7 +60,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -122,7 +119,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -182,7 +178,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -244,7 +239,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -326,7 +320,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -404,7 +397,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: collateral_to_deposit.into(),
             debt_to_repay: debt / 2,
         };
@@ -474,7 +466,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt,
         };
@@ -547,7 +538,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt,
         };
@@ -620,7 +610,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt,
         };
@@ -656,10 +645,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -722,7 +712,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -762,10 +751,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -828,7 +818,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -868,10 +857,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -934,7 +924,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -974,10 +963,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -1040,7 +1030,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -1083,10 +1072,11 @@ mod TestLiquidatePosition {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_liquidation_config(
+            .set_pair_parameter(
                 collateral_asset.contract_address,
                 debt_asset.contract_address,
-                LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() },
+                'liquidation_factor',
+                liquidation_factor.try_into().unwrap(),
             );
         stop_cheat_caller_address(pool.contract_address);
 
@@ -1149,7 +1139,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };

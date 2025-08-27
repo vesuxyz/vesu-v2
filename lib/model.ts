@@ -30,6 +30,7 @@ export interface AssetParams {
 }
 
 export interface PragmaOracleParams {
+  asset: string;
   pragma_key: BigNumberish;
   timeout: bigint;
   number_of_sources: bigint;
@@ -49,20 +50,14 @@ export interface InterestRateConfig {
   target_rate_percent: bigint;
 }
 
-export interface LiquidationParams extends AssetIndexes {
-  liquidation_factor: bigint;
-}
-
 export interface AssetIndexes {
   collateral_asset_index: number;
   debt_asset_index: number;
 }
 
-export interface LTVParams extends AssetIndexes {
+export interface PairParams extends AssetIndexes {
   max_ltv: bigint;
-}
-
-export interface DebtCapParams extends AssetIndexes {
+  liquidation_factor: bigint;
   debt_cap: bigint;
 }
 
@@ -89,16 +84,23 @@ export interface FeeParams {
   fee_recipient: string;
 }
 
+export interface VTokenParams {
+  v_token_name: string;
+  v_token_symbol: string;
+}
+
 export interface CreatePoolParams {
+  name: string;
+  owner: string;
+  curator: string;
+  // oracle: string;
+  fee_recipient: string;
+  shutdown_params: ShutdownParams;
   asset_params: AssetParams[];
-  ltv_params: LTVParams[];
+  v_token_params: VTokenParams[];
   interest_rate_configs: InterestRateConfig[];
   pragma_oracle_params: PragmaOracleParams[];
-  liquidation_params: LiquidationParams[];
-  debt_caps_params: DebtCapParams[];
-  shutdown_params: ShutdownParams;
-  fee_params: FeeParams;
-  owner: string;
+  pair_params: PairParams[];
 }
 
 export interface ModifyPositionParams {

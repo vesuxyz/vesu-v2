@@ -6,6 +6,7 @@ pub mod math;
 pub mod oracle;
 pub mod packing;
 pub mod pool;
+pub mod pool_factory;
 pub mod units;
 
 pub mod vendor {
@@ -29,6 +30,7 @@ pub mod test {
     pub mod test_packing;
     pub mod test_pool;
     pub mod test_pool_donations;
+    pub mod test_pool_factory;
     pub mod test_pragma_oracle;
     pub mod test_shutdown;
 }

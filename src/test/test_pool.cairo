@@ -9,7 +9,7 @@ mod TestPool {
     };
     #[feature("deprecated-starknet-consts")]
     use starknet::{contract_address_const, get_block_timestamp, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, AssetParams, LTVConfig, LTVParams, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, AssetParams, ModifyPositionParams, PairConfig};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
@@ -28,7 +28,7 @@ mod TestPool {
             number_of_sources: 2,
             start_time_offset: 0,
             time_window: 0,
-            aggregation_mode: AggregationMode::Median(()),
+            aggregation_mode: AggregationMode::Median,
         }
     }
 
@@ -83,7 +83,7 @@ mod TestPool {
     }
 
     #[test]
-    #[should_panic(expected: "invalid-ltv-config")]
+    #[should_panic(expected: "max-ltv-exceeded")]
     fn test_create_pool_assert_ltv_config_invalid_ltv_config() {
         let Env { pool, oracle, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
@@ -109,14 +109,6 @@ mod TestPool {
             fee_rate: 0,
         };
 
-        // create ltv config for collateral and borrow assets
-        let max_position_ltv_params_0 = LTVParams {
-            collateral_asset_index: 1, debt_asset_index: 0, max_ltv: 1_000_000_000_000_000_001,
-        };
-        let max_position_ltv_params_1 = LTVParams {
-            collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap(),
-        };
-
         // store all asset configurations
         let oracle_config = dummy_oracle_config();
         let interest_rate_config = dummy_interest_rate_config();
@@ -136,20 +128,20 @@ mod TestPool {
         pool.add_asset(params: debt_asset_params, :interest_rate_config);
         stop_cheat_caller_address(pool.contract_address);
 
+        // create ltv config for collateral and borrow assets
         // store all loan-to-value configurations for each asset pair
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_ltv_config(
+            .set_pair_config(
                 collateral_asset_params.asset,
                 debt_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_0.max_ltv },
+                PairConfig { max_ltv: 1_000_000_000_000_000_001, liquidation_factor: 0, debt_cap: 0 },
             );
-
         pool
-            .set_ltv_config(
+            .set_pair_config(
                 collateral_asset_params.asset,
                 debt_asset_params.asset,
-                LTVConfig { max_ltv: max_position_ltv_params_1.max_ltv },
+                PairConfig { max_ltv: (80 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
             );
         stop_cheat_caller_address(pool.contract_address);
     }
@@ -379,10 +371,10 @@ mod TestPool {
 
         start_cheat_caller_address(pool.contract_address, users.curator);
         pool
-            .set_ltv_config(
+            .set_pair_config(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
-                LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() },
+                PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
             );
         stop_cheat_caller_address(pool.contract_address);
     }
@@ -440,10 +432,10 @@ mod TestPool {
 
         cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
         pool
-            .set_ltv_config(
+            .set_pair_config(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
-                LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() },
+                PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
             );
     }
 
@@ -462,10 +454,10 @@ mod TestPool {
 
         cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
         pool
-            .set_ltv_config(
+            .set_pair_config(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
-                LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() },
+                PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
             );
     }
 

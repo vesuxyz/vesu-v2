@@ -92,6 +92,47 @@ mod TestModifyPosition {
     }
 
     #[test]
+    #[should_panic(expected: "debt-cap-exceeded")]
+    fn test_modify_position_debt_cap_exceeded() {
+        let (pool, _, config, users, terms) = setup();
+        let TestConfig { collateral_asset, third_asset, .. } = config;
+        let LendingTerms { collateral_to_deposit, liquidity_to_deposit_third, .. } = terms;
+
+        // Supply
+
+        let params = ModifyPositionParams {
+            collateral_asset: third_asset.contract_address,
+            debt_asset: collateral_asset.contract_address,
+            user: users.lender,
+            collateral: Amount { denomination: AmountDenomination::Assets, value: (liquidity_to_deposit_third).into() },
+            debt: Default::default(),
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
+
+        // set max utilization
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_pair_parameter(collateral_asset.contract_address, third_asset.contract_address, 'debt_cap', 1);
+        stop_cheat_caller_address(pool.contract_address);
+
+        // Borrow
+
+        let params = ModifyPositionParams {
+            collateral_asset: collateral_asset.contract_address,
+            debt_asset: third_asset.contract_address,
+            user: users.borrower,
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: (SCALE / 4).into() },
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
+    }
+
+    #[test]
     #[should_panic(expected: "not-collateralized")]
     fn test_modify_position_not_collateralized() {
         let (pool, _, config, users, terms) = setup();
@@ -1146,8 +1187,8 @@ mod TestModifyPosition {
         pool.modify_position(params);
         stop_cheat_caller_address(pool.contract_address);
 
-        let ltv_config = pool.ltv_config(third_asset.contract_address, collateral_asset.contract_address);
-        assert(ltv_config.max_ltv == 0, 'Pair should not exist');
+        let pair_config = pool.pair_config(third_asset.contract_address, collateral_asset.contract_address);
+        assert(pair_config.max_ltv == 0, 'Pair should not exist');
 
         let params = ModifyPositionParams {
             collateral_asset: third_asset.contract_address,

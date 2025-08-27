@@ -1,8 +1,6 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
-use starknet::storage_access::StorePacking;
 use vesu::math::pow_10;
-use vesu::packing::{SHIFT_128, into_u123, split_128};
 use vesu::units::SCALE;
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -41,12 +39,40 @@ pub fn assert_asset_config_exists(asset_config: AssetConfig) {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct LTVConfig {
-    pub max_ltv: u64 // [SCALE]
+pub struct PairConfig {
+    pub max_ltv: u64, // [SCALE]
+    pub liquidation_factor: u64, // [SCALE]
+    pub debt_cap: u128 // [asset scale]
 }
 
-pub fn assert_ltv_config(ltv_config: LTVConfig) {
-    assert!(ltv_config.max_ltv.into() <= SCALE, "invalid-ltv-config");
+pub fn assert_pair_config(pair_config: PairConfig) {
+    assert!(pair_config.max_ltv.into() <= SCALE, "max-ltv-exceeded");
+    assert!(pair_config.liquidation_factor.into() <= SCALE, "liquidation-factor-exceeded");
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct PairParams {
+    pub collateral_asset_index: usize,
+    pub debt_asset_index: usize,
+    pub max_ltv: u64, // [SCALE]
+    pub liquidation_factor: u64, // [SCALE]
+    pub debt_cap: u128 // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct AssetParams {
+    pub asset: ContractAddress,
+    pub floor: u256, // [SCALE]
+    pub initial_full_utilization_rate: u256, // [SCALE]
+    pub max_utilization: u256, // [SCALE]
+    pub is_legacy: bool,
+    pub fee_rate: u256 // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct VTokenParams {
+    pub v_token_name: felt252,
+    pub v_token_symbol: felt252,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default)]
@@ -75,30 +101,6 @@ pub struct AssetPrice {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-pub struct AssetParams {
-    pub asset: ContractAddress,
-    pub floor: u256, // [SCALE]
-    pub initial_full_utilization_rate: u256, // [SCALE]
-    pub max_utilization: u256, // [SCALE]
-    pub is_legacy: bool,
-    pub fee_rate: u256 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct LTVParams {
-    pub collateral_asset_index: usize,
-    pub debt_asset_index: usize,
-    pub max_ltv: u64 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct DebtCapParams {
-    pub collateral_asset_index: usize,
-    pub debt_asset_index: usize,
-    pub debt_cap: u256 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
 pub struct ModifyPositionParams {
     pub collateral_asset: ContractAddress,
     pub debt_asset: ContractAddress,
@@ -112,7 +114,6 @@ pub struct LiquidatePositionParams {
     pub collateral_asset: ContractAddress,
     pub debt_asset: ContractAddress,
     pub user: ContractAddress,
-    pub receive_as_shares: bool,
     pub min_collateral_to_receive: u256,
     pub debt_to_repay: u256,
 }
@@ -132,50 +133,16 @@ pub struct ShutdownParams {
     pub subscription_period: u64 // [seconds]
 }
 
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct LiquidationParams {
-    pub collateral_asset_index: usize,
-    pub debt_asset_index: usize,
-    pub liquidation_factor: u64 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct FeeParams {
-    pub fee_recipient: ContractAddress,
-}
-
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 pub struct ShutdownConfig {
     pub recovery_period: u64, // [seconds]
     pub subscription_period: u64 // [seconds]
 }
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct LiquidationConfig {
-    pub liquidation_factor: u64 // [SCALE]
-}
-
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Pair {
     pub total_collateral_shares: u256, // packed as u128 [SCALE]
     pub total_nominal_debt: u256 // packed as u123 [SCALE]
-}
-
-impl PairPacking of StorePacking<Pair, felt252> {
-    fn pack(value: Pair) -> felt252 {
-        let total_collateral_shares: u128 = value
-            .total_collateral_shares
-            .try_into()
-            .expect('pack-total_collateral-shares');
-        let total_nominal_debt: u128 = value.total_nominal_debt.try_into().expect('pack-total_nominal-debt');
-        let total_nominal_debt = into_u123(total_nominal_debt, 'pack-total_nominal-debt-u123');
-        total_collateral_shares.into() + total_nominal_debt * SHIFT_128
-    }
-
-    fn unpack(value: felt252) -> Pair {
-        let (total_nominal_debt, total_collateral_shares) = split_128(value.into());
-        Pair { total_collateral_shares: total_collateral_shares.into(), total_nominal_debt: total_nominal_debt.into() }
-    }
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default, starknet::Store)]

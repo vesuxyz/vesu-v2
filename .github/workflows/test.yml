@@ -6,6 +6,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+
       - uses: actions/checkout@v3
 
       - uses: software-mansion/setup-scarb@v1

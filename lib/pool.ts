@@ -9,7 +9,7 @@ export class Pool {
   ) {}
 
   async lend({ collateral_asset, debt_asset, collateral, debt, data }: OmitPool<ModifyPositionParams>) {
-    const { deployer, singleton } = this.protocol;
+    const { deployer, pool } = this.protocol;
     const params: ModifyPositionParams = {
       collateral_asset,
       debt_asset,
@@ -18,13 +18,13 @@ export class Pool {
       debt,
       data,
     };
-    singleton.connect(deployer.lender);
-    const response = await singleton.modify_position(params);
+    pool?.connect(deployer.lender);
+    const response = await pool?.modify_position(params);
     return response;
   }
 
   async borrow({ collateral_asset, debt_asset, collateral, debt, data }: OmitPool<ModifyPositionParams>) {
-    const { deployer, singleton } = this.protocol;
+    const { deployer, pool } = this.protocol;
     const params: ModifyPositionParams = {
       collateral_asset,
       debt_asset,
@@ -33,13 +33,13 @@ export class Pool {
       debt,
       data,
     };
-    singleton.connect(deployer.borrower);
-    const response = await singleton.modify_position(params);
+    pool?.connect(deployer.borrower);
+    const response = await pool?.modify_position(params);
     return response;
   }
 
   async liquidate({ collateral_asset, debt_asset, data }: OmitPool<LiquidatePositionParams>) {
-    const { deployer, singleton } = this.protocol;
+    const { deployer, pool } = this.protocol;
     const params: LiquidatePositionParams = {
       collateral_asset,
       debt_asset,
@@ -47,8 +47,8 @@ export class Pool {
       receive_as_shares: false,
       data,
     };
-    singleton.connect(deployer.lender);
-    const response = await singleton.liquidate_position(params);
+    pool?.connect(deployer.lender);
+    const response = await pool?.liquidate_position(params);
     return response;
   }
 

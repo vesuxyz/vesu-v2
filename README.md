@@ -18,6 +18,8 @@ This project uses Starknet Foundry for testing. To install Starknet Foundry foll
 
 We advise that you use [nvm](https://github.com/nvm-sh/nvm) to manage your Node versions.
 
+node v19.7.0
+
 ```sh
 yarn
 ```
