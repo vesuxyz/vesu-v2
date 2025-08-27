@@ -326,15 +326,6 @@ mod Pool {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct SetDebtCap {
-        #[key]
-        collateral_asset: ContractAddress,
-        #[key]
-        debt_asset: ContractAddress,
-        debt_cap: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SetShutdownModeAgent {
         #[key]
         agent: ContractAddress,
@@ -394,7 +385,6 @@ mod Pool {
         SetPairConfig: SetPairConfig,
         ClaimFees: ClaimFees,
         SetFeeRecipient: SetFeeRecipient,
-        SetDebtCap: SetDebtCap,
         SetShutdownModeAgent: SetShutdownModeAgent,
         SetShutdownConfig: SetShutdownConfig,
         SetShutdownMode: SetShutdownMode,
@@ -1346,6 +1336,7 @@ mod Pool {
             assert_pair_config(pair_config);
             assert_storable_pair_config(pair_config);
             self.pair_configs.write((collateral_asset, debt_asset), pair_config);
+            self.emit(SetPairConfig { collateral_asset, debt_asset, pair_config });
         }
 
         /// Sets a parameter for a given pair configuration

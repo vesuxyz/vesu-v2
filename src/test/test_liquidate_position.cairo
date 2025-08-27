@@ -60,7 +60,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -120,7 +119,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -180,7 +178,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -242,7 +239,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -324,7 +320,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt / 2,
         };
@@ -402,7 +397,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: collateral_to_deposit.into(),
             debt_to_repay: debt / 2,
         };
@@ -472,7 +466,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt,
         };
@@ -545,7 +538,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt,
         };
@@ -618,7 +610,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive: 0,
             debt_to_repay: debt,
         };
@@ -721,7 +712,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -828,7 +818,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -935,7 +924,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -1042,7 +1030,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };
@@ -1152,7 +1139,6 @@ mod TestLiquidatePosition {
             collateral_asset: collateral_asset.contract_address,
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
-            receive_as_shares: false,
             min_collateral_to_receive,
             debt_to_repay,
         };

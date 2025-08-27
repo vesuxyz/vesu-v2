@@ -114,7 +114,6 @@ pub struct LiquidatePositionParams {
     pub collateral_asset: ContractAddress,
     pub debt_asset: ContractAddress,
     pub user: ContractAddress,
-    pub receive_as_shares: bool,
     pub min_collateral_to_receive: u256,
     pub debt_to_repay: u256,
 }
