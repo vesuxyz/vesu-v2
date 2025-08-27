@@ -35,7 +35,7 @@ mod FlashLoanReceiver {
 
 #[starknet::contract]
 mod MaliciousFlashLoanReceiver {
-    use openzeppelin::interfaces::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const};
     use vesu::pool::IFlashLoanReceiver;
@@ -55,7 +55,7 @@ mod MaliciousFlashLoanReceiver {
 
 #[cfg(test)]
 mod FlashLoan {
-    use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
     use vesu::pool::{IFlashLoanReceiverDispatcher, IPoolDispatcherTrait};

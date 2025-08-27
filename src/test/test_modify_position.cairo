@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestModifyPosition {
     use core::num::traits::Zero;
-    use openzeppelin::interfaces::erc20::ERC20ABIDispatcherTrait;
+    use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, start_cheat_caller_address,
         stop_cheat_caller_address,
