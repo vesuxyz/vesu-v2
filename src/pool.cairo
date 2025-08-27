@@ -470,9 +470,9 @@ mod Pool {
         /// Asserts that the caller is either:
         /// 1. the owner of the position, or
         /// 2. a delegatee of the owner of the position
-        fn assert_ownership(ref self: ContractState, position_user: ContractAddress) {
-            let has_delegation = self.delegations.read((position_user, get_caller_address()));
-            assert!(position_user == get_caller_address() || has_delegation, "no-delegation");
+        fn assert_ownership(ref self: ContractState, owner: ContractAddress) {
+            let has_delegation = self.delegations.read((owner, get_caller_address()));
+            assert!(owner == get_caller_address() || has_delegation, "no-delegation");
         }
 
         /// Asserts that the current utilization of an asset is below the max. allowed utilization
@@ -500,14 +500,16 @@ mod Pool {
                     context, context.position,
                 );
                 self.assert_collateralization(collateral_value, debt_value, context.max_ltv.into());
-            }
-            if collateral_delta < Zero::zero() {
-                // max. utilization of the collateral is not exceed
-                self.assert_max_utilization(context.collateral_asset_config);
-            }
-            if debt_delta > Zero::zero() {
-                // max. utilization of the collateral is not exceed
-                self.assert_max_utilization(context.debt_asset_config);
+                // caller owns the position or has a delegate for modifying it
+                self.assert_ownership(context.user);
+                if collateral_delta < Zero::zero() {
+                    // max. utilization of the collateral is not exceed
+                    self.assert_max_utilization(context.collateral_asset_config);
+                }
+                if debt_delta > Zero::zero() {
+                    // max. utilization of the collateral is not exceed
+                    self.assert_max_utilization(context.debt_asset_config);
+                }
             }
         }
 
@@ -905,9 +907,6 @@ mod Pool {
 
             let ModifyPositionParams { collateral_asset, debt_asset, user, collateral, debt } = params;
 
-            // caller owns the position or has a delegate for modifying it
-            self.assert_ownership(user);
-
             let mut context = self.context(collateral_asset, debt_asset, user);
 
             // update the position
@@ -918,7 +917,6 @@ mod Pool {
 
             // verify invariants
             self.assert_position_invariants(context, collateral_delta, debt_delta);
-
             self.assert_debt_cap_and_update_pair(context, collateral_shares_delta, nominal_debt_delta);
 
             let shutdown_mode = self._update_shutdown_status(context);
