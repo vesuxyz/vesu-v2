@@ -301,6 +301,7 @@ mod Pool {
     struct SetAssetConfig {
         #[key]
         asset: ContractAddress,
+        asset_config: AssetConfig,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -1118,7 +1119,7 @@ mod Pool {
             assert_storable_asset_config(asset_config);
             self.asset_configs.write(params.asset, asset_config);
 
-            self.emit(SetAssetConfig { asset: params.asset });
+            self.emit(SetAssetConfig { asset: params.asset, asset_config });
 
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(params.asset, interest_rate_config);
@@ -1154,7 +1155,7 @@ mod Pool {
             assert_storable_asset_config(asset_config);
             self.asset_configs.write(asset, asset_config);
 
-            self.emit(SetAssetConfig { asset });
+            self.emit(SetAssetConfig { asset, asset_config });
         }
 
         /// Returns the configuration / state of an asset
