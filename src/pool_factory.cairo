@@ -92,32 +92,37 @@ mod PoolFactory {
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress, pool_class_hash: felt252) {
+    fn constructor(
+        ref self: ContractState, owner: ContractAddress, pool_class_hash: felt252, v_token_class_hash: felt252,
+    ) {
         self.ownable.initializer(owner);
         self.pool_class_hash.write(pool_class_hash);
+        self.v_token_class_hash.write(v_token_class_hash);
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
         /// Creates a vToken contract for a given collateral asset.
         /// # Arguments
-        /// * `pool_id` - id of the pool
-        /// * `collateral_asset` - address of the collateral asset
         /// * `v_token_name` - name of the vToken
         /// * `v_token_symbol` - symbol of the vToken
+        /// * `pool` - Address of the pool
+        /// * `asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
         fn create_v_token(
             ref self: ContractState,
-            pool: ContractAddress,
-            asset: ContractAddress,
             v_token_name: felt252,
             v_token_symbol: felt252,
+            pool: ContractAddress,
+            asset: ContractAddress,
+            debt_asset: ContractAddress,
         ) {
             assert!(self.v_token_for_asset.read((pool, asset)) == Zero::zero(), "v-token-already-created");
 
             let (v_token, _) = (deploy_syscall(
                 self.v_token_class_hash.read().try_into().unwrap(),
                 0,
-                array![v_token_name, v_token_symbol, pool.into(), get_contract_address().into(), asset.into()].span(),
+                array![v_token_name, v_token_symbol, pool.into(), asset.into(), debt_asset.into()].span(),
                 false,
             ))
                 .unwrap();
@@ -241,9 +246,9 @@ mod PoolFactory {
                 let interest_rate_config = *interest_rate_params.pop_front().unwrap();
                 pool.add_asset(asset_params, interest_rate_config);
 
-                // let v_token_config = *v_token_params.at(i);
-                // let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
-                // self.create_v_token(pool.contract_address, asset, v_token_name, v_token_symbol);
+                let v_token_config = *v_token_params.at(i);
+                let VTokenParams { v_token_name, v_token_symbol, debt_asset } = v_token_config;
+                self.create_v_token(v_token_name, v_token_symbol, pool.contract_address, asset, debt_asset);
 
                 i += 1;
             }

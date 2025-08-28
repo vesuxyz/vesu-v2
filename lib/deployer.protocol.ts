@@ -85,7 +85,11 @@ export class Deployer extends BaseDeployer {
     );
     const [poolFactory, poolFactoryCalls] = await this.deferContract(
       "PoolFactory",
-      CallData.compile({ owner: this.owner.address, pool_class_hash: await this.declareCached("Pool") }),
+      CallData.compile({
+        owner: this.owner.address,
+        pool_class_hash: await this.declareCached("Pool"),
+        v_token_class_hash: await this.declareCached("VToken"),
+      }),
     );
     return [{ poolFactory, oracle }, [...poolFactoryCalls, ...oracleCalls]] as const;
   }

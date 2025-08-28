@@ -46,6 +46,24 @@ mod TestPool {
     }
 
     #[test]
+    #[should_panic(expected: "caller-not-curator")]
+    fn test_set_oracle_caller_not_curator() {
+        let Env { pool, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        pool.set_oracle(contract_address_const::<'oracle'>());
+    }
+
+    #[test]
+    fn test_set_oracle_caller() {
+        let Env { pool, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool.set_oracle(contract_address_const::<'oracle'>());
+        stop_cheat_caller_address(pool.contract_address);
+
+        assert!(pool.oracle() == contract_address_const::<'oracle'>(), "Oracle not set");
+    }
+
+    #[test]
     #[should_panic(expected: "asset-config-nonexistent")]
     fn test_non_existent_asset_config() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
