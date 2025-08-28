@@ -9,6 +9,8 @@ pub mod pool;
 pub mod pool_factory;
 pub mod units;
 
+pub mod v_token;
+
 pub mod vendor {
     pub mod erc20;
     pub mod pragma;
