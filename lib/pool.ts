@@ -1,6 +1,6 @@
 import { CreatePoolParams, LiquidatePositionParams, ModifyPositionParams, Protocol, calculateRates } from ".";
 
-type OmitPool<T> = Omit<T, "user" | "receive_as_shares">;
+type OmitPool<T> = Omit<T, "user">;
 
 export class Pool {
   constructor(
@@ -8,7 +8,7 @@ export class Pool {
     public params: CreatePoolParams,
   ) {}
 
-  async lend({ collateral_asset, debt_asset, collateral, debt, data }: OmitPool<ModifyPositionParams>) {
+  async lend({ collateral_asset, debt_asset, collateral, debt }: OmitPool<ModifyPositionParams>) {
     const { deployer, pool } = this.protocol;
     const params: ModifyPositionParams = {
       collateral_asset,
@@ -16,14 +16,13 @@ export class Pool {
       user: deployer.lender.address,
       collateral,
       debt,
-      data,
     };
     pool?.connect(deployer.lender);
     const response = await pool?.modify_position(params);
     return response;
   }
 
-  async borrow({ collateral_asset, debt_asset, collateral, debt, data }: OmitPool<ModifyPositionParams>) {
+  async borrow({ collateral_asset, debt_asset, collateral, debt }: OmitPool<ModifyPositionParams>) {
     const { deployer, pool } = this.protocol;
     const params: ModifyPositionParams = {
       collateral_asset,
@@ -31,21 +30,25 @@ export class Pool {
       user: deployer.borrower.address,
       collateral,
       debt,
-      data,
     };
     pool?.connect(deployer.borrower);
     const response = await pool?.modify_position(params);
     return response;
   }
 
-  async liquidate({ collateral_asset, debt_asset, data }: OmitPool<LiquidatePositionParams>) {
+  async liquidate({
+    collateral_asset,
+    debt_asset,
+    min_collateral_to_receive,
+    debt_to_repay,
+  }: OmitPool<LiquidatePositionParams>) {
     const { deployer, pool } = this.protocol;
     const params: LiquidatePositionParams = {
       collateral_asset,
       debt_asset,
       user: deployer.borrower.address,
-      receive_as_shares: false,
-      data,
+      min_collateral_to_receive,
+      debt_to_repay,
     };
     pool?.connect(deployer.lender);
     const response = await pool?.liquidate_position(params);

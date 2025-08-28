@@ -109,7 +109,6 @@ export interface ModifyPositionParams {
   user: string;
   collateral: Amount;
   debt: Amount;
-  data: any;
 }
 
 export interface TransferPositionParams {
@@ -129,8 +128,8 @@ export interface LiquidatePositionParams {
   collateral_asset: string;
   debt_asset: string;
   user: string;
-  receive_as_shares: boolean;
-  data: any;
+  min_collateral_to_receive: bigint;
+  debt_to_repay: bigint;
 }
 
 export function Amount(args?: {
