@@ -48,6 +48,7 @@ pub trait IPool<TContractState> {
     fn asset_config(self: @TContractState, asset: ContractAddress) -> AssetConfig;
 
     // Oracle
+    fn set_oracle(ref self: TContractState, oracle: ContractAddress);
     fn oracle(self: @TContractState) -> ContractAddress;
     fn price(self: @TContractState, asset: ContractAddress) -> AssetPrice;
 
@@ -297,18 +298,23 @@ mod Pool {
     }
 
     #[derive(Drop, starknet::Event)]
+    struct SetAssetConfig {
+        #[key]
+        asset: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct SetOracle {
+        oracle: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
     struct SetPairConfig {
         #[key]
         collateral_asset: ContractAddress,
         #[key]
         debt_asset: ContractAddress,
         pair_config: PairConfig,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct SetAssetConfig {
-        #[key]
-        asset: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -382,6 +388,7 @@ mod Pool {
         ModifyDelegation: ModifyDelegation,
         Donate: Donate,
         SetAssetConfig: SetAssetConfig,
+        SetOracle: SetOracle,
         SetPairConfig: SetPairConfig,
         ClaimFees: ClaimFees,
         SetFeeRecipient: SetFeeRecipient,
@@ -1111,13 +1118,13 @@ mod Pool {
             assert_storable_asset_config(asset_config);
             self.asset_configs.write(params.asset, asset_config);
 
+            self.emit(SetAssetConfig { asset: params.asset });
+
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(params.asset, interest_rate_config);
 
             // Burn inflation fee.
             transfer_asset(asset.contract_address, caller, get_contract_address(), INFLATION_FEE, params.is_legacy);
-
-            self.emit(SetAssetConfig { asset: params.asset });
         }
 
         /// Sets a parameter of an asset
@@ -1169,6 +1176,15 @@ mod Pool {
             }
 
             asset_config
+        }
+
+        /// Sets the address of the oracle
+        /// # Arguments
+        /// * `oracle` - address of the oracle
+        fn set_oracle(ref self: ContractState, oracle: ContractAddress) {
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+            self.oracle.write(oracle);
+            self.emit(SetOracle { oracle });
         }
 
         /// Returns the address of the oracle
