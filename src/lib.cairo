@@ -9,6 +9,8 @@ pub mod pool;
 pub mod pool_factory;
 pub mod units;
 
+pub mod v_token;
+
 pub mod vendor {
     pub mod erc20;
     pub mod pragma;
@@ -33,4 +35,5 @@ pub mod test {
     pub mod test_pool_factory;
     pub mod test_pragma_oracle;
     pub mod test_shutdown;
+    pub mod test_v_token;
 }
