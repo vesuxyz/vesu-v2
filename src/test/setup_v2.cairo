@@ -141,8 +141,11 @@ pub fn setup_env(
     };
 
     let pool_class_hash = *declare("Pool").unwrap().contract_class().class_hash;
+    let v_token_class_hash = *declare("VToken").unwrap().contract_class().class_hash;
     let pool_factory = IPoolFactoryDispatcher {
-        contract_address: deploy_with_args("PoolFactory", array![users.owner.into(), pool_class_hash.into()]),
+        contract_address: deploy_with_args(
+            "PoolFactory", array![users.owner.into(), pool_class_hash.into(), v_token_class_hash.into()],
+        ),
     };
 
     let pool = IPoolDispatcher {
@@ -319,9 +322,15 @@ pub fn create_pool_via_factory(
     oracle.add_asset(asset: third_asset_params.asset, oracle_config: third_asset_oracle_config);
 
     let v_token_params = array![
-        VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' },
-        VTokenParams { v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT' },
-        VTokenParams { v_token_name: 'Vesu Third', v_token_symbol: 'vTHIRD' },
+        VTokenParams {
+            v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL', debt_asset: config.debt_asset.contract_address,
+        },
+        VTokenParams {
+            v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT', debt_asset: config.collateral_asset.contract_address,
+        },
+        VTokenParams {
+            v_token_name: 'Vesu Third', v_token_symbol: 'vTHIRD', debt_asset: config.debt_asset.contract_address,
+        },
     ]
         .span();
 
@@ -375,18 +384,17 @@ pub fn create_pool_via_factory(
             ),
     };
 
-    // let coll_v_token = pool_factory.v_token_for_asset(pool.contract_address,
-    // config.collateral_asset.contract_address);
-    // let debt_v_token = pool_factory.v_token_for_asset(pool.contract_address, config.debt_asset.contract_address);
-    // let third_v_token = pool_factory.v_token_for_asset(pool.contract_address, config.third_asset.contract_address);
+    let coll_v_token = pool_factory.v_token_for_asset(pool.contract_address, config.collateral_asset.contract_address);
+    let debt_v_token = pool_factory.v_token_for_asset(pool.contract_address, config.debt_asset.contract_address);
+    let third_v_token = pool_factory.v_token_for_asset(pool.contract_address, config.third_asset.contract_address);
 
-    // assert!(coll_v_token != Zero::zero(), "vToken not set");
-    // assert!(debt_v_token != Zero::zero(), "vToken not set");
-    // assert!(third_v_token != Zero::zero(), "vToken not set");
+    assert!(coll_v_token != Zero::zero(), "vToken not set");
+    assert!(debt_v_token != Zero::zero(), "vToken not set");
+    assert!(third_v_token != Zero::zero(), "vToken not set");
 
-    // assert!(pool_factory.asset_for_v_token(pool.contract_address, coll_v_token) != Zero::zero(), "vToken not set");
-    // assert!(pool_factory.asset_for_v_token(pool.contract_address, debt_v_token) != Zero::zero(), "vToken not set");
-    // assert!(pool_factory.asset_for_v_token(pool.contract_address, third_v_token) != Zero::zero(), "vToken not set");
+    assert!(pool_factory.asset_for_v_token(pool.contract_address, coll_v_token) != Zero::zero(), "vToken not set");
+    assert!(pool_factory.asset_for_v_token(pool.contract_address, debt_v_token) != Zero::zero(), "vToken not set");
+    assert!(pool_factory.asset_for_v_token(pool.contract_address, third_v_token) != Zero::zero(), "vToken not set");
 
     assert!(pool.pool_name() == 'DefaultPool', "pool name not set");
 }

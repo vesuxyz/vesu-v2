@@ -54,6 +54,8 @@ export const config: Config = {
         v_token_params: CONFIG.asset_parameters.map((asset: any) => ({
           v_token_name: asset.v_token.v_token_name,
           v_token_symbol: asset.v_token.v_token_symbol,
+          debt_asset: CONFIG.asset_parameters.find((_asset: any) => _asset.asset_name !== asset.asset_name)!.token
+            .address,
         })),
         interest_rate_configs: CONFIG.asset_parameters.map((asset: any) => ({
           min_target_utilization: toUtilizationScale(asset.min_target_utilization),

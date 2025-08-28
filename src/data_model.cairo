@@ -73,6 +73,7 @@ pub struct AssetParams {
 pub struct VTokenParams {
     pub v_token_name: felt252,
     pub v_token_symbol: felt252,
+    pub debt_asset: ContractAddress,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde, Default)]
