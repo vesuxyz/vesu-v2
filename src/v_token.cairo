@@ -22,16 +22,12 @@ pub trait IERC4626<TContractState> {
 
 #[starknet::interface]
 pub trait IVToken<TContractState> {
-    fn extension(self: @TContractState) -> ContractAddress;
-    fn pool_id(self: @TContractState) -> felt252;
-    fn approve_extension(ref self: TContractState);
-    fn mint_v_token(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
-    fn burn_v_token(ref self: TContractState, from: ContractAddress, amount: u256) -> bool;
+    fn pool_contract(self: @TContractState) -> ContractAddress;
 }
 #[starknet::contract]
 pub mod VToken {
     use alexandria_math::i257::I257Trait;
-    use core::num::traits::{Bounded, Zero};
+    use core::num::traits::Bounded;
     use openzeppelin::token::erc20::{
         DefaultConfig, ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait, ERC20Component,
         ERC20HooksEmptyImpl,
@@ -40,14 +36,9 @@ pub mod VToken {
     use starknet::event::EventEmitter;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, AmountType, AssetConfig, ModifyPositionParams};
-    use vesu::extension::components::position_hooks::ShutdownMode;
-    use vesu::extension::default_extension_po_v2::{
-        IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait,
-    };
-    use vesu::extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait};
-    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
-    use vesu::units::SCALE;
+    use vesu::data_model::{Amount, AmountDenomination, AssetConfig, ModifyPositionParams, ShutdownMode};
+    use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
+    use vesu::units::{SCALE, SCALE_DECIMALS};
     use vesu::v_token::{IERC4626, IVToken};
     use vesu::vendor::erc20::IERC20Metadata;
 
@@ -63,12 +54,12 @@ pub mod VToken {
     struct Storage {
         #[substorage(v0)]
         erc20: ERC20Component::Storage,
-        // The id of the pool in which the vToken's underlying asset is deposited into
-        pool_id: felt252,
-        // The extension of the pool
-        extension: ContractAddress,
+        // The address of the pool contract.
+        pool_contract: ContractAddress,
         // The underlying asset of the vToken
         asset: ContractAddress,
+        // The dummy debt asset of the vToken
+        debt_asset: ContractAddress,
         // Flag indicating whether the asset is a legacy ERC20 token using camelCase or snake_case
         is_legacy: bool,
         // The name of the vToken
@@ -113,18 +104,17 @@ pub mod VToken {
         ref self: ContractState,
         name: felt252,
         symbol: felt252,
-        pool_id: felt252,
-        extension: ContractAddress,
+        pool_contract: ContractAddress,
         asset: ContractAddress,
+        debt_asset: ContractAddress,
     ) {
         self.name.write(name);
         self.symbol.write(symbol);
-        self.pool_id.write(pool_id);
-        self.extension.write(extension);
+        self.pool_contract.write(pool_contract);
         self.asset.write(asset);
-        self.erc20._approve(get_contract_address(), extension, Bounded::<u256>::MAX);
-        IERC20Dispatcher { contract_address: asset }.approve(self.singleton().contract_address, Bounded::<u256>::MAX);
-        let (asset_config, _) = self.singleton().asset_config(pool_id, asset);
+        self.debt_asset.write(debt_asset);
+        IERC20Dispatcher { contract_address: asset }.approve(self.pool_contract.read(), Bounded::<u256>::MAX);
+        let asset_config = self.pool().asset_config(asset);
         self.is_legacy.write(asset_config.is_legacy);
     }
 
@@ -161,41 +151,37 @@ pub mod VToken {
         }
 
         fn decimals(self: @ContractState) -> u8 {
-            ERC20Component::DEFAULT_DECIMALS
+            SCALE_DECIMALS
         }
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        /// Returns the address of the singleton
-        fn singleton(self: @ContractState) -> ISingletonV2Dispatcher {
-            ISingletonV2Dispatcher {
-                contract_address: IExtensionDispatcher { contract_address: self.extension.read() }.singleton(),
-            }
+        /// Returns the pool contract dispatcher
+        fn pool(self: @ContractState) -> IPoolDispatcher {
+            IPoolDispatcher { contract_address: self.pool_contract.read() }
         }
 
         /// Returns true if the pool accepts deposits
         fn can_deposit(self: @ContractState) -> bool {
-            let shutdown_status = IDefaultExtensionPOV2Dispatcher { contract_address: self.extension.read() }
-                .shutdown_status(self.pool_id.read(), self.asset.read(), Zero::zero());
-            !(shutdown_status.shutdown_mode == ShutdownMode::Subscription
-                || shutdown_status.shutdown_mode == ShutdownMode::Redemption)
+            let shutdown_status = self.pool().shutdown_status(self.asset.read(), self.debt_asset.read());
+            shutdown_status.shutdown_mode != ShutdownMode::Subscription
+                && shutdown_status.shutdown_mode != ShutdownMode::Redemption
         }
 
         /// Returns true if the pool allows for withdrawals
         fn can_withdraw(self: @ContractState) -> bool {
-            let shutdown_status = IDefaultExtensionPOV2Dispatcher { contract_address: self.extension.read() }
-                .shutdown_status(self.pool_id.read(), self.asset.read(), Zero::zero());
-            !(shutdown_status.shutdown_mode == ShutdownMode::Recovery
-                || shutdown_status.shutdown_mode == ShutdownMode::Subscription)
+            let shutdown_status = self.pool().shutdown_status(self.asset.read(), self.debt_asset.read());
+            shutdown_status.shutdown_mode != ShutdownMode::Recovery
+                && shutdown_status.shutdown_mode != ShutdownMode::Subscription
         }
 
         /// See the `calculate_withdrawable_assets`.
         fn calculate_withdrawable_assets(self: @ContractState, asset_config: AssetConfig) -> u256 {
             let total_debt = self
-                .singleton()
+                .pool()
                 .calculate_debt(
-                    I257Trait::new(asset_config.total_nominal_debt, false),
+                    I257Trait::new(asset_config.total_nominal_debt, is_negative: false),
                     asset_config.last_rate_accumulator,
                     asset_config.scale,
                 );
@@ -219,49 +205,11 @@ pub mod VToken {
 
     #[abi(embed_v0)]
     impl VTokenImpl of IVToken<ContractState> {
-        /// Returns the address of the extension associated with the vToken
+        /// Returns the address of the pool associated with the vToken
         /// # Returns
-        /// * address of the extension
-        fn extension(self: @ContractState) -> ContractAddress {
-            self.extension.read()
-        }
-
-        /// Returns the id of the pool in which the vToken's underlying asset is deposited into
-        /// # Returns
-        /// * id of the pool
-        fn pool_id(self: @ContractState) -> felt252 {
-            self.pool_id.read()
-        }
-
-        /// Re-approves the vToken to be spendable by the extension
-        fn approve_extension(ref self: ContractState) {
-            self.erc20._approve(get_contract_address(), self.extension.read(), Bounded::<u256>::MAX);
-        }
-
-        /// Permissioned minting of vTokens. Can only be called by the associated extension.
-        /// # Arguments
-        /// * `recipient` - address to mint the vToken to
-        /// * `amount` - amount of vToken to mint [SCALE]
-        /// # Returns
-        /// * true if the minting was successful
-        fn mint_v_token(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
-            assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
-            self.erc20.mint(recipient, amount);
-            true
-        }
-
-        /// Permissioned burning of vTokens. Can only be called by the associated extension.
-        /// `from` needs to approve the extension to burn the vToken.
-        /// # Arguments
-        /// * `from` - address to burn the vToken from
-        /// * `amount` - amount of vToken to burn [SCALE]
-        /// # Returns
-        /// * true if the burning was successful
-        fn burn_v_token(ref self: ContractState, from: ContractAddress, amount: u256) -> bool {
-            assert!(get_caller_address() == self.extension.read(), "caller-not-extension");
-            self.erc20._spend_allowance(from, get_caller_address(), amount);
-            self.erc20.burn(from, amount);
-            true
+        /// * address of the pool
+        fn pool_contract(self: @ContractState) -> ContractAddress {
+            self.pool_contract.read()
         }
     }
 
@@ -278,11 +226,8 @@ pub mod VToken {
         /// # Returns
         /// * total amount of assets [asset scale]
         fn total_assets(self: @ContractState) -> u256 {
-            self
-                .singleton()
-                .calculate_collateral_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(self.erc20.total_supply(), true),
-                )
+            let shares = I257Trait::new(self.erc20.total_supply(), is_negative: true);
+            self.pool().calculate_collateral(self.asset.read(), shares)
         }
 
         /// Converts an amount of assets to the equivalent amount of vToken shares
@@ -291,11 +236,8 @@ pub mod VToken {
         /// # Returns
         /// * amount of vToken shares [SCALE]
         fn convert_to_shares(self: @ContractState, assets: u256) -> u256 {
-            self
-                .singleton()
-                .calculate_collateral_shares_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(assets, false),
-                )
+            let amount_i257 = I257Trait::new(assets, is_negative: false);
+            self.pool().calculate_collateral_shares(self.asset.read(), amount_i257)
         }
 
         /// Converts an amount of vToken shares to the equivalent amount of assets
@@ -304,9 +246,8 @@ pub mod VToken {
         /// # Returns
         /// * amount of assets [asset scale]
         fn convert_to_assets(self: @ContractState, shares: u256) -> u256 {
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, true))
+            let shares_i257 = I257Trait::new(shares, is_negative: true);
+            self.pool().calculate_collateral(self.asset.read(), shares_i257)
         }
 
         /// Returns the maximum amount of assets that can be deposited via the vToken
@@ -318,11 +259,9 @@ pub mod VToken {
             if !self.can_deposit() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let asset_config = self.pool().asset_config(self.asset.read());
             let room = Bounded::<u128>::MAX.into() - asset_config.total_collateral_shares;
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(room, false))
+            self.pool().calculate_collateral(self.asset.read(), I257Trait::new(room, is_negative: false))
         }
 
         /// Returns the amount of vToken shares that will be minted for the given amount of deposited assets
@@ -334,11 +273,7 @@ pub mod VToken {
             if !self.can_deposit() {
                 return 0;
             }
-            self
-                .singleton()
-                .calculate_collateral_shares_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(assets, false),
-                )
+            self.pool().calculate_collateral_shares(self.asset.read(), I257Trait::new(assets, is_negative: false))
         }
 
         /// Deposits assets into the pool and mints vTokens (shares) to the receiver
@@ -348,27 +283,27 @@ pub mod VToken {
         /// # Returns
         /// * amount of vToken shares minted [SCALE]
         fn deposit(ref self: ContractState, assets: u256, receiver: ContractAddress) -> u256 {
-            self.transfer_asset(get_caller_address(), get_contract_address(), assets);
+            let v_token_address = get_contract_address();
+            let caller = get_caller_address();
+            // Transfer assets to the vToken contract.
+            self.transfer_asset(caller, v_token_address, assets);
 
             let params = ModifyPositionParams {
-                pool_id: self.pool_id.read(),
                 collateral_asset: self.asset.read(),
-                debt_asset: Zero::zero(),
-                user: self.extension.read(),
+                debt_asset: self.debt_asset.read(),
+                user: v_token_address,
                 collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Assets,
-                    value: I257Trait::new(assets, false),
+                    denomination: AmountDenomination::Assets, value: I257Trait::new(assets, is_negative: false),
                 },
                 debt: Default::default(),
-                data: ArrayTrait::new().span(),
             };
 
-            let shares = self.singleton().modify_position(params).collateral_shares_delta.abs();
+            // Invoke `modify_position` and extract the number of shares minted
+            let shares = self.pool().modify_position(params).collateral_shares_delta.abs();
 
             self.erc20.mint(receiver, shares);
 
-            self.emit(Deposit { sender: get_caller_address(), owner: receiver, assets, shares });
+            self.emit(Deposit { sender: caller, owner: receiver, assets, shares });
 
             shares
         }
@@ -382,7 +317,7 @@ pub mod VToken {
             if !self.can_deposit() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let asset_config = self.pool().asset_config(self.asset.read());
             Bounded::<u128>::MAX.into() - asset_config.total_collateral_shares
         }
 
@@ -395,9 +330,7 @@ pub mod VToken {
             if !self.can_deposit() {
                 return 0;
             }
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, false))
+            self.pool().calculate_collateral(self.asset.read(), I257Trait::new(shares, is_negative: false))
         }
 
         /// Mints vToken shares to the receiver by depositing assets into the pool
@@ -407,39 +340,38 @@ pub mod VToken {
         /// # Returns
         /// * amount of assets deposited [asset scale]
         fn mint(ref self: ContractState, shares: u256, receiver: ContractAddress) -> u256 {
-            let assets_estimate = self
-                .singleton()
-                .calculate_collateral(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, false));
+            let v_token_address = get_contract_address();
+            let caller = get_caller_address();
 
-            // transfer an estimated amount of assets to the contract first to ensure that minting of vTokens
-            // happens after the deposit
-            self.transfer_asset(get_caller_address(), get_contract_address(), assets_estimate);
+            let assets_estimate = self
+                .pool()
+                .calculate_collateral(self.asset.read(), I257Trait::new(shares, is_negative: false));
+
+            // Transfer an estimated amount of assets to the vToken contract to ensure that minting
+            // of vTokens happens after the deposit.
+            self.transfer_asset(caller, v_token_address, assets_estimate);
 
             let params = ModifyPositionParams {
-                pool_id: self.pool_id.read(),
                 collateral_asset: self.asset.read(),
-                debt_asset: Zero::zero(),
-                user: self.extension.read(),
+                debt_asset: self.debt_asset.read(),
+                user: v_token_address,
                 collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Native,
-                    value: I257Trait::new(shares, false),
+                    denomination: AmountDenomination::Native, value: I257Trait::new(shares, is_negative: false),
                 },
                 debt: Default::default(),
-                data: ArrayTrait::new().span(),
             };
 
-            let response = self.singleton().modify_position(params);
+            // Invoke `modify_position` and extract the actual amount of assets deposited.
+            let response = self.pool().modify_position(params);
             let assets = response.collateral_delta.abs();
-            // take inflation fee into account for the first deposit
             let shares = response.collateral_shares_delta.abs();
 
             self.erc20.mint(receiver, shares);
 
             // refund the difference between the estimated and actual amount of assets
-            self.transfer_asset(get_contract_address(), get_caller_address(), assets_estimate - assets);
+            self.transfer_asset(v_token_address, caller, assets_estimate - assets);
 
-            self.emit(Deposit { sender: get_caller_address(), owner: receiver, assets, shares });
+            self.emit(Deposit { sender: caller, owner: receiver, assets, shares });
 
             assets
         }
@@ -453,13 +385,13 @@ pub mod VToken {
             if !self.can_withdraw() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let asset_config = self.pool().asset_config(self.asset.read());
 
             let room = self.calculate_withdrawable_assets(asset_config);
             let assets = self
-                .singleton()
-                .calculate_collateral_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(self.erc20.balance_of(owner), true),
+                .pool()
+                .calculate_collateral(
+                    self.asset.read(), I257Trait::new(self.erc20.balance_of(owner), is_negative: true),
                 );
 
             if assets > room {
@@ -478,11 +410,7 @@ pub mod VToken {
             if !self.can_withdraw() {
                 return 0;
             }
-            self
-                .singleton()
-                .calculate_collateral_shares_unsafe(
-                    self.pool_id.read(), self.asset.read(), I257Trait::new(assets, true),
-                )
+            self.pool().calculate_collateral_shares(self.asset.read(), I257Trait::new(assets, is_negative: true))
         }
 
         /// Withdraws assets from the pool and burns vTokens (shares) from the owner of the vTokens
@@ -493,30 +421,31 @@ pub mod VToken {
         /// # Returns
         /// * amount of vTokens (shares) burned [SCALE]
         fn withdraw(ref self: ContractState, assets: u256, receiver: ContractAddress, owner: ContractAddress) -> u256 {
+            let v_token_address = get_contract_address();
+            let caller = get_caller_address();
+
             let params = ModifyPositionParams {
-                pool_id: self.pool_id.read(),
                 collateral_asset: self.asset.read(),
-                debt_asset: Zero::zero(),
-                user: self.extension.read(),
+                debt_asset: self.debt_asset.read(),
+                user: v_token_address,
                 collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Assets,
-                    value: I257Trait::new(assets, true),
+                    denomination: AmountDenomination::Assets, value: I257Trait::new(assets, is_negative: true),
                 },
                 debt: Default::default(),
-                data: ArrayTrait::new().span(),
             };
 
-            let shares = self.singleton().modify_position(params).collateral_shares_delta.abs();
+            // Invoke `modify_position` and extract the number of shares burned.
+            let shares = self.pool().modify_position(params).collateral_shares_delta.abs();
 
-            if get_caller_address() != owner {
-                self.erc20._spend_allowance(owner, get_caller_address(), shares);
+            // If the withdrawal is done on behalf of the owner, we need to spend the allowance.
+            if caller != owner {
+                self.erc20._spend_allowance(owner, caller, shares);
             }
             self.erc20.burn(owner, shares);
 
-            self.transfer_asset(get_contract_address(), receiver, assets);
+            self.transfer_asset(v_token_address, receiver, assets);
 
-            self.emit(Withdraw { sender: get_caller_address(), receiver, owner, assets, shares });
+            self.emit(Withdraw { sender: caller, receiver, owner, assets, shares });
 
             shares
         }
@@ -530,13 +459,12 @@ pub mod VToken {
             if !self.can_withdraw() {
                 return 0;
             }
-            let (asset_config, _) = self.singleton().asset_config_unsafe(self.pool_id.read(), self.asset.read());
+            let asset_config = self.pool().asset_config(self.asset.read());
             let room = self
-                .singleton()
-                .calculate_collateral_shares_unsafe(
-                    self.pool_id.read(),
+                .pool()
+                .calculate_collateral_shares(
                     self.asset.read(),
-                    I257Trait::new(self.calculate_withdrawable_assets(asset_config), true),
+                    I257Trait::new(self.calculate_withdrawable_assets(asset_config), is_negative: true),
                 );
             let shares = self.erc20.balance_of(owner);
 
@@ -556,9 +484,7 @@ pub mod VToken {
             if !self.can_withdraw() {
                 return 0;
             }
-            self
-                .singleton()
-                .calculate_collateral_unsafe(self.pool_id.read(), self.asset.read(), I257Trait::new(shares, true))
+            self.pool().calculate_collateral(self.asset.read(), I257Trait::new(shares, is_negative: true))
         }
 
         /// Redeems / burns vTokens (shares) from the owner and withdraws assets from the pool
@@ -569,30 +495,31 @@ pub mod VToken {
         /// # Returns
         /// * amount of assets withdrawn [asset scale]
         fn redeem(ref self: ContractState, shares: u256, receiver: ContractAddress, owner: ContractAddress) -> u256 {
-            if get_caller_address() != owner {
-                self.erc20._spend_allowance(owner, get_caller_address(), shares);
+            let v_token_address = get_contract_address();
+            let caller = get_caller_address();
+
+            // If the redemption is done on behalf of the owner, we need to spend the allowance.
+            if caller != owner {
+                self.erc20._spend_allowance(owner, caller, shares);
             }
             self.erc20.burn(owner, shares);
 
             let params = ModifyPositionParams {
-                pool_id: self.pool_id.read(),
                 collateral_asset: self.asset.read(),
-                debt_asset: Zero::zero(),
-                user: self.extension.read(),
+                debt_asset: self.debt_asset.read(),
+                user: v_token_address,
                 collateral: Amount {
-                    amount_type: AmountType::Delta,
-                    denomination: AmountDenomination::Native,
-                    value: I257Trait::new(shares, true),
+                    denomination: AmountDenomination::Native, value: I257Trait::new(shares, is_negative: true),
                 },
                 debt: Default::default(),
-                data: ArrayTrait::new().span(),
             };
 
-            let assets = self.singleton().modify_position(params).collateral_delta.abs();
+            // Invoke `modify_position` and extract the amount of assets withdrawn.
+            let assets = self.pool().modify_position(params).collateral_delta.abs();
 
-            self.transfer_asset(get_contract_address(), receiver, assets);
+            self.transfer_asset(v_token_address, receiver, assets);
 
-            self.emit(Withdraw { sender: get_caller_address(), receiver, owner, assets, shares });
+            self.emit(Withdraw { sender: caller, receiver, owner, assets, shares });
 
             assets
         }
