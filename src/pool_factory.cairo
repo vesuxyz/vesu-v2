@@ -234,6 +234,8 @@ mod PoolFactory {
 
             let pool = IPoolDispatcher { contract_address: pool_address };
 
+            self.emit(CreatePool { pool: pool.contract_address, name, owner, curator, oracle });
+
             let mut asset_params_copy = asset_params;
             let mut i = 0;
             while !asset_params_copy.is_empty() {
@@ -278,8 +280,6 @@ mod PoolFactory {
 
             // nominate the curator
             pool.nominate_curator(curator);
-
-            self.emit(CreatePool { pool: pool.contract_address, name, owner, curator, oracle });
 
             pool.contract_address
         }

@@ -1,18 +1,13 @@
 #[cfg(test)]
 mod TestVToken {
-    use core::num::traits::Zero;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare};
     use starknet::syscalls::deploy_syscall;
-    use starknet::{ContractAddress, contract_address_const, get_contract_address};
-    use vesu::data_model::AssetConfig;
-    use vesu::math::pow_10;
-    use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
-    use vesu::test::setup_v2::{
-        Env, LendingTerms, TestConfig, Users, deploy_asset, deploy_contract, deploy_with_args, setup, setup_env,
-    };
-    use vesu::units::SCALE;
-    use vesu::v_token::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenDispatcher, IVTokenDispatcherTrait, VToken};
+    #[feature("deprecated-starknet-consts")]
+    use starknet::{ContractAddress, contract_address_const};
+    use vesu::pool::IPoolDispatcher;
+    use vesu::test::setup_v2::{Users, setup};
+    use vesu::v_token::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenDispatcher, IVTokenDispatcherTrait};
     use vesu::vendor::erc20::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait};
 
     struct VTokenEnv {
