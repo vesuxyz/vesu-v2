@@ -91,9 +91,9 @@ fn assert_interest_rate_config(interest_rate_config: InterestRateConfig) {
         rate_half_life,
         target_rate_percent,
     } = interest_rate_config;
-    assert!(max_target_utilization <= UTILIZATION_SCALE, "max-target-utilization-gt-100%");
+    assert!(max_target_utilization < UTILIZATION_SCALE, "max-target-utilization-gt-100%");
     assert!(min_target_utilization <= target_utilization, "target-utilization-lt-min-target-utilization");
-    assert!(target_utilization < max_target_utilization, "target-utilization-gt-max-target-utilization");
+    assert!(target_utilization <= max_target_utilization, "target-utilization-gt-max-target-utilization");
     assert!(max_target_utilization != 0, "max-target-utilization-eq-0");
     assert!(zero_utilization_rate <= min_full_utilization_rate, "zero-utilization-rate-gt-min-full-utilization-rate");
     assert!(

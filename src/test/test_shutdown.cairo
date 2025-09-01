@@ -1363,8 +1363,8 @@ mod TestShutdown {
 
         let interest_rate_config = InterestRateConfig {
             min_target_utilization: 90_000,
-            max_target_utilization: 100_000,
-            target_utilization: 99_999,
+            max_target_utilization: 99_999,
+            target_utilization: 99_998,
             min_full_utilization_rate: 100824704600, // 300% per year
             max_full_utilization_rate: 100824704600,
             zero_utilization_rate: 100824704600,
