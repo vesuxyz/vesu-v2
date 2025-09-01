@@ -35,7 +35,7 @@ pub fn pow_scale(mut x: u256, mut n: u256, is_negative: bool) -> u256 {
 }
 
 // From satoru/src/utils/arrays.cairo
-/// Raise a number to a power, computes x^n.
+/// Raise a number to a power, computes x^n
 /// # Arguments
 /// * `x` - number to raise
 /// * `n` - exponent
@@ -56,9 +56,9 @@ pub fn pow(x: u256, n: usize) -> u256 {
     }
 }
 
-/// Same as pow_10, but returns 0 if n is 0.
+/// Same as pow_10, but returns 0 if n is 0
 /// # Arguments
-/// * `n` - exponent.
+/// * `n` - exponent
 /// # Returns
 /// * `u256` - result
 pub fn pow_10_or_0(n: usize) -> u256 {
@@ -69,7 +69,7 @@ pub fn pow_10_or_0(n: usize) -> u256 {
     }
 }
 
-/// Raise 10 to the power of n.
+/// Raise 10 to the power of n
 /// # Arguments
 /// * `n` - exponent
 /// # Returns
@@ -114,7 +114,7 @@ pub fn log_10(mut x: u256) -> u8 {
     n
 }
 
-/// Same as log_10, but returns 0 if x is 0.
+/// Same as log_10, but returns 0 if x is 0
 /// # Arguments
 /// * `x` - number to compute the log of
 /// # Returns

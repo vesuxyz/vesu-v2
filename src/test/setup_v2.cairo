@@ -105,7 +105,7 @@ pub fn deploy_asset_with_decimals(recipient: ContractAddress, decimals: u32) -> 
 }
 
 pub fn setup_env(
-    oracle_address: ContractAddress,
+    pragma_oracle_address: ContractAddress,
     collateral_address: ContractAddress,
     debt_address: ContractAddress,
     third_address: ContractAddress,
@@ -119,8 +119,8 @@ pub fn setup_env(
     };
 
     let mock_pragma_oracle = IMockPragmaOracleDispatcher {
-        contract_address: if oracle_address.is_non_zero() {
-            oracle_address
+        contract_address: if pragma_oracle_address.is_non_zero() {
+            pragma_oracle_address
         } else {
             deploy_contract("MockPragmaOracle")
         },
@@ -219,7 +219,7 @@ pub fn setup_env(
     third_asset.approve(pool.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
-    if oracle_address.is_zero() {
+    if pragma_oracle_address.is_zero() {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
         mock_pragma_oracle.set_price(DEBT_PRAGMA_KEY, SCALE_128);
         mock_pragma_oracle.set_price(THIRD_PRAGMA_KEY, SCALE_128);
@@ -254,7 +254,7 @@ pub fn create_pool_via_factory(
     owner: ContractAddress,
     curator: ContractAddress,
     interest_rate_config: Option<InterestRateConfig>,
-) {
+) -> IPoolDispatcher {
     let interest_rate_configs = array![
         interest_rate_config.unwrap_or(test_interest_rate_config()),
         interest_rate_config.unwrap_or(test_interest_rate_config()),
@@ -397,6 +397,8 @@ pub fn create_pool_via_factory(
     assert!(pool_factory.asset_for_v_token(pool.contract_address, third_v_token) != Zero::zero(), "vToken not set");
 
     assert!(pool.pool_name() == 'DefaultPool', "pool name not set");
+
+    pool
 }
 
 pub fn create_pool(

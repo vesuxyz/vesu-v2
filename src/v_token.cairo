@@ -54,7 +54,7 @@ pub mod VToken {
     struct Storage {
         #[substorage(v0)]
         erc20: ERC20Component::Storage,
-        // The address of the pool contract.
+        // The address of the pool contract
         pool_contract: ContractAddress,
         // The underlying asset of the vToken
         asset: ContractAddress,
@@ -154,7 +154,7 @@ pub mod VToken {
                 && shutdown_status.shutdown_mode != ShutdownMode::Subscription
         }
 
-        /// See the `calculate_withdrawable_assets`.
+        /// See the `calculate_withdrawable_assets`
         fn calculate_withdrawable_assets(self: @ContractState) -> u256 {
             let asset = self.asset.read();
             let asset_config = self.pool().asset_config(asset);
@@ -167,18 +167,18 @@ pub mod VToken {
                     asset_config.scale,
                 );
 
-            // Add 1 to the utilization returned by the pool to round it up.
+            // Add 1 to the utilization returned by the pool to round it up
             if self.pool().utilization(asset) + 1 >= asset_config.max_utilization {
                 return 0;
             }
 
-            // Let x be the max amount that can be withdrawn.
+            // Let x be the max amount that can be withdrawn
             // After withdrawing `x` from the collateral, the reserve will be:
-            //    reserve - x.
+            //    reserve - x
             // Then, the utilization must be equal to `max_utilization`, so:
-            //    total_debt / ((reserve - x) + total_debt) = max_utilization.
+            //    total_debt / ((reserve - x) + total_debt) = max_utilization
             // Solving for `x` gives:
-            //    x = (reserve + total_debt) - total_debt / max_utilization.
+            //    x = (reserve + total_debt) - total_debt / max_utilization
             (asset_config.reserve + total_debt)
                 - u256_mul_div(total_debt, SCALE, asset_config.max_utilization, Rounding::Ceil)
         }
@@ -280,7 +280,8 @@ pub mod VToken {
         fn deposit(ref self: ContractState, assets: u256, receiver: ContractAddress) -> u256 {
             let v_token_address = get_contract_address();
             let caller = get_caller_address();
-            // Transfer assets to the vToken contract.
+
+            // Transfer assets to the vToken contract
             self.transfer_asset(caller, v_token_address, assets);
 
             let params = ModifyPositionParams {
@@ -343,7 +344,7 @@ pub mod VToken {
                 .calculate_collateral(self.asset.read(), I257Trait::new(shares, is_negative: false));
 
             // Transfer an estimated amount of assets to the vToken contract to ensure that minting
-            // of vTokens happens after the deposit.
+            // of vTokens happens after the deposit
             self.transfer_asset(caller, v_token_address, assets_estimate);
 
             let params = ModifyPositionParams {
@@ -356,7 +357,7 @@ pub mod VToken {
                 debt: Default::default(),
             };
 
-            // Invoke `modify_position` and extract the actual amount of assets deposited.
+            // Invoke `modify_position` and extract the actual amount of assets deposited
             let response = self.pool().modify_position(params);
             let assets = response.collateral_delta.abs();
             let shares = response.collateral_shares_delta.abs();
@@ -428,10 +429,10 @@ pub mod VToken {
                 debt: Default::default(),
             };
 
-            // Invoke `modify_position` and extract the number of shares burned.
+            // Invoke `modify_position` and extract the number of shares burned
             let shares = self.pool().modify_position(params).collateral_shares_delta.abs();
 
-            // If the withdrawal is done on behalf of the owner, we need to spend the allowance.
+            // If the withdrawal is done on behalf of the owner, we need to spend the allowance
             if caller != owner {
                 self.erc20._spend_allowance(owner, caller, shares);
             }
@@ -490,7 +491,7 @@ pub mod VToken {
             let v_token_address = get_contract_address();
             let caller = get_caller_address();
 
-            // If the redemption is done on behalf of the owner, we need to spend the allowance.
+            // If the redemption is done on behalf of the owner, we need to spend the allowance
             if caller != owner {
                 self.erc20._spend_allowance(owner, caller, shares);
             }
@@ -506,7 +507,7 @@ pub mod VToken {
                 debt: Default::default(),
             };
 
-            // Invoke `modify_position` and extract the amount of assets withdrawn.
+            // Invoke `modify_position` and extract the amount of assets withdrawn
             let assets = self.pool().modify_position(params).collateral_delta.abs();
 
             self.transfer_asset(v_token_address, receiver, assets);
