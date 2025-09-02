@@ -138,9 +138,7 @@ pub fn setup_env(
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
     let oracle = IPragmaOracleDispatcher {
         contract_address: pool_factory
-            .create_oracle(
-                users.owner, users.curator, mock_pragma_oracle.contract_address, mock_pragma_summary.contract_address,
-            ),
+            .create_oracle(users.curator, mock_pragma_oracle.contract_address, mock_pragma_summary.contract_address),
     };
 
     let pool = IPoolDispatcher {

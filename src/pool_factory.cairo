@@ -30,7 +30,6 @@ pub trait IPoolFactory<TContractState> {
     );
     fn create_oracle(
         ref self: TContractState,
-        owner: ContractAddress,
         manager: ContractAddress,
         pragma_oracle: ContractAddress,
         pragma_summary: ContractAddress,
@@ -379,7 +378,6 @@ mod PoolFactory {
 
         /// Creates a new oracle contract
         /// # Arguments
-        /// * `owner` - owner of the oracle
         /// * `manager` - manager of the oracle
         /// * `pragma_oracle` - address of the pragma oracle contract
         /// * `pragma_summary` - address of the pragma summary contract
@@ -387,11 +385,13 @@ mod PoolFactory {
         /// * `oracle` - address of the oracle contract
         fn create_oracle(
             ref self: ContractState,
-            owner: ContractAddress,
             manager: ContractAddress,
             pragma_oracle: ContractAddress,
             pragma_summary: ContractAddress,
         ) -> ContractAddress {
+            // default owner of all pools is the owner of the pool factory
+            let owner = self.ownable.owner();
+
             let (oracle, _) = (deploy_syscall(
                 self.oracle_class_hash.read().try_into().unwrap(),
                 0,

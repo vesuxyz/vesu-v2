@@ -93,8 +93,7 @@ mod TestPoolFactory {
     fn test_pool_factory_create_oracle() {
         let Env { pool_factory, oracle, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
-        let oracle = pool_factory
-            .create_oracle(users.curator, users.curator, oracle.pragma_oracle(), oracle.pragma_summary());
+        let oracle = pool_factory.create_oracle(users.owner, oracle.pragma_oracle(), oracle.pragma_summary());
 
         assert!(oracle != Zero::zero());
     }
