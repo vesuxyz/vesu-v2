@@ -99,10 +99,6 @@ mod PoolFactory {
         pool: ContractAddress,
         #[key]
         asset: ContractAddress,
-        #[key]
-        name: felt252,
-        #[key]
-        symbol: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -145,8 +141,7 @@ mod PoolFactory {
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        /// Adds an asset to the pool. The curator has to nominate the factory as the curator.
-        /// The factory will pass the ownership back to the curator after the asset is added.
+        /// Adds an asset to the pool
         /// # Arguments
         /// * `pool` - address of the pool
         /// * `asset` - address of the asset
@@ -168,15 +163,7 @@ mod PoolFactory {
 
             // add the asset to the pool
             pool.add_asset(asset_params, interest_rate_config);
-            self
-                .emit(
-                    AddAsset {
-                        pool: pool.contract_address,
-                        asset,
-                        name: v_token_params.v_token_name,
-                        symbol: v_token_params.v_token_symbol,
-                    },
-                );
+            self.emit(AddAsset { pool: pool.contract_address, asset });
 
             // create the v token for the asset
             let VTokenParams { v_token_name, v_token_symbol, debt_asset } = v_token_params;
