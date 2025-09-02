@@ -28,6 +28,13 @@ pub trait IPoolFactory<TContractState> {
         interest_rate_config: InterestRateConfig,
         v_token_params: VTokenParams,
     );
+    fn create_oracle(
+        ref self: TContractState,
+        owner: ContractAddress,
+        manager: ContractAddress,
+        pragma_oracle: ContractAddress,
+        pragma_summary: ContractAddress,
+    ) -> ContractAddress;
 }
 
 #[starknet::contract]
@@ -51,6 +58,7 @@ mod PoolFactory {
     struct Storage {
         pool_class_hash: felt252,
         v_token_class_hash: felt252,
+        oracle_class_hash: felt252,
         v_token_for_asset: Map<(ContractAddress, ContractAddress), ContractAddress>,
         asset_for_v_token: Map<(ContractAddress, ContractAddress), ContractAddress>,
         #[substorage(v0)]
@@ -97,6 +105,14 @@ mod PoolFactory {
         symbol: felt252,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct CreateOracle {
+        #[key]
+        oracle: ContractAddress,
+        #[key]
+        owner: ContractAddress,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -105,6 +121,7 @@ mod PoolFactory {
         CreateVToken: CreateVToken,
         CreatePool: CreatePool,
         AddAsset: AddAsset,
+        CreateOracle: CreateOracle,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -114,11 +131,16 @@ mod PoolFactory {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, owner: ContractAddress, pool_class_hash: felt252, v_token_class_hash: felt252,
+        ref self: ContractState,
+        owner: ContractAddress,
+        pool_class_hash: felt252,
+        v_token_class_hash: felt252,
+        oracle_class_hash: felt252,
     ) {
         self.ownable.initializer(owner);
         self.pool_class_hash.write(pool_class_hash);
         self.v_token_class_hash.write(v_token_class_hash);
+        self.oracle_class_hash.write(oracle_class_hash);
     }
 
     #[generate_trait]
@@ -366,6 +388,34 @@ mod PoolFactory {
 
             // return the ownership to the curator
             pool.nominate_curator(curator);
+        }
+
+        /// Creates a new oracle contract
+        /// # Arguments
+        /// * `owner` - owner of the oracle
+        /// * `manager` - manager of the oracle
+        /// * `pragma_oracle` - address of the pragma oracle contract
+        /// * `pragma_summary` - address of the pragma summary contract
+        /// # Returns
+        /// * `oracle` - address of the oracle contract
+        fn create_oracle(
+            ref self: ContractState,
+            owner: ContractAddress,
+            manager: ContractAddress,
+            pragma_oracle: ContractAddress,
+            pragma_summary: ContractAddress,
+        ) -> ContractAddress {
+            let (oracle, _) = (deploy_syscall(
+                self.oracle_class_hash.read().try_into().unwrap(),
+                0,
+                array![owner.into(), manager.into(), pragma_oracle.into(), pragma_summary.into()].span(),
+                false,
+            ))
+                .unwrap();
+
+            self.emit(CreateOracle { oracle, owner });
+
+            oracle
         }
     }
 }

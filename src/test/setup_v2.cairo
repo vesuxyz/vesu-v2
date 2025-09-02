@@ -118,6 +118,16 @@ pub fn setup_env(
         seeder: contract_address_const::<'seeder'>(),
     };
 
+    let pool_class_hash = *declare("Pool").unwrap().contract_class().class_hash;
+    let v_token_class_hash = *declare("VToken").unwrap().contract_class().class_hash;
+    let oracle_class_hash = *declare("Oracle").unwrap().contract_class().class_hash;
+    let pool_factory = IPoolFactoryDispatcher {
+        contract_address: deploy_with_args(
+            "PoolFactory",
+            array![users.owner.into(), pool_class_hash.into(), v_token_class_hash.into(), oracle_class_hash.into()],
+        ),
+    };
+
     let mock_pragma_oracle = IMockPragmaOracleDispatcher {
         contract_address: if pragma_oracle_address.is_non_zero() {
             pragma_oracle_address
@@ -125,27 +135,12 @@ pub fn setup_env(
             deploy_contract("MockPragmaOracle")
         },
     };
-
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
-
     let oracle = IPragmaOracleDispatcher {
-        contract_address: deploy_with_args(
-            "Oracle",
-            array![
-                users.owner.into(),
-                users.curator.into(),
-                mock_pragma_oracle.contract_address.into(),
-                mock_pragma_summary.contract_address.into(),
-            ],
-        ),
-    };
-
-    let pool_class_hash = *declare("Pool").unwrap().contract_class().class_hash;
-    let v_token_class_hash = *declare("VToken").unwrap().contract_class().class_hash;
-    let pool_factory = IPoolFactoryDispatcher {
-        contract_address: deploy_with_args(
-            "PoolFactory", array![users.owner.into(), pool_class_hash.into(), v_token_class_hash.into()],
-        ),
+        contract_address: pool_factory
+            .create_oracle(
+                users.owner, users.curator, mock_pragma_oracle.contract_address, mock_pragma_summary.contract_address,
+            ),
     };
 
     let pool = IPoolDispatcher {

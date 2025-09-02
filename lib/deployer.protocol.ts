@@ -89,6 +89,7 @@ export class Deployer extends BaseDeployer {
         owner: this.owner.address,
         pool_class_hash: await this.declareCached("Pool"),
         v_token_class_hash: await this.declareCached("VToken"),
+        oracle_class_hash: await this.declareCached("Oracle"),
       }),
     );
     return [{ poolFactory, oracle }, [...poolFactoryCalls, ...oracleCalls]] as const;
