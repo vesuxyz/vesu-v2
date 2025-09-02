@@ -7,6 +7,7 @@ mod TestVToken {
         start_cheat_caller_address, stop_cheat_caller_address, store,
     };
     use starknet::syscalls::deploy_syscall;
+    #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const};
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};

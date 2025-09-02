@@ -20,6 +20,20 @@ pub trait IPoolFactory<TContractState> {
         interest_rate_params: Span<InterestRateConfig>,
         pair_params: Span<PairParams>,
     ) -> ContractAddress;
+    fn add_asset(
+        ref self: TContractState,
+        pool: ContractAddress,
+        asset: ContractAddress,
+        asset_params: AssetParams,
+        interest_rate_config: InterestRateConfig,
+        v_token_params: VTokenParams,
+    );
+    fn create_oracle(
+        ref self: TContractState,
+        manager: ContractAddress,
+        pragma_oracle: ContractAddress,
+        pragma_summary: ContractAddress,
+    ) -> ContractAddress;
 }
 
 #[starknet::contract]
@@ -43,6 +57,7 @@ mod PoolFactory {
     struct Storage {
         pool_class_hash: felt252,
         v_token_class_hash: felt252,
+        oracle_class_hash: felt252,
         v_token_for_asset: Map<(ContractAddress, ContractAddress), ContractAddress>,
         asset_for_v_token: Map<(ContractAddress, ContractAddress), ContractAddress>,
         #[substorage(v0)]
@@ -77,6 +92,22 @@ mod PoolFactory {
         oracle: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct AddAsset {
+        #[key]
+        pool: ContractAddress,
+        #[key]
+        asset: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct CreateOracle {
+        #[key]
+        oracle: ContractAddress,
+        #[key]
+        manager: ContractAddress,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -84,6 +115,8 @@ mod PoolFactory {
         OwnableEvent: OwnableComponent::Event,
         CreateVToken: CreateVToken,
         CreatePool: CreatePool,
+        AddAsset: AddAsset,
+        CreateOracle: CreateOracle,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -93,16 +126,50 @@ mod PoolFactory {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, owner: ContractAddress, pool_class_hash: felt252, v_token_class_hash: felt252,
+        ref self: ContractState,
+        owner: ContractAddress,
+        pool_class_hash: felt252,
+        v_token_class_hash: felt252,
+        oracle_class_hash: felt252,
     ) {
         self.ownable.initializer(owner);
         self.pool_class_hash.write(pool_class_hash);
         self.v_token_class_hash.write(v_token_class_hash);
+        self.oracle_class_hash.write(oracle_class_hash);
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        /// Creates a vToken contract for a given collateral asset.
+        /// Adds an asset to the pool
+        /// # Arguments
+        /// * `pool` - address of the pool
+        /// * `asset` - address of the asset
+        /// * `asset_params` - asset parameters
+        /// * `interest_rate_config` - interest rate model configuration
+        /// * `v_token_params` - vToken parameters
+        fn _add_asset(
+            ref self: ContractState,
+            pool: ContractAddress,
+            asset: ContractAddress,
+            asset_params: AssetParams,
+            interest_rate_config: InterestRateConfig,
+            v_token_params: VTokenParams,
+        ) {
+            let pool = IPoolDispatcher { contract_address: pool };
+
+            // set allowance for the pool to burn inflation fee
+            self.transfer_inflation_fee(pool.contract_address, asset, asset_params.is_legacy);
+
+            // add the asset to the pool
+            pool.add_asset(asset_params, interest_rate_config);
+            self.emit(AddAsset { pool: pool.contract_address, asset });
+
+            // create the v token for the asset
+            let VTokenParams { v_token_name, v_token_symbol, debt_asset } = v_token_params;
+            self.create_v_token(v_token_name, v_token_symbol, pool.contract_address, asset, debt_asset);
+        }
+
+        /// Creates a vToken contract for a given collateral asset
         /// # Arguments
         /// * `v_token_name` - name of the vToken
         /// * `v_token_symbol` - symbol of the vToken
@@ -234,22 +301,21 @@ mod PoolFactory {
 
             let pool = IPoolDispatcher { contract_address: pool_address };
 
+            self.emit(CreatePool { pool: pool.contract_address, name, owner, curator, oracle });
+
             let mut asset_params_copy = asset_params;
             let mut i = 0;
             while !asset_params_copy.is_empty() {
                 let asset_params = *asset_params_copy.pop_front().unwrap();
                 let asset = asset_params.asset;
-
-                // set allowance for the pool to burn inflation fee
-                self.transfer_inflation_fee(pool.contract_address, asset, asset_params.is_legacy);
-
-                let interest_rate_config = *interest_rate_params.pop_front().unwrap();
-                pool.add_asset(asset_params, interest_rate_config);
-
-                let v_token_config = *v_token_params.at(i);
-                let VTokenParams { v_token_name, v_token_symbol, debt_asset } = v_token_config;
-                self.create_v_token(v_token_name, v_token_symbol, pool.contract_address, asset, debt_asset);
-
+                self
+                    ._add_asset(
+                        pool.contract_address,
+                        asset,
+                        asset_params,
+                        *interest_rate_params.pop_front().unwrap(),
+                        *v_token_params.at(i),
+                    );
                 i += 1;
             }
 
@@ -279,9 +345,64 @@ mod PoolFactory {
             // nominate the curator
             pool.nominate_curator(curator);
 
-            self.emit(CreatePool { pool: pool.contract_address, name, owner, curator, oracle });
-
             pool.contract_address
+        }
+
+        /// Adds an asset to the pool. The curator has to nominate the factory as the curator.
+        /// The factory will pass the ownership back to the curator after the asset is added.
+        /// # Arguments
+        /// * `pool` - address of the pool
+        /// * `asset` - address of the asset
+        /// * `asset_params` - asset parameters
+        /// * `interest_rate_config` - interest rate model configuration
+        /// * `v_token_params` - vToken parameters
+        fn add_asset(
+            ref self: ContractState,
+            pool: ContractAddress,
+            asset: ContractAddress,
+            asset_params: AssetParams,
+            interest_rate_config: InterestRateConfig,
+            v_token_params: VTokenParams,
+        ) {
+            let pool = IPoolDispatcher { contract_address: pool };
+
+            // accept the curator ownership temporarily
+            let curator = pool.curator();
+            pool.accept_curator_ownership();
+
+            self._add_asset(pool.contract_address, asset, asset_params, interest_rate_config, v_token_params);
+
+            // return the ownership to the curator
+            pool.nominate_curator(curator);
+        }
+
+        /// Creates a new oracle contract
+        /// # Arguments
+        /// * `manager` - manager of the oracle
+        /// * `pragma_oracle` - address of the pragma oracle contract
+        /// * `pragma_summary` - address of the pragma summary contract
+        /// # Returns
+        /// * `oracle` - address of the oracle contract
+        fn create_oracle(
+            ref self: ContractState,
+            manager: ContractAddress,
+            pragma_oracle: ContractAddress,
+            pragma_summary: ContractAddress,
+        ) -> ContractAddress {
+            // default owner of all oracles is the owner of the pool factory
+            let owner = self.ownable.owner();
+
+            let (oracle, _) = (deploy_syscall(
+                self.oracle_class_hash.read().try_into().unwrap(),
+                0,
+                array![owner.into(), manager.into(), pragma_oracle.into(), pragma_summary.into()].span(),
+                false,
+            ))
+                .unwrap();
+
+            self.emit(CreateOracle { oracle, manager });
+
+            oracle
         }
     }
 }

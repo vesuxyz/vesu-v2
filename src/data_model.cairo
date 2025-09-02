@@ -24,7 +24,7 @@ pub struct AssetConfig { //                                     | slot | packed 
     pub last_full_utilization_rate: u256, //    [SCALE]         | 3    | u64    |
     pub fee_rate: u256, //                      [SCALE]         | 3    | u8     | percentage
     // tracks the number of unclaimed allocated shares (from each asset) that can be claimed by
-    // `fee_recipient`.
+    // `fee_recipient`
     pub fee_shares: u256 //                     [SCALE]         | 4    | u128   |
 }
 

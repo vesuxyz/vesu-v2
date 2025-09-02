@@ -1111,7 +1111,7 @@ mod Pool {
                 fee_shares: 0,
             };
 
-            // Check that oracle of the given asset was set.
+            // Check that oracle of the given asset was set
             let oracle = IOracleDispatcher { contract_address: self.oracle.read() };
             assert!(oracle.price(params.asset).is_valid, "oracle-price-invalid");
 
@@ -1124,7 +1124,7 @@ mod Pool {
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(params.asset, interest_rate_config);
 
-            // Burn inflation fee.
+            // Burn inflation fee
             transfer_asset(asset.contract_address, caller, get_contract_address(), INFLATION_FEE, params.is_legacy);
         }
 
@@ -1165,7 +1165,8 @@ mod Pool {
         /// * `asset_config` - asset configuration
         fn asset_config(self: @ContractState, asset: ContractAddress) -> AssetConfig {
             let mut asset_config = self.asset_configs.read(asset);
-            // Check that the asset is registered.
+
+            // Check that the asset is registered
             assert_asset_config_exists(asset_config);
 
             if asset_config.last_updated != get_block_timestamp() {
@@ -1204,7 +1205,7 @@ mod Pool {
             IOracleDispatcher { contract_address: self.oracle.read() }.price(asset)
         }
 
-        /// Sets the address to which fees are sent.
+        /// Sets the address to which fees are sent
         /// # Arguments
         /// * `fee_recipient` - new fee address
         fn set_fee_recipient(ref self: ContractState, fee_recipient: ContractAddress) {
@@ -1231,13 +1232,13 @@ mod Pool {
             let mut asset_config = self.asset_config(asset);
             let fee_shares = asset_config.fee_shares;
 
-            // Zero out the stored fee shares for the asset.
+            // Zero out the stored fee shares for the asset
             asset_config.fee_shares = 0;
 
-            // Write the updated asset config back to storage.
+            // Write the updated asset config back to storage
             self.asset_configs.write(asset, asset_config);
 
-            // Convert shares to amount (round down).
+            // Convert shares to amount (round down)
             let amount = calculate_collateral(fee_shares, asset_config, false);
             let fee_recipient = self.fee_recipient.read();
 
@@ -1248,12 +1249,12 @@ mod Pool {
             self.emit(ClaimFees { asset, recipient: fee_recipient, amount });
         }
 
-        /// Returns the number of unclaimed fee shares and the corresponding amount.
+        /// Returns the number of unclaimed fee shares and the corresponding amount
         fn get_fees(self: @ContractState, asset: ContractAddress) -> (u256, u256) {
             let asset_config = self.asset_config(asset);
             let fee_shares = asset_config.fee_shares;
 
-            // Convert shares to amount (round down).
+            // Convert shares to amount (round down)
             let amount = calculate_collateral(fee_shares, asset_config, false);
 
             (fee_shares, amount)
@@ -1507,7 +1508,7 @@ mod Pool {
             self.emit(SetShutdownMode { shutdown_mode: new_shutdown_mode, last_updated: shutdown_state.last_updated });
         }
 
-        /// Updates the shutdown mode for a specific pair.
+        /// Updates the shutdown mode for a specific pair
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
@@ -1675,9 +1676,9 @@ mod Pool {
         ///
         /// Requirements:
         ///
-        /// - The contract is not paused.
+        /// - The contract is not paused
         ///
-        /// Emits a `Paused` event.
+        /// Emits a `Paused` event
         fn pause(ref self: ContractState) {
             self.ownable.assert_only_owner();
             assert!(!self.paused.read(), "contract-already-paused");
@@ -1685,13 +1686,13 @@ mod Pool {
             self.emit(ContractPaused { account: get_caller_address() });
         }
 
-        /// Lifts the pause on the contract.
+        /// Lifts the pause on the contract
         ///
         /// Requirements:
         ///
-        /// - The contract is paused.
+        /// - The contract is paused
         ///
-        /// Emits an `Unpaused` event.
+        /// Emits an `Unpaused` event
         fn unpause(ref self: ContractState) {
             self.ownable.assert_only_owner();
             assert!(self.paused.read(), "contract-already-unpaused");
@@ -1699,7 +1700,7 @@ mod Pool {
             self.emit(ContractUnpaused { account: get_caller_address() });
         }
 
-        /// Returns true if the contract is paused, and false otherwise.
+        /// Returns true if the contract is paused, and false otherwise
         fn is_paused(self: @ContractState) -> bool {
             self.paused.read()
         }
