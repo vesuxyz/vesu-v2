@@ -105,7 +105,7 @@ mod PoolFactory {
         #[key]
         oracle: ContractAddress,
         #[key]
-        owner: ContractAddress,
+        manager: ContractAddress,
     }
 
     #[event]
@@ -389,7 +389,7 @@ mod PoolFactory {
             pragma_oracle: ContractAddress,
             pragma_summary: ContractAddress,
         ) -> ContractAddress {
-            // default owner of all pools is the owner of the pool factory
+            // default owner of all oracles is the owner of the pool factory
             let owner = self.ownable.owner();
 
             let (oracle, _) = (deploy_syscall(
@@ -400,7 +400,7 @@ mod PoolFactory {
             ))
                 .unwrap();
 
-            self.emit(CreateOracle { oracle, owner });
+            self.emit(CreateOracle { oracle, manager });
 
             oracle
         }
