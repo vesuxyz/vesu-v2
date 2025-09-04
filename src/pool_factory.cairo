@@ -361,6 +361,7 @@ mod PoolFactory {
 
             // accept the curator ownership temporarily
             let curator = pool.curator();
+            assert!(curator == get_caller_address(), "caller-not-curator");
             pool.accept_curator_ownership();
 
             self._add_asset(pool.contract_address, asset, asset_params, interest_rate_config, v_token_params);
