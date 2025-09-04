@@ -6,7 +6,7 @@ use snforge_std::{
 };
 #[feature("deprecated-starknet-consts")]
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, get_contract_address};
-use vesu::data_model::{AssetParams, PairConfig, PairParams, ShutdownConfig, ShutdownParams, VTokenParams};
+use vesu::data_model::{AssetParams, PairConfig, PairParams, VTokenParams};
 use vesu::interest_rate_model::InterestRateConfig;
 use vesu::math::pow_10;
 use vesu::oracle::{IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig};
@@ -15,7 +15,7 @@ use vesu::pool_factory::{IPoolFactoryDispatcher, IPoolFactoryDispatcherTrait};
 use vesu::test::mock_oracle::{
     IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
 };
-use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE, SCALE_128};
+use vesu::units::{INFLATION_FEE, PERCENT, SCALE, SCALE_128};
 use vesu::vendor::pragma::AggregationMode;
 
 pub const COLL_PRAGMA_KEY: felt252 = 19514442401534788;
@@ -359,8 +359,6 @@ pub fn create_pool_via_factory(
     ]
         .span();
 
-    let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
-
     cheat_caller_address(pool_factory.contract_address, curator, CheatSpan::TargetCalls(1));
     let pool = IPoolDispatcher {
         contract_address: pool_factory
@@ -369,7 +367,6 @@ pub fn create_pool_via_factory(
                 curator,
                 oracle.contract_address,
                 curator,
-                shutdown_params,
                 asset_params,
                 v_token_params,
                 interest_rate_configs,
@@ -452,8 +449,6 @@ pub fn create_pool(
         aggregation_mode: AggregationMode::Median,
     };
 
-    let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
-
     // Add assets.
     cheat_caller_address(oracle.contract_address, curator, CheatSpan::TargetCalls(1));
     oracle.add_asset(asset: collateral_asset_params.asset, oracle_config: collateral_oracle_config);
@@ -524,11 +519,6 @@ pub fn create_pool(
             pair_config: PairConfig { max_ltv: (85 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
         );
 
-    // set the shutdown config
-    let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
-    cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
-    pool.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
-
     assert!(pool.pool_name() == 'PoolName', "pool name not set");
 }
 
@@ -581,7 +571,7 @@ pub fn setup_pool(
     pool.set_asset_parameter(third_asset.contract_address, 'floor', SCALE / 10_000);
     stop_cheat_caller_address(pool.contract_address);
     start_cheat_caller_address(pool.contract_address, users.curator);
-    pool.set_shutdown_mode_agent(get_contract_address());
+    pool.set_pausing_agent(get_contract_address());
     stop_cheat_caller_address(pool.contract_address);
 
     (pool, oracle, config, users, terms)

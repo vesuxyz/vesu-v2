@@ -5,12 +5,11 @@ mod TestDefaultPOV2 {
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
     use vesu::data_model::{AssetParams, PairConfig};
-    use vesu::data_model::{ShutdownConfig, ShutdownMode};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Env, TestConfig, create_pool, deploy_asset, setup_env};
-    use vesu::units::{DAY_IN_SECONDS, INFLATION_FEE, PERCENT, SCALE};
+    use vesu::units::{INFLATION_FEE, PERCENT, SCALE};
     use vesu::vendor::pragma::AggregationMode;
 
     #[test]
@@ -484,38 +483,6 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    fn test_set_shutdown_config() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        let recovery_period = 11 * DAY_IN_SECONDS;
-        let subscription_period = 12 * DAY_IN_SECONDS;
-
-        start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
-        stop_cheat_caller_address(pool.contract_address);
-
-        let shutdown_config = pool.shutdown_config();
-
-        assert(shutdown_config.recovery_period == recovery_period, 'recovery period not set');
-        assert(shutdown_config.subscription_period == subscription_period, 'subscription period not set');
-    }
-
-    #[test]
-    #[should_panic(expected: "caller-not-curator")]
-    fn test_set_shutdown_config_caller_not_curator() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        let recovery_period = 11 * DAY_IN_SECONDS;
-        let subscription_period = 12 * DAY_IN_SECONDS;
-
-        pool.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
-    }
-
-    #[test]
     fn test_set_oracle_parameter() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
@@ -752,27 +719,27 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    fn test_set_shutdown_mode_agent() {
+    fn test_set_pausing_agent() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.set_shutdown_mode_agent(users.lender);
+        pool.set_pausing_agent(users.lender);
         stop_cheat_caller_address(pool.contract_address);
 
-        let shutdown_mode_agent = pool.shutdown_mode_agent();
-        assert(shutdown_mode_agent == users.lender, 'Shutdown mode agent not set');
+        let pausing_agent = pool.pausing_agent();
+        assert(pausing_agent == users.lender, 'Pausing agent not set');
     }
 
     #[test]
     #[should_panic(expected: "caller-not-curator")]
-    fn test_set_shutdown_mode_agent_caller_not_owner() {
+    fn test_set_pausing_agent_caller_not_owner() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
-        pool.set_shutdown_mode_agent(users.lender);
+        pool.set_pausing_agent(users.lender);
     }
 
     #[test]
@@ -878,50 +845,44 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    fn test_set_shutdown_mode() {
+    fn test_pause_pool() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.set_shutdown_mode_agent(users.lender);
+        pool.set_pausing_agent(users.lender);
         stop_cheat_caller_address(pool.contract_address);
 
+        // agent
         start_cheat_caller_address(pool.contract_address, users.lender);
-        pool.set_shutdown_mode(ShutdownMode::Recovery);
+        pool.pause();
         stop_cheat_caller_address(pool.contract_address);
 
-        let shutdown_status = pool
-            .shutdown_status(config.collateral_asset.contract_address, config.debt_asset.contract_address);
-        assert(shutdown_status.shutdown_mode == ShutdownMode::Recovery, 'Shutdown mode not set');
+        assert(pool.is_paused(), 'Not paused');
 
+        // curator
         start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.set_shutdown_mode(ShutdownMode::None);
+        pool.unpause();
         stop_cheat_caller_address(pool.contract_address);
 
-        let shutdown_status = pool
-            .shutdown_status(config.collateral_asset.contract_address, config.debt_asset.contract_address);
-        assert(shutdown_status.shutdown_mode == ShutdownMode::None, 'Shutdown mode not set');
+        assert(!pool.is_paused(), 'Not unpaused');
+
+        // owner
+        start_cheat_caller_address(pool.contract_address, users.owner);
+        pool.pause();
+        stop_cheat_caller_address(pool.contract_address);
+
+        assert(pool.is_paused(), 'Not paused');
     }
 
     #[test]
-    #[should_panic(expected: "caller-not-curator-or-agent")]
-    fn test_set_shutdown_mode_caller_not_owner_or_agent() {
+    #[should_panic(expected: "caller-not-authorized")]
+    fn test_pause_pool_caller_not_authorized() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
-        pool.set_shutdown_mode(ShutdownMode::Recovery);
-    }
-
-    #[test]
-    #[should_panic(expected: "caller-not-curator-or-agent")]
-    fn test_update_shutdown_status_caller_not_curator_or_agent() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-        let TestConfig { collateral_asset, debt_asset, .. } = config;
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        pool.update_shutdown_status(collateral_asset.contract_address, debt_asset.contract_address);
+        pool.pause();
     }
 }

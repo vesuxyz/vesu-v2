@@ -75,11 +75,6 @@ export interface AssetConfig {
   fee_rate: bigint;
 }
 
-export interface ShutdownParams {
-  recovery_period: bigint;
-  subscription_period: bigint;
-}
-
 export interface FeeParams {
   fee_recipient: string;
 }
@@ -95,7 +90,6 @@ export interface CreatePoolParams {
   curator: string;
   // oracle: string;
   fee_recipient: string;
-  shutdown_params: ShutdownParams;
   asset_params: AssetParams[];
   v_token_params: VTokenParams[];
   interest_rate_configs: InterestRateConfig[];

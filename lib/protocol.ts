@@ -53,7 +53,6 @@ export class Protocol implements ProtocolContracts {
       params.curator,
       oracle.address,
       params.fee_recipient,
-      params.shutdown_params,
       params.asset_params,
       params.v_token_params,
       params.interest_rate_configs,

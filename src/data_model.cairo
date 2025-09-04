@@ -129,44 +129,9 @@ pub struct UpdatePositionResponse {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-pub struct ShutdownParams {
-    pub recovery_period: u64, // [seconds]
-    pub subscription_period: u64 // [seconds]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct ShutdownConfig {
-    pub recovery_period: u64, // [seconds]
-    pub subscription_period: u64 // [seconds]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
 pub struct Pair {
     pub total_collateral_shares: u256, // packed as u128 [SCALE]
     pub total_nominal_debt: u256 // packed as u123 [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde, Default, starknet::Store)]
-pub enum ShutdownMode {
-    #[default]
-    None,
-    Recovery,
-    Subscription,
-    Redemption,
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-pub struct ShutdownStatus {
-    pub shutdown_mode: ShutdownMode,
-    pub violating: bool,
-}
-
-#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct ShutdownState {
-    // current set shutdown mode (overwrites the inferred shutdown mode)
-    pub shutdown_mode: ShutdownMode,
-    // timestamp at which the shutdown mode was last updated
-    pub last_updated: u64,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]

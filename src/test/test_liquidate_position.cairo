@@ -70,7 +70,7 @@ mod TestLiquidatePosition {
     }
 
     #[test]
-    #[should_panic(expected: "emergency-mode")]
+    #[should_panic(expected: "invalid-oracle")]
     fn test_liquidate_position_invalid_oracle_1() {
         let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -129,7 +129,7 @@ mod TestLiquidatePosition {
     }
 
     #[test]
-    #[should_panic(expected: "emergency-mode")]
+    #[should_panic(expected: "invalid-oracle")]
     fn test_liquidate_position_invalid_oracle_2() {
         let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;

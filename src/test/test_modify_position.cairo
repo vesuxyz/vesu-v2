@@ -4,14 +4,17 @@ mod TestModifyPosition {
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{
         CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, start_cheat_caller_address,
-        stop_cheat_caller_address,
+        stop_cheat_block_timestamp_global, stop_cheat_caller_address,
     };
     #[feature("deprecated-starknet-consts")]
     use starknet::get_block_timestamp;
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
+    use vesu::interest_rate_model::InterestRateConfig;
+    use vesu::oracle::IPragmaOracleDispatcherTrait;
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::test::mock_asset::{IMintableDispatcher, IMintableDispatcherTrait};
-    use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
+    use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
+    use vesu::test::setup_v2::{COLL_PRAGMA_KEY, LendingTerms, TestConfig, setup, setup_pool};
     use vesu::units::{DAY_IN_SECONDS, SCALE, YEAR_IN_SECONDS};
 
     // identical-assets
@@ -262,6 +265,114 @@ mod TestModifyPosition {
         start_cheat_caller_address(pool.contract_address, users.borrower);
         pool.modify_position(params);
         stop_cheat_caller_address(pool.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: "invalid-oracle")]
+    fn test_modify_position_invalid_oracle() {
+        let (pool, oracle, config, users, terms) = setup();
+        let TestConfig { collateral_asset, third_asset, .. } = config;
+        let LendingTerms { liquidity_to_deposit_third, .. } = terms;
+
+        // Supply
+
+        let params = ModifyPositionParams {
+            collateral_asset: third_asset.contract_address,
+            debt_asset: collateral_asset.contract_address,
+            user: users.lender,
+            collateral: Amount { denomination: AmountDenomination::Assets, value: (liquidity_to_deposit_third).into() },
+            debt: Default::default(),
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
+
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
+
+        pool
+            .check_invariants(
+                collateral_asset.contract_address,
+                third_asset.contract_address,
+                users.borrower,
+                Zero::zero(),
+                Zero::zero(),
+                Zero::zero(),
+                Zero::zero(),
+                false,
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: "unsafe-rate-accumulator")]
+    fn test_modify_position_unsafe_rate_accumulator() {
+        let current_time = 1707509060;
+        start_cheat_block_timestamp_global(current_time);
+
+        let interest_rate_config = InterestRateConfig {
+            min_target_utilization: 90_000,
+            max_target_utilization: 99_999,
+            target_utilization: 99_998,
+            min_full_utilization_rate: 100824704600, // 300% per year
+            max_full_utilization_rate: 100824704600,
+            zero_utilization_rate: 100824704600,
+            rate_half_life: 172_800,
+            target_rate_percent: SCALE,
+        };
+
+        let (pool, _, config, users, terms) = setup_pool(
+            Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), true, Option::Some(interest_rate_config),
+        );
+
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
+        let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
+
+        // User 1
+
+        // deposit collateral which is later borrowed by the borrower
+        let params = ModifyPositionParams {
+            collateral_asset: debt_asset.contract_address,
+            debt_asset: collateral_asset.contract_address,
+            user: users.lender,
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
+            debt: Default::default(),
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
+
+        // User 2
+
+        let params = ModifyPositionParams {
+            collateral_asset: collateral_asset.contract_address,
+            debt_asset: debt_asset.contract_address,
+            user: users.borrower,
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount { denomination: AmountDenomination::Native, value: nominal_debt_to_draw.into() },
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
+
+        let current_time = current_time + (360 * DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(current_time);
+
+        pool
+            .check_invariants(
+                collateral_asset.contract_address,
+                debt_asset.contract_address,
+                users.lender,
+                Zero::zero(),
+                Zero::zero(),
+                Zero::zero(),
+                Zero::zero(),
+                false,
+            );
+
+        stop_cheat_block_timestamp_global();
     }
 
     #[test]

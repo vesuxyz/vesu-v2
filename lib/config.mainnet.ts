@@ -39,10 +39,6 @@ export const config: Config = {
         curator: CONFIG.pool_parameters.owner,
         fee_recipient: CONFIG.pool_parameters.fee_recipient,
         // oracle: CONFIG.pool_parameters.oracle,
-        shutdown_params: {
-          recovery_period: BigInt(CONFIG.pool_parameters.recovery_period),
-          subscription_period: BigInt(CONFIG.pool_parameters.subscription_period),
-        },
         asset_params: CONFIG.asset_parameters.map((asset: any) => ({
           asset: asset.token.address,
           floor: toScale(asset.floor),

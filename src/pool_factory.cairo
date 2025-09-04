@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use vesu::data_model::{AssetParams, PairParams, ShutdownParams, VTokenParams};
+use vesu::data_model::{AssetParams, PairParams, VTokenParams};
 use vesu::interest_rate_model::InterestRateConfig;
 
 #[starknet::interface]
@@ -14,7 +14,6 @@ pub trait IPoolFactory<TContractState> {
         curator: ContractAddress,
         oracle: ContractAddress,
         fee_recipient: ContractAddress,
-        shutdown_params: ShutdownParams,
         asset_params: Span<AssetParams>,
         v_token_params: Span<VTokenParams>,
         interest_rate_params: Span<InterestRateConfig>,
@@ -47,7 +46,7 @@ mod PoolFactory {
     };
     use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use vesu::data_model::{AssetParams, PairConfig, PairParams, ShutdownConfig, ShutdownParams, VTokenParams};
+    use vesu::data_model::{AssetParams, PairConfig, PairParams, VTokenParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::pool_factory::IPoolFactory;
@@ -263,7 +262,6 @@ mod PoolFactory {
         /// * `curator` - curator of the pool
         /// * `oracle` - oracle of the pool
         /// * `fee_recipient` - fee recipient of the pool
-        /// * `shutdown_params` - shutdown parameters
         /// * `asset_params` - asset parameters
         /// * `v_token_params` - vToken parameters
         /// * `interest_rate_params` - interest rate model parameters
@@ -276,7 +274,6 @@ mod PoolFactory {
             curator: ContractAddress,
             oracle: ContractAddress,
             fee_recipient: ContractAddress,
-            shutdown_params: ShutdownParams,
             mut asset_params: Span<AssetParams>,
             mut v_token_params: Span<VTokenParams>,
             mut interest_rate_params: Span<InterestRateConfig>,
@@ -334,10 +331,6 @@ mod PoolFactory {
                         },
                     );
             }
-
-            // set the shutdown config
-            let ShutdownParams { recovery_period, subscription_period } = shutdown_params;
-            pool.set_shutdown_config(ShutdownConfig { recovery_period, subscription_period });
 
             // set the fee config
             pool.set_fee_recipient(fee_recipient);

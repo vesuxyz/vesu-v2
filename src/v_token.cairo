@@ -27,7 +27,7 @@ pub trait IVToken<TContractState> {
 #[starknet::contract]
 pub mod VToken {
     use alexandria_math::i257::I257Trait;
-    use core::num::traits::Bounded;
+    use core::num::traits::{Bounded, Zero};
     use openzeppelin::token::erc20::{
         DefaultConfig, ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait, ERC20Component,
         ERC20HooksEmptyImpl,
@@ -36,8 +36,8 @@ pub mod VToken {
     use starknet::event::EventEmitter;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams, ShutdownMode};
-    use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
+    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
+    use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait};
     use vesu::units::{SCALE, SCALE_DECIMALS};
     use vesu::v_token::{IERC4626, IVToken};
     use vesu::vendor::erc20::IERC20Metadata;
@@ -141,17 +141,24 @@ pub mod VToken {
         }
 
         /// Returns true if the pool accepts deposits
-        fn can_deposit(self: @ContractState) -> bool {
-            let shutdown_status = self.pool().shutdown_status(self.asset.read(), self.debt_asset.read());
-            shutdown_status.shutdown_mode != ShutdownMode::Subscription
-                && shutdown_status.shutdown_mode != ShutdownMode::Redemption
-        }
+        fn can_modify_position(self: @ContractState) -> bool {
+            let pool = IPoolSafeDispatcher { contract_address: self.pool_contract.read() };
 
-        /// Returns true if the pool allows for withdrawals
-        fn can_withdraw(self: @ContractState) -> bool {
-            let shutdown_status = self.pool().shutdown_status(self.asset.read(), self.debt_asset.read());
-            shutdown_status.shutdown_mode != ShutdownMode::Recovery
-                && shutdown_status.shutdown_mode != ShutdownMode::Subscription
+            #[feature("safe_dispatcher")]
+            let invariants = pool
+                .check_invariants(
+                    self.asset.read(),
+                    self.debt_asset.read(),
+                    get_caller_address(),
+                    Zero::zero(),
+                    Zero::zero(),
+                    Zero::zero(),
+                    Zero::zero(),
+                    false,
+                )
+                .is_ok();
+
+            invariants && !self.pool().is_paused()
         }
 
         /// See the `calculate_withdrawable_assets`
@@ -251,7 +258,7 @@ pub mod VToken {
         /// # Returns
         /// * maximum amount of assets [asset scale]
         fn max_deposit(self: @ContractState, receiver: ContractAddress) -> u256 {
-            if !self.can_deposit() {
+            if !self.can_modify_position() {
                 return 0;
             }
             let asset_config = self.pool().asset_config(self.asset.read());
@@ -265,7 +272,7 @@ pub mod VToken {
         /// # Returns
         /// * amount of vToken shares minted [SCALE]
         fn preview_deposit(self: @ContractState, assets: u256) -> u256 {
-            if !self.can_deposit() {
+            if !self.can_modify_position() {
                 return 0;
             }
             self.pool().calculate_collateral_shares(self.asset.read(), I257Trait::new(assets, is_negative: false))
@@ -310,7 +317,7 @@ pub mod VToken {
         /// # Returns
         /// * maximum amount of vToken shares minted [SCALE]
         fn max_mint(self: @ContractState, receiver: ContractAddress) -> u256 {
-            if !self.can_deposit() {
+            if !self.can_modify_position() {
                 return 0;
             }
             let asset_config = self.pool().asset_config(self.asset.read());
@@ -323,7 +330,7 @@ pub mod VToken {
         /// # Returns
         /// * amount of assets deposited [asset scale]
         fn preview_mint(self: @ContractState, shares: u256) -> u256 {
-            if !self.can_deposit() {
+            if !self.can_modify_position() {
                 return 0;
             }
             self.pool().calculate_collateral(self.asset.read(), I257Trait::new(shares, is_negative: false))
@@ -378,7 +385,7 @@ pub mod VToken {
         /// # Returns
         /// * maximum amount of assets [asset scale]
         fn max_withdraw(self: @ContractState, owner: ContractAddress) -> u256 {
-            if !self.can_withdraw() {
+            if !self.can_modify_position() {
                 return 0;
             }
 
@@ -402,7 +409,7 @@ pub mod VToken {
         /// # Returns
         /// * amount of vToken shares burned [SCALE]
         fn preview_withdraw(self: @ContractState, assets: u256) -> u256 {
-            if !self.can_withdraw() {
+            if !self.can_modify_position() {
                 return 0;
             }
             self.pool().calculate_collateral_shares(self.asset.read(), I257Trait::new(assets, is_negative: true))
@@ -451,7 +458,7 @@ pub mod VToken {
         /// # Returns
         /// * maximum amount of vToken shares [SCALE]
         fn max_redeem(self: @ContractState, owner: ContractAddress) -> u256 {
-            if !self.can_withdraw() {
+            if !self.can_modify_position() {
                 return 0;
             }
             let room = self
@@ -474,7 +481,7 @@ pub mod VToken {
         /// # Returns
         /// * amount of assets withdrawn [asset scale]
         fn preview_redeem(self: @ContractState, shares: u256) -> u256 {
-            if !self.can_withdraw() {
+            if !self.can_modify_position() {
                 return 0;
             }
             self.pool().calculate_collateral(self.asset.read(), I257Trait::new(shares, is_negative: true))

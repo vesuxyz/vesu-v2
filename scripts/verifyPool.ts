@@ -10,9 +10,6 @@ const config = deployer.config.pools["genesis-pool"].params;
 assert(toAddress(await pool.oracle()) === deployer.config.protocol.oracle!.toLowerCase(), "oracle-neq");
 assert((await pool.owner()) === BigInt(deployer.owner.address), "owner-neq");
 assert(BigInt(await pool.fee_recipient()) === BigInt(config.fee_recipient!.toLowerCase()), "fee_recipient-neq");
-const shutdown_config = await pool.shutdown_config();
-assert(shutdown_config.recovery_period === config.shutdown_params.recovery_period, "recovery_period-neq");
-assert(shutdown_config.subscription_period === config.shutdown_params.subscription_period, "subscription_period-neq");
 
 for (const [index, asset] of config.asset_params.entries()) {
   const oracle_config = await protocol.oracle.oracle_config(asset.asset);

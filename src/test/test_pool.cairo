@@ -398,7 +398,7 @@ mod TestPool {
     }
 
     #[test]
-    #[should_panic(expected: ('Caller is not the owner',))]
+    #[should_panic(expected: "caller-not-authorized")]
     fn test_pool_pause_only_owner() {
         let Env { pool, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
@@ -419,7 +419,7 @@ mod TestPool {
     }
 
     #[test]
-    #[should_panic(expected: ('Caller is not the owner',))]
+    #[should_panic(expected: "caller-not-authorized")]
     fn test_pool_unpause_only_owner() {
         let Env { pool, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
