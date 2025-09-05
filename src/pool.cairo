@@ -1538,9 +1538,7 @@ mod Pool {
         /// Emits an `Unpaused` event
         fn unpause(ref self: ContractState) {
             assert!(
-                get_caller_address() == self.ownable.owner()
-                    || get_caller_address() == self.curator.read()
-                    || get_caller_address() == self.pausing_agent.read(),
+                get_caller_address() == self.ownable.owner() || get_caller_address() == self.curator.read(),
                 "caller-not-authorized",
             );
             assert!(self.paused.read(), "contract-already-unpaused");

@@ -153,7 +153,7 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "oracle-price-invalid")]
+    #[should_panic(expected: "invalid-pragma-key")]
     fn test_add_asset_before_set_oracle() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
