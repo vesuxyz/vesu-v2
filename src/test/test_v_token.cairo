@@ -215,6 +215,7 @@ mod TestVToken {
 
         pool.pause();
         assert!(v_token.max_withdraw(users.lender) == 0);
+        cheat_caller_address(pool.contract_address, users.owner, CheatSpan::TargetCalls(1));
         pool.unpause();
         assert!(v_token.max_withdraw(users.lender) == 6000);
 
