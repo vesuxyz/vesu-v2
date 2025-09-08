@@ -1323,6 +1323,11 @@ mod Pool {
             assert!(collateral_asset != debt_asset, "identical-assets");
             assert_pair_config(pair_config);
             assert_storable_pair_config(pair_config);
+
+            // assert asset_configs exist
+            assert_asset_config_exists(self.asset_config(collateral_asset));
+            assert_asset_config_exists(self.asset_config(debt_asset));
+
             self.pair_configs.write((collateral_asset, debt_asset), pair_config);
             self.emit(SetPairConfig { collateral_asset, debt_asset, pair_config });
         }
