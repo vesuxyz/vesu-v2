@@ -1098,6 +1098,9 @@ mod TestModifyPosition {
         pool.modify_position(params);
         stop_cheat_caller_address(pool.contract_address);
 
+        // let asset_config = pool.asset_config(third_asset.contract_address);
+        // let reserve = asset_config.reserve;
+
         // Borrow
 
         let params = ModifyPositionParams {
@@ -1137,12 +1140,14 @@ mod TestModifyPosition {
         pool.modify_position(params);
         stop_cheat_caller_address(pool.contract_address);
 
-        let (shares, fee_amount) = pool.get_fees(third_asset.contract_address);
-        assert(shares > 0, 'Fee shares not minted');
+        let (fee_shares, fee_amount) = pool.get_fees(third_asset.contract_address);
+        assert(fee_shares > 0, 'Fee shares not minted');
 
         // fees increase total_collateral_shares
         let asset_config = pool.asset_config(third_asset.contract_address);
-        assert(asset_config.total_collateral_shares > total_collateral_shares, 'Shares not increased');
+        let reserve = asset_config.reserve;
+        assert(asset_config.total_collateral_shares == total_collateral_shares + fee_shares, 'Shares not increased');
+        assert(asset_config.fee_shares > 0, 'Fee shares not increased');
 
         // withdraw fees
         let balance_before = third_asset.balance_of(users.curator);
@@ -1150,6 +1155,11 @@ mod TestModifyPosition {
         let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
         assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
+
+        let asset_config = pool.asset_config(third_asset.contract_address);
+        assert(asset_config.total_collateral_shares == total_collateral_shares, 'Shares not decreased');
+        assert(asset_config.reserve == reserve - fee_amount, 'Reserve not decreased');
+        assert(asset_config.fee_shares == 0, 'Fee shares not decreased');
     }
 
     #[test]

@@ -1201,22 +1201,24 @@ mod Pool {
 
             let mut asset_config = self.asset_config(asset);
             let fee_shares = asset_config.fee_shares;
+            let fee_amount = calculate_collateral(fee_shares, asset_config, false);
 
-            // Zero out the stored fee shares for the asset
+            // Deduct the fee shares and amount from the total collateral shares and reserve
             asset_config.fee_shares = 0;
+            asset_config.total_collateral_shares -= fee_shares;
+            asset_config.reserve -= fee_amount;
 
             // Write the updated asset config back to storage
             self.asset_configs.write(asset, asset_config);
 
             // Convert shares to amount (round down)
-            let amount = calculate_collateral(fee_shares, asset_config, false);
             let fee_recipient = self.fee_recipient.read();
 
             assert!(
-                IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, amount), "fee-transfer-failed",
+                IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, fee_amount), "fee-transfer-failed",
             );
 
-            self.emit(ClaimFees { asset, recipient: fee_recipient, amount });
+            self.emit(ClaimFees { asset, recipient: fee_recipient, amount: fee_amount });
         }
 
         /// Returns the number of unclaimed fee shares and the corresponding amount
