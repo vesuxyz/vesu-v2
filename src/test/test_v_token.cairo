@@ -10,8 +10,10 @@ mod TestVToken {
     #[feature("deprecated-starknet-consts")]
     use starknet::{ContractAddress, contract_address_const};
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
+    use vesu::oracle::{IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait};
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
-    use vesu::test::setup_v2::{Users, setup};
+    use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
+    use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Users, setup};
     use vesu::units::PERCENT;
     use vesu::v_token::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenDispatcher, IVTokenDispatcherTrait};
     use vesu::vendor::erc20::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait};
@@ -25,7 +27,7 @@ mod TestVToken {
     }
 
     fn setup_v_token() -> VTokenEnv {
-        let (pool, _oracle, config, users, _lending) = setup();
+        let (pool, _, config, users, _) = setup();
 
         let v_token_class_hash = *declare("VToken").unwrap().contract_class().class_hash;
         let (v_token, _) = (deploy_syscall(
@@ -210,5 +212,16 @@ mod TestVToken {
         // Withdrawing 6000 tokens will leave 3000 in the reserve + 1000 debt, which is the max 25% utilization.
         assert!(v_token.max_withdraw(users.lender) == 6000);
         assert!(v_token.max_redeem(users.lender) == 6000 * to_shares);
+
+        pool.pause();
+        assert!(v_token.max_withdraw(users.lender) == 0);
+        pool.unpause();
+        assert!(v_token.max_withdraw(users.lender) == 6000);
+
+        let oracle = IPragmaOracleDispatcher { contract_address: pool.oracle() };
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        mock_pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, 1);
+
+        assert!(v_token.max_withdraw(users.lender) == 0);
     }
 }

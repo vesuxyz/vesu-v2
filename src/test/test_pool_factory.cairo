@@ -7,7 +7,7 @@ mod TestPoolFactory {
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
-    use vesu::pool_factory::IPoolFactoryDispatcherTrait;
+    use vesu::pool_factory::{IPoolFactoryDispatcherTrait, IPoolFactorySafeDispatcher, IPoolFactorySafeDispatcherTrait};
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
     use vesu::test::setup_v2::{Env, create_pool_via_factory, deploy_asset, setup_env};
     use vesu::units::{PERCENT, SCALE, SCALE_128};
@@ -77,6 +77,15 @@ mod TestPoolFactory {
 
         cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
         pool.nominate_curator(pool_factory.contract_address);
+
+        #[feature("safe_dispatcher")]
+        assert!(
+            !IPoolFactorySafeDispatcher { contract_address: pool_factory.contract_address }
+                .add_asset(
+                    pool.contract_address, asset.contract_address, asset_params, interest_rate_config, v_token_params,
+                )
+                .is_ok(),
+        );
 
         cheat_caller_address(pool_factory.contract_address, users.curator, CheatSpan::TargetCalls(1));
         pool_factory

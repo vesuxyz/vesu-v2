@@ -4,7 +4,7 @@ mod TestPragmaOracle {
     use snforge_std::{CheatSpan, cheat_caller_address, map_entry_address, start_cheat_block_timestamp_global, store};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::common::is_collateralized;
-    use vesu::data_model::{AssetParams, PairConfig, PairParams, ShutdownConfig, ShutdownParams};
+    use vesu::data_model::{AssetParams, PairConfig, PairParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{
         IOracleDispatcher, IOracleDispatcherTrait, IPragmaOracleDispatcher, IPragmaOracleDispatcherTrait, OracleConfig,
@@ -15,7 +15,7 @@ mod TestPragmaOracle {
         IMockPragmaSummaryDispatcherTrait,
     };
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env, TestConfig, setup, setup_env};
-    use vesu::units::{DAY_IN_SECONDS, PERCENT, SCALE};
+    use vesu::units::{PERCENT, SCALE};
     use vesu::vendor::pragma::AggregationMode;
 
 
@@ -90,9 +90,7 @@ mod TestPragmaOracle {
             debt_cap: 0,
         };
 
-        let shutdown_params = ShutdownParams { recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS };
-
-        // Add assets.
+        // Add assets
         cheat_caller_address(oracle.contract_address, curator, CheatSpan::TargetCalls(1));
         oracle.add_asset(asset: collateral_asset_params.asset, oracle_config: collateral_oracle_config);
         cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
@@ -132,12 +130,6 @@ mod TestPragmaOracle {
                     debt_cap: pair_params_1.debt_cap,
                 },
             );
-
-        // set the shutdown config
-        let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
-        cheat_caller_address(pool.contract_address, curator, CheatSpan::TargetCalls(1));
-        pool.set_shutdown_config(shutdown_config: ShutdownConfig { recovery_period, subscription_period });
-        // No stop_cheat_caller_address needed for one-shot cheat_caller_address
     }
 
     #[test]
