@@ -42,9 +42,6 @@ pub fn pow_scale(mut x: u256, mut n: u256, is_negative: bool) -> u256 {
 /// # Returns
 /// * `u256` - result of x raised to the power of n
 pub fn pow(x: u256, n: usize) -> u256 {
-    if x == 0 {
-        return 0;
-    }
     if n == 0 {
         1
     } else if n == 1 {
