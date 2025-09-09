@@ -5,7 +5,7 @@ This repository contains the Cairo contracts for the Vesu V2 lending protocol.
 ## Overview
 
 <p align="center">
-  <img width="4352" height="2049" alt="vesu-v2-architecture" src="https://github.com/user-attachments/assets/07ff9f0b-d5b4-4bbe-b529-2cbe496ae770" />
+  <img width="4352" height="2049" alt="vesu-v2-architecture" src="https://github.com/user-attachments/assets/d448d6b7-028e-43f2-ad92-1a3da3480dad" />
 </p>
 
 ## Setup
