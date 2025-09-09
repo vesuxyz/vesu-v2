@@ -148,8 +148,8 @@ mod TestPragmaOracle {
     }
 
     #[test]
-    #[should_panic(expected: "oracle-price-invalid")]
-    fn test_price_invalid() {
+    #[should_panic(expected: "invalid-pragma-key")]
+    fn test_invalid_pragma_key() {
         let (_, oracle, _, _, _) = setup();
         let price_oracle = IOracleDispatcher { contract_address: oracle.contract_address };
 

@@ -303,7 +303,7 @@ mod Oracle {
                 pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode,
             } = self.oracle_configs.read(asset);
 
-            assert!(pragma_key.is_non_zero(), "oracle-price-invalid");
+            assert!(pragma_key.is_non_zero(), "invalid-pragma-key");
 
             let dispatcher = IPragmaABIDispatcher { contract_address: self.pragma_oracle.read() };
             let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
