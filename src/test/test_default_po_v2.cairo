@@ -4,6 +4,8 @@ mod TestDefaultPOV2 {
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
     use snforge_std::{CheatSpan, cheat_caller_address, start_cheat_caller_address, stop_cheat_caller_address};
     #[feature("deprecated-starknet-consts")]
+    use starknet::contract_address_const;
+    #[feature("deprecated-starknet-consts")]
     use vesu::data_model::{AssetParams, PairConfig};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
@@ -281,6 +283,38 @@ mod TestDefaultPOV2 {
             .set_pair_config(
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
+                PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: "asset-config-nonexistent")]
+    fn test_set_pair_config_nonexistent_assets() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_config(
+                contract_address_const::<'nonexistent-asset'>(),
+                config.debt_asset.contract_address,
+                PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: "asset-config-nonexistent")]
+    fn test_set_pair_config_nonexistent_assets_2() {
+        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+
+        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
+
+        start_cheat_caller_address(pool.contract_address, users.curator);
+        pool
+            .set_pair_config(
+                config.debt_asset.contract_address,
+                contract_address_const::<'nonexistent-asset'>(),
                 PairConfig { max_ltv: (40 * PERCENT).try_into().unwrap(), liquidation_factor: 0, debt_cap: 0 },
             );
     }
