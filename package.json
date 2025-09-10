@@ -17,6 +17,6 @@
     "starknet-devnet": "^0.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
-    "vesu_changelog": "https://github.com/vesuxyz/changelog.git#f871b7ba099ecb6a8dcf6395bbd14f961dcdd31b"
+    "vesu_changelog": "https://github.com/vesuxyz/changelog.git#63f6f6edc4f293a9bde291cb26bd83004021a322"
   }
 }
