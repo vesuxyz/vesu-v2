@@ -1151,7 +1151,7 @@ mod TestModifyPosition {
 
         // withdraw fees
         let balance_before = third_asset.balance_of(users.curator);
-        pool.claim_fees(third_asset.contract_address);
+        pool.claim_fees(third_asset.contract_address, 0);
         let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
         assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
@@ -1260,7 +1260,10 @@ mod TestModifyPosition {
         // withdraw fees
         let (_, fee_amount) = pool.get_fees(third_asset.contract_address);
         let balance_before = third_asset.balance_of(users.curator);
-        pool.claim_fees(third_asset.contract_address);
+        pool.claim_fees(third_asset.contract_address, fee_shares / 2);
+        let (rest, _) = pool.get_fees(third_asset.contract_address);
+        assert(rest > 0, 'All fees claimed');
+        pool.claim_fees(third_asset.contract_address, 0);
 
         let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
