@@ -1198,6 +1198,10 @@ mod Pool {
         /// * `asset` - address of the asset
         fn claim_fees(ref self: ContractState, asset: ContractAddress) {
             self.assert_not_paused();
+            assert!(
+                get_caller_address() == self.curator.read() || get_caller_address() == self.fee_recipient.read(),
+                "caller-not-curator-or-fee-recipient",
+            );
 
             let mut asset_config = self.asset_config(asset);
             let fee_shares = asset_config.fee_shares;
