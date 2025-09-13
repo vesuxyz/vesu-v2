@@ -199,6 +199,11 @@ mod PoolFactory {
             self.emit(CreateVToken { pool, asset, v_token, v_token_name, v_token_symbol });
         }
 
+        /// Transfers the inflation fee from the caller to the factory and approves the pool to spend the it
+        /// # Arguments
+        /// * `pool` - address of the pool
+        /// * `asset` - address of the asset
+        /// * `is_legacy` - whether the asset is a legacy ERC20 (only supporting camelCase instead of snake_case)
         fn transfer_inflation_fee(
             self: @ContractState, pool: ContractAddress, asset: ContractAddress, is_legacy: bool,
         ) {
