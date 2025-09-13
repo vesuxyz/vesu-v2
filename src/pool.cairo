@@ -1501,7 +1501,6 @@ mod Pool {
         fn accept_curator_ownership(ref self: ContractState) {
             let new_curator = self.pending_curator.read();
             assert!(get_caller_address() == new_curator, "caller-not-new-curator");
-            assert!(new_curator.is_non_zero(), "invalid-zero-curator-address");
 
             self.pending_curator.write(Zero::zero());
             self.curator.write(new_curator);

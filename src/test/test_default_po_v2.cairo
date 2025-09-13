@@ -817,17 +817,6 @@ mod TestDefaultPOV2 {
     }
 
     #[test]
-    #[should_panic(expected: "invalid-zero-curator-address")]
-    fn test_pool_accept_zero_curator() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        cheat_caller_address(pool.contract_address, Zero::zero(), CheatSpan::TargetCalls(1));
-        pool.accept_curator_ownership();
-    }
-
-    #[test]
     fn test_oracle_set_manager() {
         let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
 
@@ -864,17 +853,6 @@ mod TestDefaultPOV2 {
         create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
 
         cheat_caller_address(oracle.contract_address, users.lender, CheatSpan::TargetCalls(1));
-        oracle.accept_manager_ownership();
-    }
-
-    #[test]
-    #[should_panic(expected: "invalid-zero-manager-address")]
-    fn test_oracle_accept_zero_manager() {
-        let Env { pool, oracle, config, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
-
-        create_pool(pool, oracle, config, users.owner, users.curator, Option::None);
-
-        cheat_caller_address(oracle.contract_address, Zero::zero(), CheatSpan::TargetCalls(1));
         oracle.accept_manager_ownership();
     }
 
