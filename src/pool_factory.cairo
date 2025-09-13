@@ -45,7 +45,7 @@ mod PoolFactory {
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::deploy_syscall;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starknet::{ContractAddress, SyscallResultTrait, get_caller_address, get_contract_address};
     use vesu::data_model::{AssetParams, PairConfig, PairParams, VTokenParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -191,7 +191,7 @@ mod PoolFactory {
                 array![v_token_name, v_token_symbol, pool.into(), asset.into(), debt_asset.into()].span(),
                 false,
             ))
-                .unwrap();
+                .unwrap_syscall();
 
             self.v_token_for_asset.write((pool, asset), v_token);
             self.asset_for_v_token.write((pool, v_token), asset);
@@ -294,7 +294,7 @@ mod PoolFactory {
                 array![name.into(), owner.into(), get_contract_address().into(), oracle.into()].span(),
                 false,
             ))
-                .unwrap();
+                .unwrap_syscall();
 
             let pool = IPoolDispatcher { contract_address: pool_address };
 
@@ -392,7 +392,7 @@ mod PoolFactory {
                 array![owner.into(), manager.into(), pragma_oracle.into(), pragma_summary.into()].span(),
                 false,
             ))
-                .unwrap();
+                .unwrap_syscall();
 
             self.emit(CreateOracle { oracle, manager });
 
