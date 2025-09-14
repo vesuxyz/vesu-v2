@@ -1200,6 +1200,10 @@ mod Pool {
         /// * `shares` - number of fee shares to claim (0 to claim all)
         fn claim_fees(ref self: ContractState, asset: ContractAddress, mut fee_shares: u256) {
             self.assert_not_paused();
+            assert!(
+                get_caller_address() == self.curator.read() || get_caller_address() == self.fee_recipient.read(),
+                "caller-not-curator-or-fee-recipient",
+            );
 
             let mut asset_config = self.asset_config(asset);
             assert!(asset_config.fee_shares >= fee_shares, "insufficient-fee-shares");
