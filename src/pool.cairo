@@ -216,6 +216,7 @@ mod Pool {
         pending_curator: ContractAddress,
         // Indicates whether the contract is paused
         paused: bool,
+        // storage for the ownable component
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         // storage for the interest rate model component

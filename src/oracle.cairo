@@ -73,22 +73,25 @@ mod Oracle {
 
     #[storage]
     struct Storage {
-        #[substorage(v0)]
-        ownable: OwnableComponent::Storage,
-        // The address of the pragma oracle contract
+        // the address of the pragma oracle contract
         pragma_oracle: ContractAddress,
-        // The address of the pragma summary contract
+        // the address of the pragma summary contract
         pragma_summary: ContractAddress,
+        // tracks the oracle configuration for each asset
         // asset -> oracle configuration
         oracle_configs: Map<ContractAddress, OracleConfig>,
-        // The owner of the pool
+        // the address of the manager of the oracle
         manager: ContractAddress,
-        // The pending manager
+        // the address of the pending (nominated) manager
         pending_manager: ContractAddress,
+        // storage for the ownable component
+        #[substorage(v0)]
+        ownable: OwnableComponent::Storage,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct SetOracleConfig {
+        #[key]
         asset: ContractAddress,
         oracle_config: OracleConfig,
     }
@@ -107,6 +110,7 @@ mod Oracle {
 
     #[derive(Drop, starknet::Event)]
     struct ContractUpgraded {
+        #[key]
         new_implementation: ClassHash,
     }
 
