@@ -1151,6 +1151,7 @@ mod TestModifyPosition {
 
         // withdraw fees
         let balance_before = third_asset.balance_of(users.curator);
+        cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
         pool.claim_fees(third_asset.contract_address);
         let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
