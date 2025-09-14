@@ -1275,7 +1275,7 @@ mod TestModifyPosition {
         let (rest, _) = pool.get_fees(third_asset.contract_address);
         assert(rest > 0, 'All fees claimed');
         pool.claim_fees(third_asset.contract_address, 0);
-        
+
         pool.set_fee_recipient(fee_recipient);
         stop_cheat_caller_address(pool.contract_address);
 
