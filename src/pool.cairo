@@ -1056,6 +1056,7 @@ mod Pool {
         /// This function assumes that the oracle config was already set up for the asset.
         /// # Arguments
         /// * `params` - see AssetParams
+        /// * `interest_rate_config` - interest rate model configuration
         fn add_asset(ref self: ContractState, params: AssetParams, interest_rate_config: InterestRateConfig) {
             self.assert_not_paused();
 
@@ -1429,7 +1430,7 @@ mod Pool {
         /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral
         /// shares # Arguments
         /// * `asset` - address of the asset
-        /// * `collateral_shares` - amount of collateral shares
+        /// * `collateral_shares` - amount of collateral shares [SCALE]
         /// # Returns
         /// * `collateral` - computed collateral [asset scale]
         fn calculate_collateral(self: @ContractState, asset: ContractAddress, collateral_shares: i257) -> u256 {
