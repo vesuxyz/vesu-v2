@@ -240,7 +240,7 @@ mod Oracle {
         /// The nominated manager should invoke `accept_manager_ownership` to complete the transfer.
         /// At that point, the original manager will be removed and replaced with the nominated manager.
         /// # Arguments
-        /// * `manager` - address of the new manager
+        /// * `pending_manager` - address of the new manager
         fn nominate_manager(ref self: ContractState, pending_manager: ContractAddress) {
             assert!(get_caller_address() == self.manager.read(), "caller-not-manager");
 

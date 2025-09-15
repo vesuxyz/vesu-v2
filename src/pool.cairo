@@ -187,34 +187,34 @@ mod Pool {
 
     #[storage]
     struct Storage {
-        // tracks the name
+        // the name of the pool
         pool_name: felt252,
-        // tracks the state of each position
+        // tracks the balances of each position
         // (collateral_asset, debt_asset, user) -> position
         positions: Map<(ContractAddress, ContractAddress, ContractAddress), Position>,
-        // tracks the delegation status for each delegator to a delegatee
+        // tracks the delegation status of each delegator to a delegatee
         // (delegator, delegatee) -> delegation
         delegations: Map<(ContractAddress, ContractAddress), bool>,
         // tracks the configuration / state of each asset
         // asset -> asset configuration
         asset_configs: Map<ContractAddress, AssetConfig>,
-        // Oracle contract address
+        // the oracle contract address
         oracle: ContractAddress,
-        // fee recipient
+        // the address of the fee recipient
         fee_recipient: ContractAddress,
         // tracks the configuration / state of each pair
         // (collateral_asset, debt_asset) -> pair configuration
         pair_configs: Map<(ContractAddress, ContractAddress), PairConfig>,
-        // tracks the total collateral shares and the total nominal debt for each pair
-        // (collateral asset, debt asset) -> pair configuration
+        // tracks the total balances of each pair
+        // (collateral asset, debt asset) -> pair balances
         pairs: Map<(ContractAddress, ContractAddress), Pair>,
-        // tracks the address that can pause the contract
+        // the address that can pause the contract
         pausing_agent: ContractAddress,
-        // The owner of the pool
+        // the address of the curator of the pool
         curator: ContractAddress,
-        // The pending curator
+        // the address of the pending (nominated) curator
         pending_curator: ContractAddress,
-        // Indicates whether the contract is paused
+        // indicates whether the contract is paused
         paused: bool,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
@@ -700,13 +700,12 @@ mod Pool {
         }
 
         /// Implements logic to execute before a position gets liquidated.
-        /// Liquidations are only allowed in normal and recovery mode. The liquidator has to be specify how much
-        /// debt to repay and the minimum amount of collateral to receive in exchange. The value of the collateral
-        /// is discounted by the liquidation factor in comparison to the current price (according to the oracle).
-        /// In an event where there's not enough collateral to cover the debt, the liquidation will result in bad debt.
-        /// The bad debt is attributed to the pool and distributed amongst the lenders of the corresponding
-        /// collateral asset. The liquidator receives all the collateral but only has to repay the proportioned
-        /// debt value.
+        /// The liquidator has to be specify how much debt to repay and the minimum amount of collateral to receive
+        /// in exchange. The value of the collateral is discounted by the liquidation factor in comparison to the
+        /// current price (according to the oracle). In an event where there's not enough collateral to cover the debt,
+        /// the liquidation will result in bad debt. The bad debt is attributed to the pool and distributed amongst the
+        /// lenders of the corresponding collateral asset. The liquidator receives all the collateral but only has to
+        /// repay the proportioned debt value.
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// * `min_collateral_to_receive` - minimum amount of collateral to be received
@@ -1411,7 +1410,7 @@ mod Pool {
         /// * `rate_accumulator` - current rate accumulator [SCALE]
         /// * `asset_scale` - debt asset's scale
         /// # Returns
-        /// * `nominal_debt` - computed nominal debt [asset scale]
+        /// * `nominal_debt` - computed nominal debt [SCALE]
         fn calculate_nominal_debt(self: @ContractState, debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
             calculate_nominal_debt(debt.abs(), rate_accumulator, asset_scale, !debt.is_negative())
         }
@@ -1498,7 +1497,7 @@ mod Pool {
         /// The nominated curator should invoke `accept_curator_ownership` to complete the transfer.
         /// At that point, the original curator will be removed and replaced with the nominated curator.
         /// # Arguments
-        /// * `curator` - address of the new curator
+        /// * `pending_curator` - address of the new curator
         fn nominate_curator(ref self: ContractState, pending_curator: ContractAddress) {
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
 

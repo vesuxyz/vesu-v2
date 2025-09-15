@@ -56,7 +56,7 @@ pub struct PairParams {
     pub debt_asset_index: usize,
     pub max_ltv: u64, // [SCALE]
     pub liquidation_factor: u64, // [SCALE]
-    pub debt_cap: u128 // [SCALE]
+    pub debt_cap: u128 // [asset scale]
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
