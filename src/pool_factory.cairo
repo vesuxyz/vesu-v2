@@ -38,6 +38,7 @@ pub trait IPoolFactory<TContractState> {
 #[starknet::contract]
 mod PoolFactory {
     use core::num::traits::Zero;
+    use core::poseidon::poseidon_hash_span;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::OwnableComponent::InternalImpl;
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
@@ -45,7 +46,7 @@ mod PoolFactory {
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::deploy_syscall;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starknet::{ContractAddress, SyscallResultTrait, get_block_timestamp, get_caller_address, get_contract_address};
     use vesu::data_model::{AssetParams, PairConfig, PairParams, VTokenParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -54,6 +55,8 @@ mod PoolFactory {
 
     #[storage]
     struct Storage {
+        // tracks the pool creation nonce which is incremented after each pool creation
+        creation_nonce: u256,
         // the class hash of the pool contract
         pool_class_hash: felt252,
         // the class hash of the vToken contract
@@ -197,7 +200,7 @@ mod PoolFactory {
                 array![v_token_name, v_token_symbol, pool.into(), asset.into(), debt_asset.into()].span(),
                 false,
             ))
-                .unwrap();
+                .unwrap_syscall();
 
             self.v_token_for_asset.write((pool, asset), v_token);
             self.asset_for_v_token.write((pool, v_token), asset);
@@ -205,6 +208,11 @@ mod PoolFactory {
             self.emit(CreateVToken { pool, asset, v_token, v_token_name, v_token_symbol });
         }
 
+        /// Transfers the inflation fee from the caller to the factory and approves the pool to spend the it
+        /// # Arguments
+        /// * `pool` - address of the pool
+        /// * `asset` - address of the asset
+        /// * `is_legacy` - whether the asset is a legacy ERC20 (only supporting camelCase instead of snake_case)
         fn transfer_inflation_fee(
             self: @ContractState, pool: ContractAddress, asset: ContractAddress, is_legacy: bool,
         ) {
@@ -293,14 +301,19 @@ mod PoolFactory {
             // default owner of all pools is the owner of the pool factory
             let owner = self.ownable.owner();
 
+            // compute the salt to derive a unique pool address
+            let nonce = self.creation_nonce.read() + 1;
+            self.creation_nonce.write(nonce);
+            let salt: Array<felt252> = array![nonce.try_into().unwrap(), get_block_timestamp().into()];
+
             // deploy the pool
             let (pool_address, _) = (deploy_syscall(
                 self.pool_class_hash.read().try_into().unwrap(),
-                0,
+                poseidon_hash_span(salt.span()),
                 array![name.into(), owner.into(), get_contract_address().into(), oracle.into()].span(),
                 false,
             ))
-                .unwrap();
+                .unwrap_syscall();
 
             let pool = IPoolDispatcher { contract_address: pool_address };
 
@@ -398,7 +411,7 @@ mod PoolFactory {
                 array![owner.into(), manager.into(), pragma_oracle.into(), pragma_summary.into()].span(),
                 false,
             ))
-                .unwrap();
+                .unwrap_syscall();
 
             self.emit(CreateOracle { oracle, manager });
 

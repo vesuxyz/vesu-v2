@@ -1,7 +1,7 @@
 use core::traits::DivRem;
 use vesu::units::SCALE;
 
-/// Adapted from https://github.com/influenceth/cubit/blob/main/src/f128/math/core.cairo#L240
+/// Adapted from https://github.com/influenceth/cubit/blob/legacy/src/f128/math/core.cairo#L239
 /// # Arguments
 /// * `x` - base [SCALE]
 /// * `n` - exponent [decimal]

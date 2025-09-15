@@ -66,7 +66,7 @@ pub trait IPool<TContractState> {
     // Fees
     fn set_fee_recipient(ref self: TContractState, fee_recipient: ContractAddress);
     fn fee_recipient(self: @TContractState) -> ContractAddress;
-    fn claim_fees(ref self: TContractState, asset: ContractAddress);
+    fn claim_fees(ref self: TContractState, asset: ContractAddress, fee_shares: u256);
     fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
 
     // Interest Rate Model
@@ -187,34 +187,34 @@ mod Pool {
 
     #[storage]
     struct Storage {
-        // tracks the name
+        // the name of the pool
         pool_name: felt252,
-        // tracks the state of each position
+        // tracks the balances of each position
         // (collateral_asset, debt_asset, user) -> position
         positions: Map<(ContractAddress, ContractAddress, ContractAddress), Position>,
-        // tracks the delegation status for each delegator to a delegatee
+        // tracks the delegation status of each delegator to a delegatee
         // (delegator, delegatee) -> delegation
         delegations: Map<(ContractAddress, ContractAddress), bool>,
         // tracks the configuration / state of each asset
         // asset -> asset configuration
         asset_configs: Map<ContractAddress, AssetConfig>,
-        // Oracle contract address
+        // the oracle contract address
         oracle: ContractAddress,
-        // fee recipient
+        // the address of the fee recipient
         fee_recipient: ContractAddress,
         // tracks the configuration / state of each pair
         // (collateral_asset, debt_asset) -> pair configuration
         pair_configs: Map<(ContractAddress, ContractAddress), PairConfig>,
-        // tracks the total collateral shares and the total nominal debt for each pair
-        // (collateral asset, debt asset) -> pair configuration
+        // tracks the total balances of each pair
+        // (collateral asset, debt asset) -> pair balances
         pairs: Map<(ContractAddress, ContractAddress), Pair>,
-        // tracks the address that can pause the contract
+        // the address that can pause the contract
         pausing_agent: ContractAddress,
-        // The owner of the pool
+        // the address of the curator of the pool
         curator: ContractAddress,
-        // The pending curator
+        // the address of the pending (nominated) curator
         pending_curator: ContractAddress,
-        // Indicates whether the contract is paused
+        // indicates whether the contract is paused
         paused: bool,
         // storage for the ownable component
         #[substorage(v0)]
@@ -320,7 +320,8 @@ mod Pool {
         #[key]
         asset: ContractAddress,
         recipient: ContractAddress,
-        amount: u256,
+        fee_shares: u256,
+        fee_amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -700,13 +701,12 @@ mod Pool {
         }
 
         /// Implements logic to execute before a position gets liquidated.
-        /// Liquidations are only allowed in normal and recovery mode. The liquidator has to be specify how much
-        /// debt to repay and the minimum amount of collateral to receive in exchange. The value of the collateral
-        /// is discounted by the liquidation factor in comparison to the current price (according to the oracle).
-        /// In an event where there's not enough collateral to cover the debt, the liquidation will result in bad debt.
-        /// The bad debt is attributed to the pool and distributed amongst the lenders of the corresponding
-        /// collateral asset. The liquidator receives all the collateral but only has to repay the proportioned
-        /// debt value.
+        /// The liquidator has to be specify how much debt to repay and the minimum amount of collateral to receive
+        /// in exchange. The value of the collateral is discounted by the liquidation factor in comparison to the
+        /// current price (according to the oracle). In an event where there's not enough collateral to cover the debt,
+        /// the liquidation will result in bad debt. The bad debt is attributed to the pool and distributed amongst the
+        /// lenders of the corresponding collateral asset. The liquidator receives all the collateral but only has to
+        /// repay the proportioned debt value.
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// * `min_collateral_to_receive` - minimum amount of collateral to be received
@@ -1056,6 +1056,7 @@ mod Pool {
         /// This function assumes that the oracle config was already set up for the asset.
         /// # Arguments
         /// * `params` - see AssetParams
+        /// * `interest_rate_config` - interest rate model configuration
         fn add_asset(ref self: ContractState, params: AssetParams, interest_rate_config: InterestRateConfig) {
             self.assert_not_paused();
 
@@ -1197,15 +1198,23 @@ mod Pool {
         /// Claims the fees accrued in the pool for a given asset and sends them to the fee recipient
         /// # Arguments
         /// * `asset` - address of the asset
-        fn claim_fees(ref self: ContractState, asset: ContractAddress) {
+        /// * `shares` - number of fee shares to claim (0 to claim all)
+        fn claim_fees(ref self: ContractState, asset: ContractAddress, mut fee_shares: u256) {
             self.assert_not_paused();
+            assert!(
+                get_caller_address() == self.curator.read() || get_caller_address() == self.fee_recipient.read(),
+                "caller-not-curator-or-fee-recipient",
+            );
 
             let mut asset_config = self.asset_config(asset);
-            let fee_shares = asset_config.fee_shares;
-            let fee_amount = calculate_collateral(fee_shares, asset_config, false);
+            assert!(asset_config.fee_shares >= fee_shares, "insufficient-fee-shares");
+            if fee_shares == 0 {
+                fee_shares = asset_config.fee_shares;
+            }
+            let fee_amount = calculate_collateral(fee_shares, asset_config, true);
 
             // Deduct the fee shares and amount from the total collateral shares and reserve
-            asset_config.fee_shares = 0;
+            asset_config.fee_shares -= fee_shares;
             asset_config.total_collateral_shares -= fee_shares;
             asset_config.reserve -= fee_amount;
 
@@ -1219,7 +1228,7 @@ mod Pool {
                 IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, fee_amount), "fee-transfer-failed",
             );
 
-            self.emit(ClaimFees { asset, recipient: fee_recipient, amount: fee_amount });
+            self.emit(ClaimFees { asset, recipient: fee_recipient, fee_shares, fee_amount });
         }
 
         /// Returns the number of unclaimed fee shares and the corresponding amount
@@ -1228,7 +1237,7 @@ mod Pool {
             let fee_shares = asset_config.fee_shares;
 
             // Convert shares to amount (round down)
-            let amount = calculate_collateral(fee_shares, asset_config, false);
+            let amount = calculate_collateral(fee_shares, asset_config, true);
 
             (fee_shares, amount)
         }
@@ -1402,7 +1411,7 @@ mod Pool {
         /// * `rate_accumulator` - current rate accumulator [SCALE]
         /// * `asset_scale` - debt asset's scale
         /// # Returns
-        /// * `nominal_debt` - computed nominal debt [asset scale]
+        /// * `nominal_debt` - computed nominal debt [SCALE]
         fn calculate_nominal_debt(self: @ContractState, debt: i257, rate_accumulator: u256, asset_scale: u256) -> u256 {
             calculate_nominal_debt(debt.abs(), rate_accumulator, asset_scale, !debt.is_negative())
         }
@@ -1421,7 +1430,7 @@ mod Pool {
         /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral
         /// shares # Arguments
         /// * `asset` - address of the asset
-        /// * `collateral_shares` - amount of collateral shares
+        /// * `collateral_shares` - amount of collateral shares [SCALE]
         /// # Returns
         /// * `collateral` - computed collateral [asset scale]
         fn calculate_collateral(self: @ContractState, asset: ContractAddress, collateral_shares: i257) -> u256 {
@@ -1489,7 +1498,7 @@ mod Pool {
         /// The nominated curator should invoke `accept_curator_ownership` to complete the transfer.
         /// At that point, the original curator will be removed and replaced with the nominated curator.
         /// # Arguments
-        /// * `curator` - address of the new curator
+        /// * `pending_curator` - address of the new curator
         fn nominate_curator(ref self: ContractState, pending_curator: ContractAddress) {
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
 
@@ -1502,7 +1511,6 @@ mod Pool {
         fn accept_curator_ownership(ref self: ContractState) {
             let new_curator = self.pending_curator.read();
             assert!(get_caller_address() == new_curator, "caller-not-new-curator");
-            assert!(new_curator.is_non_zero(), "invalid-zero-curator-address");
 
             self.pending_curator.write(Zero::zero());
             self.curator.write(new_curator);
