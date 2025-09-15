@@ -1152,7 +1152,7 @@ mod TestModifyPosition {
         // withdraw fees
         let balance_before = third_asset.balance_of(users.curator);
         cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
-        pool.claim_fees(third_asset.contract_address);
+        pool.claim_fees(third_asset.contract_address, 0);
         let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
         assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
@@ -1262,19 +1262,25 @@ mod TestModifyPosition {
         let fee_recipient = contract_address_const::<'fee_recipient'>();
         let (_, fee_amount) = pool.get_fees(third_asset.contract_address);
         let balance_before = third_asset.balance_of(users.curator);
+
         #[feature("safe_dispatcher")]
         assert!(
             !IPoolSafeDispatcher { contract_address: pool.contract_address }
-                .claim_fees(third_asset.contract_address)
+                .claim_fees(third_asset.contract_address, 0)
                 .is_ok(),
         );
+
         start_cheat_caller_address(pool.contract_address, users.curator);
-        pool.claim_fees(third_asset.contract_address);
+        pool.claim_fees(third_asset.contract_address, fee_shares / 2);
+        let (rest, _) = pool.get_fees(third_asset.contract_address);
+        assert(rest > 0, 'All fees claimed');
+        pool.claim_fees(third_asset.contract_address, 0);
+
         pool.set_fee_recipient(fee_recipient);
         stop_cheat_caller_address(pool.contract_address);
 
         start_cheat_caller_address(pool.contract_address, fee_recipient);
-        pool.claim_fees(third_asset.contract_address);
+        pool.claim_fees(third_asset.contract_address, 0);
         stop_cheat_caller_address(pool.contract_address);
 
         let balance_after = third_asset.balance_of(users.curator);
