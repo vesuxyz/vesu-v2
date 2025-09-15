@@ -253,7 +253,6 @@ mod Oracle {
         fn accept_manager_ownership(ref self: ContractState) {
             let new_manager = self.pending_manager.read();
             assert!(get_caller_address() == new_manager, "caller-not-new-manager");
-            assert!(new_manager.is_non_zero(), "invalid-zero-manager-address");
 
             self.pending_manager.write(Zero::zero());
             self.manager.write(new_manager);
