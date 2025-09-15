@@ -23,6 +23,7 @@ pub trait IERC4626<TContractState> {
 #[starknet::interface]
 pub trait IVToken<TContractState> {
     fn pool_contract(self: @TContractState) -> ContractAddress;
+    fn approve_pool(ref self: TContractState);
 }
 #[starknet::contract]
 pub mod VToken {
@@ -113,7 +114,7 @@ pub mod VToken {
         self.pool_contract.write(pool_contract);
         self.asset.write(asset);
         self.debt_asset.write(debt_asset);
-        IERC20Dispatcher { contract_address: asset }.approve(self.pool_contract.read(), Bounded::<u256>::MAX);
+        self.approve_pool();
         let asset_config = self.pool().asset_config(asset);
         self.is_legacy.write(asset_config.is_legacy);
     }
@@ -212,6 +213,15 @@ pub mod VToken {
         /// * address of the pool
         fn pool_contract(self: @ContractState) -> ContractAddress {
             self.pool_contract.read()
+        }
+
+        /// Approves the pool contract to spend the vToken
+        fn approve_pool(ref self: ContractState) {
+            assert!(
+                IERC20Dispatcher { contract_address: self.asset.read() }
+                    .approve(self.pool_contract.read(), Bounded::<u256>::MAX),
+                "approve-failed",
+            );
         }
     }
 

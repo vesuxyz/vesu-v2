@@ -66,7 +66,7 @@ pub trait IPool<TContractState> {
     // Fees
     fn set_fee_recipient(ref self: TContractState, fee_recipient: ContractAddress);
     fn fee_recipient(self: @TContractState) -> ContractAddress;
-    fn claim_fees(ref self: TContractState, asset: ContractAddress);
+    fn claim_fees(ref self: TContractState, asset: ContractAddress, fee_shares: u256);
     fn get_fees(self: @TContractState, asset: ContractAddress) -> (u256, u256);
 
     // Interest Rate Model
@@ -319,7 +319,8 @@ mod Pool {
         #[key]
         asset: ContractAddress,
         recipient: ContractAddress,
-        amount: u256,
+        fee_shares: u256,
+        fee_amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -1196,15 +1197,23 @@ mod Pool {
         /// Claims the fees accrued in the pool for a given asset and sends them to the fee recipient
         /// # Arguments
         /// * `asset` - address of the asset
-        fn claim_fees(ref self: ContractState, asset: ContractAddress) {
+        /// * `shares` - number of fee shares to claim (0 to claim all)
+        fn claim_fees(ref self: ContractState, asset: ContractAddress, mut fee_shares: u256) {
             self.assert_not_paused();
+            assert!(
+                get_caller_address() == self.curator.read() || get_caller_address() == self.fee_recipient.read(),
+                "caller-not-curator-or-fee-recipient",
+            );
 
             let mut asset_config = self.asset_config(asset);
-            let fee_shares = asset_config.fee_shares;
-            let fee_amount = calculate_collateral(fee_shares, asset_config, false);
+            assert!(asset_config.fee_shares >= fee_shares, "insufficient-fee-shares");
+            if fee_shares == 0 {
+                fee_shares = asset_config.fee_shares;
+            }
+            let fee_amount = calculate_collateral(fee_shares, asset_config, true);
 
             // Deduct the fee shares and amount from the total collateral shares and reserve
-            asset_config.fee_shares = 0;
+            asset_config.fee_shares -= fee_shares;
             asset_config.total_collateral_shares -= fee_shares;
             asset_config.reserve -= fee_amount;
 
@@ -1218,7 +1227,7 @@ mod Pool {
                 IERC20Dispatcher { contract_address: asset }.transfer(fee_recipient, fee_amount), "fee-transfer-failed",
             );
 
-            self.emit(ClaimFees { asset, recipient: fee_recipient, amount: fee_amount });
+            self.emit(ClaimFees { asset, recipient: fee_recipient, fee_shares, fee_amount });
         }
 
         /// Returns the number of unclaimed fee shares and the corresponding amount
@@ -1227,7 +1236,7 @@ mod Pool {
             let fee_shares = asset_config.fee_shares;
 
             // Convert shares to amount (round down)
-            let amount = calculate_collateral(fee_shares, asset_config, false);
+            let amount = calculate_collateral(fee_shares, asset_config, true);
 
             (fee_shares, amount)
         }
