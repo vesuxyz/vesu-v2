@@ -57,11 +57,17 @@ mod PoolFactory {
     struct Storage {
         // tracks the pool creation nonce which is incremented after each pool creation
         creation_nonce: u256,
+        // the class hash of the pool contract
         pool_class_hash: felt252,
+        // the class hash of the vToken contract
         v_token_class_hash: felt252,
+        // the class hash of the oracle contract
         oracle_class_hash: felt252,
+        // tracks the vToken address for a given asset
         v_token_for_asset: Map<(ContractAddress, ContractAddress), ContractAddress>,
+        // tracks the asset address for a given vToken
         asset_for_v_token: Map<(ContractAddress, ContractAddress), ContractAddress>,
+        // storage for the ownable component
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
