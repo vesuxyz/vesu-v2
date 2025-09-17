@@ -69,7 +69,7 @@ mod TestPoolFactory {
         };
 
         let v_token_params = VTokenParams {
-            v_token_name: 'VToken', v_token_symbol: 'VTK', debt_asset: config.debt_asset.contract_address,
+            v_token_name: "VToken", v_token_symbol: "VTK", debt_asset: config.debt_asset.contract_address,
         };
 
         cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));
@@ -82,7 +82,11 @@ mod TestPoolFactory {
         assert!(
             !IPoolFactorySafeDispatcher { contract_address: pool_factory.contract_address }
                 .add_asset(
-                    pool.contract_address, asset.contract_address, asset_params, interest_rate_config, v_token_params,
+                    pool.contract_address,
+                    asset.contract_address,
+                    asset_params,
+                    interest_rate_config,
+                    v_token_params.clone(),
                 )
                 .is_ok(),
         );
@@ -90,7 +94,11 @@ mod TestPoolFactory {
         cheat_caller_address(pool_factory.contract_address, users.curator, CheatSpan::TargetCalls(1));
         pool_factory
             .add_asset(
-                pool.contract_address, asset.contract_address, asset_params, interest_rate_config, v_token_params,
+                pool.contract_address,
+                asset.contract_address,
+                asset_params,
+                interest_rate_config,
+                v_token_params.clone(),
             );
 
         cheat_caller_address(pool.contract_address, users.curator, CheatSpan::TargetCalls(1));

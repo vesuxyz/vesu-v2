@@ -69,10 +69,10 @@ pub struct AssetParams {
     pub fee_rate: u256 // [SCALE]
 }
 
-#[derive(PartialEq, Copy, Drop, Serde)]
+#[derive(PartialEq, Clone, Drop, Serde)]
 pub struct VTokenParams {
-    pub v_token_name: felt252,
-    pub v_token_symbol: felt252,
+    pub v_token_name: ByteArray,
+    pub v_token_symbol: ByteArray,
     pub debt_asset: ContractAddress,
 }
 

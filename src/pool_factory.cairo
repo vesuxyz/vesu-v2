@@ -81,9 +81,9 @@ mod PoolFactory {
         #[key]
         v_token: ContractAddress,
         #[key]
-        v_token_name: felt252,
+        v_token_name: ByteArray,
         #[key]
-        v_token_symbol: felt252,
+        v_token_symbol: ByteArray,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -186,19 +186,22 @@ mod PoolFactory {
         /// * `debt_asset` - address of the debt asset
         fn create_v_token(
             ref self: ContractState,
-            v_token_name: felt252,
-            v_token_symbol: felt252,
+            v_token_name: ByteArray,
+            v_token_symbol: ByteArray,
             pool: ContractAddress,
             asset: ContractAddress,
             debt_asset: ContractAddress,
         ) {
             assert!(self.v_token_for_asset.read((pool, asset)) == Zero::zero(), "v-token-already-created");
 
+            let mut calldata = array![];
+            v_token_name.serialize(ref calldata);
+            v_token_symbol.serialize(ref calldata);
+            pool.serialize(ref calldata);
+            asset.serialize(ref calldata);
+            debt_asset.serialize(ref calldata);
             let (v_token, _) = (deploy_syscall(
-                self.v_token_class_hash.read().try_into().unwrap(),
-                0,
-                array![v_token_name, v_token_symbol, pool.into(), asset.into(), debt_asset.into()].span(),
-                false,
+                self.v_token_class_hash.read().try_into().unwrap(), 0, calldata.span(), false,
             ))
                 .unwrap_syscall();
 
@@ -330,7 +333,7 @@ mod PoolFactory {
                         asset,
                         asset_params,
                         *interest_rate_params.pop_front().unwrap(),
-                        *v_token_params.at(i),
+                        v_token_params.at(i).clone(),
                     );
                 i += 1;
             }

@@ -316,13 +316,13 @@ pub fn create_pool_via_factory(
 
     let v_token_params = array![
         VTokenParams {
-            v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL', debt_asset: config.debt_asset.contract_address,
+            v_token_name: "Vesu Collateral", v_token_symbol: "vCOLL", debt_asset: config.debt_asset.contract_address,
         },
         VTokenParams {
-            v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT', debt_asset: config.collateral_asset.contract_address,
+            v_token_name: "Vesu Debt", v_token_symbol: "vDEBT", debt_asset: config.collateral_asset.contract_address,
         },
         VTokenParams {
-            v_token_name: 'Vesu Third', v_token_symbol: 'vTHIRD', debt_asset: config.debt_asset.contract_address,
+            v_token_name: "Vesu Third", v_token_symbol: "vTHIRD", debt_asset: config.debt_asset.contract_address,
         },
     ]
         .span();
