@@ -1,4 +1,4 @@
-import { byteArray, CairoCustomEnum } from "starknet";
+import { CairoCustomEnum } from "starknet";
 import { Config, EnvAssetParams, toScale, toUtilizationScale } from ".";
 
 import CONFIG from "vesu_changelog/configurations/config_prime_sn_main.json" with { type: "json" };
