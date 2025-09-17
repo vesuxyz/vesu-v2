@@ -37,7 +37,7 @@ pub mod VToken {
     use starknet::event::EventEmitter;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
+    use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams, UpdatePositionResponse};
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait};
     use vesu::units::SCALE;
     use vesu::v_token::{IERC4626, IVToken};
@@ -427,7 +427,11 @@ pub mod VToken {
             };
 
             // Invoke `modify_position` and extract the number of shares burned
-            let shares = self.pool().modify_position(params).collateral_shares_delta.abs();
+            let UpdatePositionResponse {
+                collateral_shares_delta, collateral_delta, ..,
+            } = self.pool().modify_position(params);
+            assert!(collateral_delta.abs() == assets, "insufficient-assets");
+            let shares = collateral_shares_delta.abs();
 
             // If the withdrawal is done on behalf of the owner, we need to spend the allowance
             if caller != owner {
