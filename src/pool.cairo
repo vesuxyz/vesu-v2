@@ -849,7 +849,8 @@ mod Pool {
             (context.position, collateral, debt)
         }
 
-        /// Checks if a position is collateralized according to the max. loan-to-value ratio
+        /// Checks if a position is collateralized according to the max. loan-to-value ratio. In case of invalid
+        /// oracle prices this method will not revert.
         /// # Arguments
         /// * `collateral_asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
