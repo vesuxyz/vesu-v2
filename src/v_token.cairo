@@ -52,16 +52,17 @@ pub mod VToken {
 
     #[storage]
     struct Storage {
+        // the address of the pool contract
+        pool_contract: ContractAddress,
+        // the address of the underlying asset of the vToken
+        asset: ContractAddress,
+        // the address of the debt asset of the position owned by the vToken
+        debt_asset: ContractAddress,
+        // flag indicating whether the asset is a legacy ERC20 token using camelCase or snake_case
+        is_legacy: bool,
+        // storage for the erc20 component
         #[substorage(v0)]
         erc20: ERC20Component::Storage,
-        // The address of the pool contract
-        pool_contract: ContractAddress,
-        // The underlying asset of the vToken
-        asset: ContractAddress,
-        // The dummy debt asset of the vToken
-        debt_asset: ContractAddress,
-        // Flag indicating whether the asset is a legacy ERC20 token using camelCase or snake_case
-        is_legacy: bool,
     }
 
     #[derive(Drop, starknet::Event)]
