@@ -1,4 +1,4 @@
-import { BigNumberish, CairoCustomEnum, Uint256 } from "starknet";
+import { BigNumberish, ByteArray, CairoCustomEnum, Uint256 } from "starknet";
 import { toI257 } from ".";
 
 export type u256 = Uint256;
@@ -80,8 +80,8 @@ export interface FeeParams {
 }
 
 export interface VTokenParams {
-  v_token_name: string;
-  v_token_symbol: string;
+  v_token_name: ByteArray;
+  v_token_symbol: ByteArray;
 }
 
 export interface CreatePoolParams {

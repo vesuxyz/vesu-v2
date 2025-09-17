@@ -39,17 +39,16 @@ pub mod VToken {
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use vesu::data_model::{Amount, AmountDenomination, ModifyPositionParams};
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait};
-    use vesu::units::{SCALE, SCALE_DECIMALS};
+    use vesu::units::SCALE;
     use vesu::v_token::{IERC4626, IVToken};
-    use vesu::vendor::erc20::IERC20Metadata;
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
 
     #[abi(embed_v0)]
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
-    #[abi(embed_v0)]
-    impl ERC20CamelOnlyImpl = ERC20Component::ERC20CamelOnlyImpl<ContractState>;
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
+    #[abi(embed_v0)]
+    impl ERC20MetadataImpl = ERC20Component::ERC20MetadataImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -63,10 +62,6 @@ pub mod VToken {
         debt_asset: ContractAddress,
         // Flag indicating whether the asset is a legacy ERC20 token using camelCase or snake_case
         is_legacy: bool,
-        // The name of the vToken
-        name: felt252,
-        // The symbol of the vToken
-        symbol: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -103,35 +98,19 @@ pub mod VToken {
     #[constructor]
     fn constructor(
         ref self: ContractState,
-        name: felt252,
-        symbol: felt252,
+        name: ByteArray,
+        symbol: ByteArray,
         pool_contract: ContractAddress,
         asset: ContractAddress,
         debt_asset: ContractAddress,
     ) {
-        self.name.write(name);
-        self.symbol.write(symbol);
+        self.erc20.initializer(name, symbol);
         self.pool_contract.write(pool_contract);
         self.asset.write(asset);
         self.debt_asset.write(debt_asset);
         self.approve_pool();
         let asset_config = self.pool().asset_config(asset);
         self.is_legacy.write(asset_config.is_legacy);
-    }
-
-    #[abi(embed_v0)]
-    impl ERC20Metadata of IERC20Metadata<ContractState> {
-        fn name(self: @ContractState) -> felt252 {
-            self.name.read()
-        }
-
-        fn symbol(self: @ContractState) -> felt252 {
-            self.symbol.read()
-        }
-
-        fn decimals(self: @ContractState) -> u8 {
-            SCALE_DECIMALS
-        }
     }
 
     #[generate_trait]

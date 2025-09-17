@@ -17,7 +17,6 @@ for (const name of pools) {
 
   const [pool, response] = await protocol.createPool(name);
   console.log("Created tx:", response.transaction_hash);
-  console.log("Created pool params:", pool.params);
 
   console.dir(pool.params, { depth: null });
 }

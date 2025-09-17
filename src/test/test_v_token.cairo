@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestVToken {
     use alexandria_math::i257::I257Trait;
+    use openzeppelin::token::erc20::interface::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait};
     use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{
         CheatSpan, DeclareResultTrait, cheat_caller_address, declare, load, map_entry_address,
@@ -16,7 +17,6 @@ mod TestVToken {
     use vesu::test::setup_v2::{COLL_PRAGMA_KEY, Users, setup};
     use vesu::units::PERCENT;
     use vesu::v_token::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenDispatcher, IVTokenDispatcherTrait};
-    use vesu::vendor::erc20::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait};
 
     struct VTokenEnv {
         pool: IPoolDispatcher,
@@ -30,20 +30,18 @@ mod TestVToken {
         let (pool, _, config, users, _) = setup();
 
         let v_token_class_hash = *declare("VToken").unwrap().contract_class().class_hash;
-        let (v_token, _) = (deploy_syscall(
-            v_token_class_hash.try_into().unwrap(),
-            0,
-            array![
-                'vToken',
-                'vSymbol',
-                pool.contract_address.into(),
-                config.collateral_asset.contract_address.into(),
-                config.debt_asset.contract_address.into(),
-            ]
-                .span(),
-            true,
-        ))
-            .unwrap();
+
+        let name: ByteArray = "vToken";
+        let symbol: ByteArray = "vSymbol";
+
+        let mut calldata = array![];
+        name.serialize(ref calldata);
+        symbol.serialize(ref calldata);
+        pool.contract_address.serialize(ref calldata);
+        config.collateral_asset.contract_address.serialize(ref calldata);
+        config.debt_asset.contract_address.serialize(ref calldata);
+
+        let (v_token, _) = (deploy_syscall(v_token_class_hash.try_into().unwrap(), 0, calldata.span(), true)).unwrap();
 
         let v_token = IERC4626Dispatcher { contract_address: v_token };
         let asset = IERC20Dispatcher { contract_address: config.collateral_asset.contract_address };
@@ -70,8 +68,10 @@ mod TestVToken {
         assert!(v_token.asset() == asset.contract_address);
 
         let metadata = IERC20MetadataDispatcher { contract_address: v_token.contract_address };
-        assert!(metadata.name() == 'vToken');
-        assert!(metadata.symbol() == 'vSymbol');
+        let name: ByteArray = "vToken";
+        let symbol: ByteArray = "vSymbol";
+        assert!(metadata.name() == name);
+        assert!(metadata.symbol() == symbol);
         assert!(metadata.decimals() == 18);
     }
 
