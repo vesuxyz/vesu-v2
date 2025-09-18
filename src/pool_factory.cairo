@@ -307,7 +307,8 @@ mod PoolFactory {
         /// * `asset` - address of the collateral asset
         /// * `v_token` - address of the new vToken contract
         fn update_v_token(ref self: ContractState, pool: ContractAddress, asset: ContractAddress, v_token: ContractAddress) {
-            self.ownable.assert_only_owner();
+            let curator = IPoolDispatcher { contract_address: pool }.curator();
+            assert!(curator == get_caller_address(), "caller-not-curator");
 
             let prev_v_token = self.v_token_for_asset.read((pool, asset));
             self.v_token_for_asset.write((pool, asset), v_token);
