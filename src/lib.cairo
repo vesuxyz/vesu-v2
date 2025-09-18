@@ -20,6 +20,7 @@ pub mod test {
     pub mod mock_asset;
     pub mod mock_oracle;
     pub mod mock_pool;
+    pub mod mock_pool_factory_upgrade;
     pub mod mock_pool_upgrade;
     pub mod setup_v2;
     pub mod test_common;

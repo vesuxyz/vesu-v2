@@ -1,4 +1,4 @@
-use starknet::ContractAddress;
+use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{AssetParams, PairParams, VTokenParams};
 use vesu::interest_rate_model::InterestRateConfig;
 
@@ -33,6 +33,12 @@ pub trait IPoolFactory<TContractState> {
         pragma_oracle: ContractAddress,
         pragma_summary: ContractAddress,
     ) -> ContractAddress;
+    fn upgrade_name(self: @TContractState) -> felt252;
+    fn upgrade(
+        ref self: TContractState,
+        new_implementation: ClassHash,
+        eic_implementation_data: Option<(ClassHash, Span<felt252>)>,
+    );
 }
 
 #[starknet::contract]
@@ -45,11 +51,13 @@ mod PoolFactory {
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
-    use starknet::syscalls::deploy_syscall;
-    use starknet::{ContractAddress, SyscallResultTrait, get_block_timestamp, get_caller_address, get_contract_address};
+    use starknet::syscalls::{deploy_syscall, replace_class_syscall};
+    use starknet::{
+        ClassHash, ContractAddress, SyscallResultTrait, get_block_timestamp, get_caller_address, get_contract_address,
+    };
     use vesu::data_model::{AssetParams, PairConfig, PairParams, VTokenParams};
     use vesu::interest_rate_model::InterestRateConfig;
-    use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
+    use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher, IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::pool_factory::IPoolFactory;
     use vesu::units::INFLATION_FEE;
 
@@ -116,6 +124,11 @@ mod PoolFactory {
         manager: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct ContractUpgraded {
+        new_implementation: ClassHash,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -125,6 +138,7 @@ mod PoolFactory {
         CreatePool: CreatePool,
         AddAsset: AddAsset,
         CreateOracle: CreateOracle,
+        ContractUpgraded: ContractUpgraded,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -419,6 +433,35 @@ mod PoolFactory {
             self.emit(CreateOracle { oracle, manager });
 
             oracle
+        }
+
+        /// Returns the name of the contract
+        /// # Returns
+        /// * `name` - the name of the contract
+        fn upgrade_name(self: @ContractState) -> felt252 {
+            'Vesu Pool Factory'
+        }
+
+        /// Upgrades the contract to a new implementation
+        /// # Arguments
+        /// * `new_implementation` - the new implementation class hash
+        /// * `eic_implementation_data` - the (optional) eic implementation class hash and the calldata
+        /// to pass to the eic `eic_initialize` function
+        fn upgrade(
+            ref self: ContractState,
+            new_implementation: ClassHash,
+            eic_implementation_data: Option<(ClassHash, Span<felt252>)>,
+        ) {
+            self.ownable.assert_only_owner();
+
+            if let Some((eic_implementation, eic_data)) = eic_implementation_data {
+                IEICLibraryDispatcher { class_hash: eic_implementation }.eic_initialize(eic_data);
+            }
+            replace_class_syscall(new_implementation).unwrap_syscall();
+            // Check to prevent mistakes when upgrading the contract
+            let new_name = IPoolDispatcher { contract_address: get_contract_address() }.upgrade_name();
+            assert(new_name == self.upgrade_name(), 'invalid upgrade name');
+            self.emit(ContractUpgraded { new_implementation });
         }
     }
 }

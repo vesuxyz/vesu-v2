@@ -2,13 +2,18 @@
 mod TestPoolFactory {
     use core::num::traits::{Bounded, Zero};
     use openzeppelin::token::erc20::ERC20ABIDispatcherTrait;
-    use snforge_std::{CheatSpan, cheat_caller_address};
+    use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare, start_cheat_caller_address};
+    #[feature("deprecated-starknet-consts")]
+    use starknet::contract_address_const;
     use vesu::data_model::{AssetParams, VTokenParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::oracle::{IPragmaOracleDispatcherTrait, OracleConfig};
     use vesu::pool::IPoolDispatcherTrait;
     use vesu::pool_factory::{IPoolFactoryDispatcherTrait, IPoolFactorySafeDispatcher, IPoolFactorySafeDispatcherTrait};
     use vesu::test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait};
+    use vesu::test::mock_pool_factory_upgrade::{
+        IMockPoolFactoryUpgradeDispatcher, IMockPoolFactoryUpgradeDispatcherTrait,
+    };
     use vesu::test::setup_v2::{Env, create_pool_via_factory, deploy_asset, setup_env};
     use vesu::units::{PERCENT, SCALE, SCALE_128};
     use vesu::vendor::pragma::AggregationMode;
@@ -113,5 +118,65 @@ mod TestPoolFactory {
         let oracle = pool_factory.create_oracle(users.owner, oracle.pragma_oracle(), oracle.pragma_summary());
 
         assert!(oracle != Zero::zero());
+    }
+
+    #[test]
+    #[should_panic(expected: ('Caller is not the owner',))]
+    fn test_pool_factory_upgrade_only_owner() {
+        let Env { pool_factory, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockPoolFactoryUpgrade").unwrap().contract_class().class_hash;
+        start_cheat_caller_address(pool_factory.contract_address, contract_address_const::<'not_owner'>());
+        pool_factory.upgrade(new_classhash, Option::None);
+    }
+
+    #[test]
+    fn test_pool_factory_upgrade() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockPoolFactoryUpgrade").unwrap().contract_class().class_hash;
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.upgrade(new_classhash, Option::None);
+        let tag = IMockPoolFactoryUpgradeDispatcher { contract_address: pool_factory.contract_address }.tag();
+        assert!(tag == 'MockPoolFactoryUpgrade', "Invalid tag");
+    }
+
+    #[test]
+    #[should_panic(expected: ('invalid upgrade name',))]
+    fn test_pool_factory_upgrade_wrong_name() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockPoolFactoryUpgradeWrongName").unwrap().contract_class().class_hash;
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.upgrade(new_classhash, Option::None);
+    }
+
+    #[test]
+    fn test_pool_factory_upgrade_eic() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockPoolFactoryUpgrade").unwrap().contract_class().class_hash;
+        let eic_classhash = *declare("MockEICFactory").unwrap().contract_class().class_hash;
+        let new_pool_class_hash = 'NewPoolClassHash';
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.upgrade(new_classhash, Some((eic_classhash, array![new_pool_class_hash].span())));
+        let actual_new_pool_class_hash = pool_factory.pool_class_hash();
+        assert!(actual_new_pool_class_hash == new_pool_class_hash, "New pool class hash mismatch");
+    }
+
+    #[test]
+    #[should_panic(expected: 'Index out of bounds')]
+    fn test_pool_factory_upgrade_eic_initialize_failed() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockPoolFactoryUpgrade").unwrap().contract_class().class_hash;
+        let eic_classhash = *declare("MockEICFactory").unwrap().contract_class().class_hash;
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.upgrade(new_classhash, Some((eic_classhash, array![].span())));
+    }
+
+    #[test]
+    #[should_panic(expected: 'Invalid mock eic data')]
+    fn test_pool_factory_upgrade_eic_invalid_data() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let new_classhash = *declare("MockPoolFactoryUpgrade").unwrap().contract_class().class_hash;
+        let eic_classhash = *declare("MockEICFactory").unwrap().contract_class().class_hash;
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.upgrade(new_classhash, Some((eic_classhash, array!['invalid-mock-eic-data'].span())));
     }
 }
