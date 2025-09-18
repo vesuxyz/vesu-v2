@@ -8,6 +8,7 @@ pub trait IPoolFactory<TContractState> {
     fn v_token_class_hash(self: @TContractState) -> felt252;
     fn v_token_for_asset(self: @TContractState, pool: ContractAddress, asset: ContractAddress) -> ContractAddress;
     fn asset_for_v_token(self: @TContractState, pool: ContractAddress, v_token: ContractAddress) -> ContractAddress;
+    fn update_v_token(ref self: TContractState, pool: ContractAddress, asset: ContractAddress, v_token: ContractAddress);
     fn create_pool(
         ref self: TContractState,
         name: felt252,
@@ -95,6 +96,18 @@ mod PoolFactory {
     }
 
     #[derive(Drop, starknet::Event)]
+    struct UpdateVToken {
+        #[key]
+        pool: ContractAddress,
+        #[key]
+        asset: ContractAddress,
+        #[key]
+        prev_v_token: ContractAddress,
+        #[key]
+        new_v_token: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
     struct CreatePool {
         #[key]
         pool: ContractAddress,
@@ -135,6 +148,7 @@ mod PoolFactory {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         CreateVToken: CreateVToken,
+        UpdateVToken: UpdateVToken,
         CreatePool: CreatePool,
         AddAsset: AddAsset,
         CreateOracle: CreateOracle,
@@ -287,6 +301,21 @@ mod PoolFactory {
             self.asset_for_v_token.read((pool, v_token))
         }
 
+        /// Updates the vToken address for a given collateral asset
+        /// # Arguments
+        /// * `pool` - address of the pool
+        /// * `asset` - address of the collateral asset
+        /// * `v_token` - address of the new vToken contract
+        fn update_v_token(ref self: ContractState, pool: ContractAddress, asset: ContractAddress, v_token: ContractAddress) {
+            self.ownable.assert_only_owner();
+
+            let prev_v_token = self.v_token_for_asset.read((pool, asset));
+            self.v_token_for_asset.write((pool, asset), v_token);
+            self.asset_for_v_token.write((pool, v_token), asset);
+            
+            self.emit(UpdateVToken { pool, asset, prev_v_token, new_v_token: v_token });
+        }
+
         /// Creates a new pool
         /// # Arguments
         /// * `name` - name of the pool
@@ -336,7 +365,7 @@ mod PoolFactory {
 
             self.emit(CreatePool { pool: pool.contract_address, name, owner, curator, oracle });
 
-            // add assets to the pool and deploy the corresponding v tokens
+            // add assets to the pool and deploy the corresponding v token
             let mut i = 0;
             let mut asset_params_copy = asset_params;
             while !asset_params_copy.is_empty() {
