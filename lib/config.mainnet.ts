@@ -34,7 +34,7 @@ export const config: Config = {
   pools: {
     "genesis-pool": {
       params: {
-        name: "genesis-pool",
+        name: CONFIG.pool_parameters.name,
         owner: CONFIG.pool_parameters.owner,
         curator: CONFIG.pool_parameters.owner,
         fee_recipient: CONFIG.pool_parameters.fee_recipient,
