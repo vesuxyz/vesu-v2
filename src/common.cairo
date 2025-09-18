@@ -94,8 +94,7 @@ pub fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, 
     assert!(total_collateral_shares > 0, "unexpected-zero-collateral-shares");
     let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, round_up);
     let (collateral, remainder) = integer::u512_safe_div_rem_by_u256(
-        WideMul::<u256>::wide_mul(collateral_shares * total_assets, SCALE),
-        (total_collateral_shares * SCALE).try_into().unwrap(),
+        WideMul::<u256>::wide_mul(collateral_shares, total_assets), (total_collateral_shares).try_into().unwrap(),
     );
     assert!(collateral.limb2 == 0 && collateral.limb3 == 0, "collateral-overflow");
     let mut collateral = u256 { low: collateral.limb0, high: collateral.limb1 };
