@@ -123,10 +123,18 @@ pub fn assert_storable_asset_config(asset_config: AssetConfig) {
     assert_asset_config_exists(asset_config);
     let packed = AssetConfigPacking::pack(asset_config);
     let unpacked = AssetConfigPacking::unpack(packed);
+    assert!(asset_config.total_collateral_shares == unpacked.total_collateral_shares, "total-collateral-shares-precision-loss");
+    assert!(asset_config.total_nominal_debt == unpacked.total_nominal_debt, "total-nominal-debt-precision-loss");
+    assert!(asset_config.reserve == unpacked.reserve, "reserve-precision-loss");
     assert!(asset_config.max_utilization == unpacked.max_utilization, "max-utilization-precision-loss");
     assert!(asset_config.floor == unpacked.floor, "floor-precision-loss");
     assert!(asset_config.scale == unpacked.scale, "scale-precision-loss");
+    assert!(asset_config.is_legacy == unpacked.is_legacy, "is-legacy-precision-loss");
+    assert!(asset_config.last_updated == unpacked.last_updated, "last-updated-precision-loss");
+    assert!(asset_config.last_rate_accumulator == unpacked.last_rate_accumulator, "last-rate-accumulator-precision-loss");
+    assert!(asset_config.last_full_utilization_rate == unpacked.last_full_utilization_rate, "last-full-utilization-rate-precision-loss");
     assert!(asset_config.fee_rate == unpacked.fee_rate, "fee-rate-precision-loss");
+    assert!(asset_config.fee_shares == unpacked.fee_shares, "fee-shares-precision-loss");
 }
 
 pub impl PairConfigPacking of StorePacking<PairConfig, felt252> {
