@@ -3,7 +3,7 @@ use core::integer;
 use core::num::traits::{WideMul, Zero};
 use openzeppelin::utils::math::{Rounding, u256_mul_div};
 use starknet::get_block_timestamp;
-use vesu::data_model::{Amount, AmountDenomination, AssetConfig, Context, Position};
+use vesu::data_model::{Amount, AmountDenomination, AssetConfig, Context};
 use vesu::math::pow_scale;
 use vesu::units::SCALE;
 
@@ -238,14 +238,13 @@ pub fn is_collateralized(collateral_value: u256, debt_value: u256, max_ltv_ratio
 /// Calculates the collateral and debt value of a position
 /// # Arguments
 /// * `context` - Contextual state of the user (position owner)
-/// * `position` - Position [SCALE]
 /// # Returns
 /// * `collateral` - collateral amount [asset scale]
 /// * `collateral_value` - collateral value [SCALE]
 /// * `debt` - debt amount [asset scale]
 /// * `debt_value` - debt value [SCALE]
-pub fn calculate_collateral_and_debt_value(context: Context, position: Position) -> (u256, u256, u256, u256) {
-    let Context { collateral_asset_config, debt_asset_config, .. } = context;
+pub fn calculate_collateral_and_debt_value(context: Context) -> (u256, u256, u256, u256) {
+    let Context { collateral_asset_config, debt_asset_config, position, .. } = context;
 
     let collateral = calculate_collateral(position.collateral_shares, collateral_asset_config, false);
     let debt = calculate_debt(

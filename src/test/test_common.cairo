@@ -283,7 +283,7 @@ mod TestCommon {
             position: position,
         };
 
-        let (collateral, _, debt, _) = calculate_collateral_and_debt_value(context, context.position);
+        let (collateral, _, debt, _) = calculate_collateral_and_debt_value(context);
 
         let expected_collateral = calculate_collateral(
             position.collateral_shares, context.collateral_asset_config, false,
@@ -332,9 +332,7 @@ mod TestCommon {
             position: position,
         };
 
-        let (collateral, collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(
-            context, context.position,
-        );
+        let (collateral, collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(context);
 
         let expected_collateral_value = collateral * context.collateral_asset_price.value / config.scale;
         let expected_debt_value = debt * context.debt_asset_price.value / config.scale;

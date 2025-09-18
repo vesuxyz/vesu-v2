@@ -322,22 +322,23 @@ mod PoolFactory {
 
             self.emit(CreatePool { pool: pool.contract_address, name, owner, curator, oracle });
 
-            let mut asset_params_copy = asset_params;
+            // add assets to the pool and deploy the corresponding v tokens
             let mut i = 0;
+            let mut asset_params_copy = asset_params;
             while !asset_params_copy.is_empty() {
-                let asset_params = *asset_params_copy.pop_front().unwrap();
-                let asset = asset_params.asset;
+                let params = *asset_params_copy.pop_front().unwrap();
                 self
                     ._add_asset(
                         pool.contract_address,
-                        asset,
-                        asset_params,
+                        params.asset,
+                        params,
                         *interest_rate_params.pop_front().unwrap(),
                         v_token_params.at(i).clone(),
                     );
                 i += 1;
             }
 
+            // set the pair configurations
             while !pair_params.is_empty() {
                 let params = *pair_params.pop_front().unwrap();
                 let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;

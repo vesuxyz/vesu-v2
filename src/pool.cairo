@@ -476,9 +476,7 @@ mod Pool {
         ) {
             if collateral_delta < Zero::zero() || debt_delta > Zero::zero() {
                 // position is collateralized
-                let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(
-                    context, context.position,
-                );
+                let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context);
                 self.assert_collateralization(collateral_value, debt_value, context.max_ltv.into());
                 // caller owns the position or has a delegate for modifying it
                 self.assert_ownership(context.user);
@@ -509,7 +507,7 @@ mod Pool {
 
         /// Asserts that the position's balances aren't below the floor (dusty)
         fn assert_floor_invariant(self: @ContractState, context: Context) {
-            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
+            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context);
 
             if context.position.nominal_debt != 0 {
                 // value of the collateral is above the floor
@@ -719,9 +717,7 @@ mod Pool {
             ref self: ContractState, context: Context, min_collateral_to_receive: u256, mut debt_to_repay: u256,
         ) -> (u256, u256, u256) {
             // compute the collateral and debt value of the position
-            let (collateral, mut collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(
-                context, context.position,
-            );
+            let (collateral, mut collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(context);
 
             // if the liquidation factor is not set, then set it to 100%
             let PairConfig {
@@ -845,7 +841,7 @@ mod Pool {
             self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
         ) -> (Position, u256, u256) {
             let context = self.context(collateral_asset, debt_asset, user);
-            let (collateral, _, debt, _) = calculate_collateral_and_debt_value(context, context.position);
+            let (collateral, _, debt, _) = calculate_collateral_and_debt_value(context);
             (context.position, collateral, debt)
         }
 
@@ -863,7 +859,7 @@ mod Pool {
             self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
         ) -> (bool, u256, u256) {
             let context = self.context(collateral_asset, debt_asset, user);
-            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
+            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context);
             (is_collateralized(collateral_value, debt_value, context.max_ltv.into()), collateral_value, debt_value)
         }
 
@@ -956,7 +952,7 @@ mod Pool {
             let debt = Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(debt, true) };
 
             // only allow for liquidation of undercollateralized positions
-            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context, context.position);
+            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(context);
             assert!(
                 !is_collateralized(collateral_value, debt_value, context.max_ltv.into()), "not-undercollateralized",
             );
