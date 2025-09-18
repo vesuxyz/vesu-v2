@@ -159,9 +159,7 @@ pub fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u25
         return 0;
     }
 
-    let accrued_interest = calculate_debt(
-        asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, true,
-    );
+    let accrued_interest = calculate_debt(total_nominal_debt, rate_accumulator_delta, scale, true);
     let fee = u256_mul_div(accrued_interest, fee_rate, SCALE, Rounding::Floor);
     let total_assets = reserve + calculate_debt(total_nominal_debt, last_rate_accumulator, scale, true);
 

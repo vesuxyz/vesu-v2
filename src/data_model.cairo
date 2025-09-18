@@ -1,6 +1,5 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
-use vesu::math::pow_10;
 use vesu::units::SCALE;
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -29,7 +28,7 @@ pub struct AssetConfig { //                                     | slot | packed 
 }
 
 pub fn assert_asset_config(asset_config: AssetConfig) {
-    assert!(asset_config.scale <= pow_10(18), "scale-exceeded");
+    assert!(asset_config.scale <= SCALE, "scale-exceeded");
     assert!(asset_config.max_utilization <= SCALE, "max-utilization-exceeded");
     assert!(asset_config.fee_rate <= SCALE, "fee-rate-exceeded");
 }

@@ -521,11 +521,11 @@ mod Pool {
         /// Asserts that the debt cap is not exceeded for a pair
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
-        fn assert_debt_cap_invariant(self: @ContractState, context: Context) {
+        fn assert_debt_cap_invariant(self: @ContractState, context: Context, debt_delta: i257) {
             let Pair { total_nominal_debt, .. } = self.pairs.read((context.collateral_asset, context.debt_asset));
             let PairConfig { debt_cap, .. } = self.pair_configs.read((context.collateral_asset, context.debt_asset));
-
-            if debt_cap != 0 {
+            // skip if debt is not increasing
+            if debt_cap != 0 && debt_delta > Zero::zero() {
                 let total_debt = calculate_debt(
                     total_nominal_debt,
                     context.debt_asset_config.last_rate_accumulator,
@@ -564,7 +564,7 @@ mod Pool {
             }
             self.assert_delta_invariants(collateral_delta, collateral_shares_delta, debt_delta, nominal_debt_delta);
             self.assert_floor_invariant(context);
-            self.assert_debt_cap_invariant(context);
+            self.assert_debt_cap_invariant(context, debt_delta);
             self.assert_security_invariants(context);
         }
 
@@ -1040,7 +1040,6 @@ mod Pool {
 
             assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
             let mut asset_config = self.asset_config(asset);
-            assert_asset_config_exists(asset_config);
             // donate amount to the reserve
             asset_config.reserve += amount;
             self.asset_configs.write(asset, asset_config);
