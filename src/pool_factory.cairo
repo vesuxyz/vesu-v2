@@ -8,7 +8,14 @@ pub trait IPoolFactory<TContractState> {
     fn v_token_class_hash(self: @TContractState) -> felt252;
     fn v_token_for_asset(self: @TContractState, pool: ContractAddress, asset: ContractAddress) -> ContractAddress;
     fn asset_for_v_token(self: @TContractState, pool: ContractAddress, v_token: ContractAddress) -> ContractAddress;
-    fn update_v_token(ref self: TContractState, pool: ContractAddress, asset: ContractAddress, v_token: ContractAddress);
+    fn update_v_token(
+        ref self: TContractState,
+        pool: ContractAddress,
+        asset: ContractAddress,
+        debt_asset: ContractAddress,
+        v_token_name: ByteArray,
+        v_token_symbol: ByteArray,
+    );
     fn create_pool(
         ref self: TContractState,
         name: felt252,
@@ -212,6 +219,8 @@ mod PoolFactory {
         /// * `pool` - Address of the pool
         /// * `asset` - address of the collateral asset
         /// * `debt_asset` - address of the debt asset
+        /// # Returns
+        /// * `v_token` - address of the vToken contract
         fn create_v_token(
             ref self: ContractState,
             v_token_name: ByteArray,
@@ -219,8 +228,9 @@ mod PoolFactory {
             pool: ContractAddress,
             asset: ContractAddress,
             debt_asset: ContractAddress,
-        ) {
+        ) -> ContractAddress {
             assert!(self.v_token_for_asset.read((pool, asset)) == Zero::zero(), "v-token-already-created");
+            assert!(asset != debt_asset, "invalid-debt-asset");
 
             let mut calldata = array![];
             v_token_name.serialize(ref calldata);
@@ -237,6 +247,8 @@ mod PoolFactory {
             self.asset_for_v_token.write((pool, v_token), asset);
 
             self.emit(CreateVToken { pool, asset, v_token, v_token_name, v_token_symbol });
+
+            v_token
         }
 
         /// Transfers the inflation fee from the caller to the factory and approves the pool to spend the it
@@ -306,14 +318,20 @@ mod PoolFactory {
         /// * `pool` - address of the pool
         /// * `asset` - address of the collateral asset
         /// * `v_token` - address of the new vToken contract
-        fn update_v_token(ref self: ContractState, pool: ContractAddress, asset: ContractAddress, v_token: ContractAddress) {
+        fn update_v_token(
+            ref self: ContractState,
+            pool: ContractAddress,
+            asset: ContractAddress,
+            debt_asset: ContractAddress,
+            v_token_name: ByteArray,
+            v_token_symbol: ByteArray,
+        ) {
             let curator = IPoolDispatcher { contract_address: pool }.curator();
             assert!(curator == get_caller_address(), "caller-not-curator");
 
             let prev_v_token = self.v_token_for_asset.read((pool, asset));
-            self.v_token_for_asset.write((pool, asset), v_token);
-            self.asset_for_v_token.write((pool, v_token), asset);
-            
+            let v_token = self.create_v_token(v_token_name, v_token_symbol, pool, asset, debt_asset);
+
             self.emit(UpdateVToken { pool, asset, prev_v_token, new_v_token: v_token });
         }
 
