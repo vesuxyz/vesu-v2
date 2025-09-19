@@ -130,7 +130,7 @@ pub mod VToken {
                 .check_invariants(
                     self.asset.read(),
                     self.debt_asset.read(),
-                    get_caller_address(),
+                    get_contract_address(),
                     Zero::zero(),
                     Zero::zero(),
                     Zero::zero(),
