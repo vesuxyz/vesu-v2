@@ -1168,4 +1168,116 @@ mod TestLiquidatePosition {
             "debt reserve should increase",
         );
     }
+
+    #[test]
+    fn test_onewei_partial_liquidation_with_bad_debt_profit() {
+        let (pool, oracle, config, users, terms) = setup();
+        let TestConfig { collateral_asset, debt_asset, .. } = config;
+        let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
+
+        // LENDER
+
+        // deposit collateral which is later borrowed by the borrower
+        let params = ModifyPositionParams {
+            collateral_asset: debt_asset.contract_address,
+            debt_asset: collateral_asset.contract_address,
+            user: users.lender,
+            collateral: Amount { denomination: AmountDenomination::Assets, value: liquidity_to_deposit.into() },
+            debt: Default::default(),
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.lender);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
+
+        // BORROWER
+
+        let params = ModifyPositionParams {
+            collateral_asset: collateral_asset.contract_address,
+            debt_asset: debt_asset.contract_address,
+            user: users.borrower,
+            collateral: Amount { denomination: AmountDenomination::Assets, value: collateral_to_deposit.into() },
+            debt: Amount {
+                denomination: AmountDenomination::Native,
+                value: (nominal_debt_to_draw + nominal_debt_to_draw / 10).into(),
+            },
+        };
+
+        start_cheat_caller_address(pool.contract_address, users.borrower);
+        pool.modify_position(params);
+        stop_cheat_caller_address(pool.contract_address);
+
+        // LIQUIDATOR
+
+        // reduce oracle price - to some uneven value close to 0.5
+        let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: oracle.pragma_oracle() };
+        mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128 * 1263489 / 2412519);
+
+        let (_, _, initial_debt) = pool
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+
+        let (collateralized, _, _) = pool
+            .check_collateralization(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+        assert!(!collateralized, "Not undercollateralized");
+
+        // print debt asset balance of liquidator
+        let initial_balance = IERC20Dispatcher { contract_address: debt_asset.contract_address }
+            .balance_of(users.lender);
+
+        // Number of partial liquidations to perform
+        let num_liquidations = 300_u32; // Adjust this value as needed; use 1 and 300 to show difference
+        let debt_per_liquidation = 1; //force rounding up, so for sure we fully liquidate
+
+        let mut total_bad_debt = 0_u256;
+        let mut total_collateral_received = 0_u256;
+        let mut i = 0_u32;
+
+        // Perform partial liquidations in a loop
+        loop {
+            if i >= num_liquidations {
+                break;
+            }
+
+            // Get current position state before liquidation
+            let (_, _, current_debt) = pool
+                .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+
+            // Check if position still exists and has debt
+            if current_debt == 0 {
+                println!("Position fully liquidated after {} iterations", i);
+                break;
+            }
+
+            let debt_to_repay = debt_per_liquidation;
+
+            let params = LiquidatePositionParams {
+                collateral_asset: collateral_asset.contract_address,
+                debt_asset: debt_asset.contract_address,
+                user: users.borrower,
+                min_collateral_to_receive: 0,
+                debt_to_repay: debt_to_repay,
+            };
+
+            start_cheat_caller_address(pool.contract_address, users.lender);
+            let result = pool.liquidate_position(params);
+            stop_cheat_caller_address(pool.contract_address);
+
+            // Track cumulative results
+            total_bad_debt += result.bad_debt;
+            // collateral_delta is negative for the liquidated user (collateral removed)
+            // Use abs() to get the absolute value as u256
+            total_collateral_received += result.collateral_delta.abs();
+
+            i += 1;
+        }
+
+        // Final checks after all liquidations
+        let final_balance = IERC20Dispatcher { contract_address: debt_asset.contract_address }.balance_of(users.lender);
+        let total_balance_spent = initial_balance - final_balance;
+
+        let (_, _, final_debt) = pool
+            .position(collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+
+        assert!(initial_debt - final_debt == total_balance_spent);
+    }
 }
