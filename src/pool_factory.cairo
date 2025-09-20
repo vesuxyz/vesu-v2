@@ -313,11 +313,14 @@ mod PoolFactory {
             self.asset_for_v_token.read((pool, v_token))
         }
 
-        /// Updates the vToken address for a given collateral asset
+        /// Updates the vToken address for a given collateral asset. Only the curator of the corresponding pool can
+        /// update the vToken.
         /// # Arguments
         /// * `pool` - address of the pool
         /// * `asset` - address of the collateral asset
         /// * `v_token` - address of the new vToken contract
+        /// * `v_token_name` - name of the vToken
+        /// * `v_token_symbol` - symbol of the vToken
         fn update_v_token(
             ref self: ContractState,
             pool: ContractAddress,
