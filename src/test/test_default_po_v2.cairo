@@ -379,7 +379,7 @@ mod TestDefaultPOV2 {
 
         let pair_config = PairConfig {
             max_ltv: (40 * PERCENT).try_into().unwrap(),
-            liquidation_factor: (10 * PERCENT).try_into().unwrap(),
+            liquidation_factor: (50 * PERCENT).try_into().unwrap(),
             debt_cap: 10000_u128,
         };
 
@@ -501,7 +501,7 @@ mod TestDefaultPOV2 {
                 config.collateral_asset.contract_address,
                 config.debt_asset.contract_address,
                 'liquidation_factor',
-                (10 * PERCENT).try_into().unwrap(),
+                (50 * PERCENT).try_into().unwrap(),
             );
         pool
             .set_pair_parameter(

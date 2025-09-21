@@ -47,6 +47,10 @@ pub struct PairConfig {
 pub fn assert_pair_config(pair_config: PairConfig) {
     assert!(pair_config.max_ltv.into() <= SCALE, "max-ltv-exceeded");
     assert!(pair_config.liquidation_factor.into() <= SCALE, "liquidation-factor-exceeded");
+    assert!(
+        pair_config.liquidation_factor == 0 || pair_config.max_ltv <= pair_config.liquidation_factor,
+        "max-ltv-gt-liquidation-factor",
+    );
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
