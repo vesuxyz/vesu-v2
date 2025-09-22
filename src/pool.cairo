@@ -183,7 +183,7 @@ mod Pool {
         IEICDispatcherTrait, IEICLibraryDispatcher, IFlashLoanReceiverDispatcher, IFlashLoanReceiverDispatcherTrait,
         IPool, IPoolDispatcher, IPoolDispatcherTrait,
     };
-    use vesu::units::{INFLATION_FEE, SCALE};
+    use vesu::units::{INFLATION_FEE, MIN_LIQUIDATION_AMOUNT, SCALE};
 
     #[storage]
     struct Storage {
@@ -776,6 +776,7 @@ mod Pool {
                         );
                     debt_to_repay = debt;
                 } else {
+                    assert!(debt_to_repay > MIN_LIQUIDATION_AMOUNT, "less-than-min-liquidation-amount");
                     // derive the bad debt proportionally to the debt repaid
                     bad_debt =
                         u256_mul_div(debt_to_repay, debt_value - collateral_value, collateral_value, Rounding::Floor);

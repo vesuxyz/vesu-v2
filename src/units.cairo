@@ -6,3 +6,4 @@ pub const FRACTION: u256 = 10_000_000_000_000; // 1e13
 pub const YEAR_IN_SECONDS: u256 = 31_104_000; // 360 * 24 * 60 * 60
 pub const DAY_IN_SECONDS: u64 = 86_400; // 24 * 60 * 60
 pub const INFLATION_FEE: u256 = 2000;
+pub const MIN_LIQUIDATION_AMOUNT: u256 = 2000;

@@ -1170,6 +1170,7 @@ mod TestLiquidatePosition {
     }
 
     #[test]
+    #[should_panic(expected: "less-than-min-liquidation-amount")]
     fn test_onewei_partial_liquidation_with_bad_debt_profit() {
         let (pool, oracle, config, users, terms) = setup();
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -1226,7 +1227,7 @@ mod TestLiquidatePosition {
 
         // Number of partial liquidations to perform
         let num_liquidations = 300_u32; // Adjust this value as needed; use 1 and 300 to show difference
-        let debt_per_liquidation = 1; //force rounding up, so for sure we fully liquidate
+        let debt_per_liquidation = 1; // force rounding up, so for sure we fully liquidate
 
         let mut total_bad_debt = 0_u256;
         let mut total_collateral_received = 0_u256;
