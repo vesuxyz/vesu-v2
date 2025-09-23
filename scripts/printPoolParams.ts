@@ -6,9 +6,14 @@ const protocol = await deployer.loadProtocol();
 const pool = protocol.pool!;
 const config = deployer.config.pools["genesis-pool"].params;
 
+console.log("Pool name:                 ", shortString.decodeShortString(await pool.pool_name()));
 console.log("Oracle:                    ", toAddress(await pool.oracle()));
 console.log("Owner:                     ", toAddress(await pool.owner()));
 console.log("Fee recipient:             ", toAddress(await pool.fee_recipient()));
+console.log("Curator:                   ", toAddress(await pool.curator()));
+console.log("Pending curator:           ", toAddress(await pool.pending_curator()));
+console.log("Pausing agent:             ", toAddress(await pool.pausing_agent()));
+console.log("Paused:                    ", await pool.is_paused());
 
 for (const [index, asset] of config.asset_params.entries()) {
   const oracle_config = await protocol.oracle.oracle_config(asset.asset);
