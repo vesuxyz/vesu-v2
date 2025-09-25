@@ -229,7 +229,6 @@ mod PoolFactory {
             asset: ContractAddress,
             debt_asset: ContractAddress,
         ) -> ContractAddress {
-            assert!(self.v_token_for_asset.read((pool, asset)) == Zero::zero(), "v-token-already-created");
             assert!(asset != debt_asset, "invalid-debt-asset");
 
             let mut calldata = array![];
@@ -333,6 +332,7 @@ mod PoolFactory {
             assert!(curator == get_caller_address(), "caller-not-curator");
 
             let prev_v_token = self.v_token_for_asset.read((pool, asset));
+            self.asset_for_v_token.write((pool, prev_v_token), Zero::zero());
             let v_token = self.create_v_token(v_token_name, v_token_symbol, pool, asset, debt_asset);
 
             self.emit(UpdateVToken { pool, asset, prev_v_token, new_v_token: v_token });

@@ -13,5 +13,6 @@
   "pragma": {
     "oracle": "0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b",
     "summary_stats": "0x049eefafae944d07744d07cc72a5bf14728a6fb463c3eae5bca13552f5d455fd"
-  }
+  },
+  "pausing_agent": "0x773daa9f2605288be0e7586fa8390b7a9f9c4016dc36f68c7effa48de125583"
 }

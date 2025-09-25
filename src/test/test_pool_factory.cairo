@@ -121,6 +121,42 @@ mod TestPoolFactory {
     }
 
     #[test]
+    fn test_pool_factory_update_v_token() {
+        let Env {
+            pool_factory, oracle, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let pool = create_pool_via_factory(pool_factory, oracle, config, users.owner, users.curator, Option::None);
+
+        cheat_caller_address(pool_factory.contract_address, pool.curator(), CheatSpan::TargetCalls(1));
+        pool_factory
+            .update_v_token(
+                pool.contract_address,
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                "VToken",
+                "VTK",
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: "caller-not-curator")]
+    fn test_pool_factory_update_v_token_not_curator() {
+        let Env {
+            pool_factory, oracle, config, users, ..,
+        } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        let pool = create_pool_via_factory(pool_factory, oracle, config, users.owner, users.curator, Option::None);
+
+        pool_factory
+            .update_v_token(
+                pool.contract_address,
+                config.collateral_asset.contract_address,
+                config.debt_asset.contract_address,
+                "VToken",
+                "VTK",
+            );
+    }
+
+    #[test]
     #[should_panic(expected: ('Caller is not the owner',))]
     fn test_pool_factory_upgrade_only_owner() {
         let Env { pool_factory, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
