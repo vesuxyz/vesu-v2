@@ -47,10 +47,8 @@ export class Deployer extends BaseDeployer {
   }
 
   async loadProtocol(): Promise<Protocol> {
-    const { protocol, pool } = this.config;
-    const addresses = pool.deployParams.asset_params
-      .map(({ asset }: { asset: string }) => asset)
-      .map(this.loadContract.bind(this));
+    const { protocol } = this.config;
+    const addresses = protocol.assets!.map((asset) => asset).map(this.loadContract.bind(this));
     console.log(protocol);
     const contracts = {
       poolFactory: await this.loadContract(protocol.poolFactory!),

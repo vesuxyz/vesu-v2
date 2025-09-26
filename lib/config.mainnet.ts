@@ -23,7 +23,7 @@ export const config: Config = {
   name: "mainnet",
   protocol: {
     poolFactory: DEPLOYMENT.poolFactory || "0x0",
-    pool: (DEPLOYMENT.pools && DEPLOYMENT.pools[0]) || process.env.POOL || "0x0",
+    pool: process.env.POOL || (DEPLOYMENT.pools && DEPLOYMENT.pools[0]) || "0x0",
     oracle: DEPLOYMENT.oracle || "0x0",
     pragma: {
       oracle: DEPLOYMENT.pragma.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
