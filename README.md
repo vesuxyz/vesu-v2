@@ -30,16 +30,6 @@ yarn
 scarb run test
 ```
 
-### Gas Reporting
-
-Requires running a local devnet. You should have docker installed, then you can start the devnet by running the following command:
-
-```shell
-scarb run startDevnet
-# in another terminal instance
-scarb run updateGasReport
-```
-
 ## Deployment
 
 ### Prerequisite

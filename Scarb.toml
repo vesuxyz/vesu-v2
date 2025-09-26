@@ -22,28 +22,23 @@ sort-module-level-items = true
 
 [[tool.snforge.fork]]
 name = "Mainnet"
-# url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
 url = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/rdvL5iHyAP1ZHb84DY8JR"
 block_id.number = "1565065"
 
 [tool.voyager]
+oracle = { path = "src/oracle.cairo" }
 pool = { path = "src/pool.cairo" }
+pool-factory = { path = "src/pool-factory.cairo" }
 
 [scripts]
 buildRelease = "scarb --profile release build"
 format = "scarb fmt && yarn prettier --write ."
 checkFormat = "scarb fmt --check && yarn prettier --check ."
-startDevnet = "./scripts/startDevnet.sh"
-killDevnet = "lsof -t -i tcp:5050 | xargs kill"
 createPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/createPool.ts"
 createPosition = "scarb --profile release build && node --loader ts-node/esm ./scripts/createPosition.ts"
 checkSecurityInvariants = "scarb --profile release build && node --loader ts-node/esm ./scripts/checkSecurityInvariants.ts"
-deployDevnet = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployDevnet.ts"
 deployMainnet = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployMainnet.ts"
-deploySepolia = "scarb --profile release build && node --loader ts-node/esm ./scripts/deploySepolia.ts"
-deployExtensions = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployExtensions.ts"
-verifyPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/verifyPool.ts"
-checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
-updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
 print-contract-size = "scarb --profile release build && node --loader ts-node/esm ./scripts/print-contract-size.ts"
+print-pool-params = "scarb --profile release build && node --loader ts-node/esm ./scripts/printPoolParams.ts"
+verifyPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/verifyPool.ts"
 test = "snforge test --max-n-steps 100000000"

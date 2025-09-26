@@ -16,16 +16,16 @@ export class Protocol implements ProtocolContracts {
     return new Protocol(poolFactory, pool, oracle, pragma, assets, deployer);
   }
 
-  async createPool(name: string, { devnetEnv = false, printParams = false } = {}) {
-    let { params } = this.deployer.config.pools[name];
+  async createPool({ devnetEnv = false, printParams = false } = {}) {
+    let { deployParams } = this.deployer.config.pool;
     if (devnetEnv) {
-      params = this.patchPoolParamsWithEnv(params);
+      deployParams = this.patchPoolParamsWithEnv(deployParams);
       if (printParams) {
         console.log("Pool params:");
-        console.dir(params, { depth: null });
+        console.dir(deployParams, { depth: null });
       }
     }
-    return this.createPoolFromParams(params);
+    return this.createPoolFromParams(deployParams);
   }
 
   async addAssetsToOracle(params: PragmaOracleParams[]) {
@@ -67,13 +67,8 @@ export class Protocol implements ProtocolContracts {
     return [pool, response] as const;
   }
 
-  async loadPool(name: string | 0) {
-    const { config } = this.deployer;
-    if (name === 0) {
-      [name] = Object.keys(config.pools);
-    }
-    const poolConfig = config.pools[name];
-    return new Pool(this, poolConfig.params);
+  async loadPool() {
+    return new Pool(this, this.deployer.config.pool.deployParams);
   }
 
   patchPoolParamsWithEnv({ asset_params, owner, ...others }: CreatePoolParams): CreatePoolParams {

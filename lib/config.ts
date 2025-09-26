@@ -16,6 +16,7 @@ interface ProtocolConfig {
     oracle: string | undefined;
     summary_stats: string | undefined;
   };
+  assets: string[] | undefined;
 }
 
 export class EnvAssetParams {
@@ -42,14 +43,14 @@ export class EnvAssetParams {
 }
 
 export interface PoolConfig {
-  params: CreatePoolParams;
+  deployParams: CreatePoolParams;
 }
 
 export interface Config {
   name: string;
   protocol: ProtocolConfig;
   env?: EnvAssetParams[];
-  pools: Record<string, PoolConfig>;
+  pool: PoolConfig;
 }
 
 export function toU256(x: BigNumberish): u256 {

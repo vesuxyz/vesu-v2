@@ -3,9 +3,9 @@ import { setup } from "../lib";
 
 const deployer = await setup("mainnet");
 const protocol = await deployer.deployProtocol();
-await protocol.addAssetsToOracle(deployer.config.pools["genesis-pool"].params.pragma_oracle_params);
+await protocol.addAssetsToOracle(deployer.config.pool.deployParams.pragma_oracle_params);
 await deployer.setApprovals(protocol.poolFactory, protocol.assets);
-await protocol.createPool("genesis-pool");
+await protocol.createPool();
 
 const deployment = {
   poolFactory: protocol.poolFactory.address,

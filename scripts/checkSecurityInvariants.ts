@@ -5,12 +5,12 @@ const deployer = await setup("mainnet");
 const protocol = await deployer.loadProtocol();
 const pool = protocol.pool!;
 const assets = protocol.assets;
-const config = deployer.config.pools["genesis-pool"].params;
+const params = deployer.config.pool.deployParams;
 
 console.log("");
 console.log("Checking oracle status for each pair...");
 
-for (const [, asset] of config.pair_params.entries()) {
+for (const [, asset] of params.pair_params.entries()) {
   let collateral_asset = assets[asset.collateral_asset_index];
   let debt_asset = assets[asset.debt_asset_index];
   const collateral_asset_symbol = shortString.decodeShortString(await collateral_asset.symbol());
