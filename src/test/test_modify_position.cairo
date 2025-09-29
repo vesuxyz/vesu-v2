@@ -1155,11 +1155,11 @@ mod TestModifyPosition {
         pool.claim_fees(third_asset.contract_address, 0);
         let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
-        assert(balance_before + fee_amount - 1 == balance_after, 'Wrong fee amount');
+        assert(balance_before + fee_amount == balance_after, 'Wrong fee amount');
 
         let asset_config = pool.asset_config(third_asset.contract_address);
         assert(asset_config.total_collateral_shares == total_collateral_shares, 'Shares not decreased');
-        assert(asset_config.reserve - 1 == reserve - fee_amount, 'Reserve not decreased');
+        assert(asset_config.reserve == reserve - fee_amount, 'Reserve not decreased');
         assert(asset_config.fee_shares == 0, 'Fee shares not decreased');
     }
 
@@ -1285,7 +1285,7 @@ mod TestModifyPosition {
 
         let balance_after = third_asset.balance_of(users.curator);
         assert(balance_before < balance_after, 'Fees not claimed');
-        assert(balance_before + fee_amount - 2 == balance_after, 'Wrong fee amount');
+        assert(balance_before + fee_amount - 1 == balance_after, 'Wrong fee amount');
     }
 
     #[test]

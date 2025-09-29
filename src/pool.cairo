@@ -1234,7 +1234,7 @@ mod Pool {
             let fee_shares = asset_config.fee_shares;
 
             // Convert shares to amount (round down)
-            let amount = calculate_collateral(fee_shares, asset_config, true);
+            let amount = calculate_collateral(fee_shares, asset_config, false);
 
             (fee_shares, amount)
         }
