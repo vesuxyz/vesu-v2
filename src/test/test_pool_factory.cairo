@@ -19,6 +19,50 @@ mod TestPoolFactory {
     use vesu::vendor::pragma::AggregationMode;
 
     #[test]
+    fn test_pool_factory_set_pool_class_hash() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.set_pool_class_hash('NewPoolClassHash');
+        assert!(pool_factory.pool_class_hash() == 'NewPoolClassHash');
+    }
+
+    #[test]
+    #[should_panic(expected: 'Caller is not the owner')]
+    fn test_pool_factory_set_pool_class_hash_not_owner() {
+        let Env { pool_factory, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        pool_factory.set_pool_class_hash('NewPoolClassHash');
+    }
+
+    fn test_pool_factory_set_v_token_class_hash() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.set_v_token_class_hash('NewVTokenClassHash');
+        assert!(pool_factory.v_token_class_hash() == 'NewVTokenClassHash');
+    }
+
+    #[test]
+    #[should_panic(expected: 'Caller is not the owner')]
+    fn test_pool_factory_set_v_token_class_hash_not_owner() {
+        let Env { pool_factory, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        pool_factory.set_v_token_class_hash('NewVTokenClassHash');
+    }
+
+    #[test]
+    fn test_pool_factory_set_oracle_class_hash() {
+        let Env { pool_factory, users, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        cheat_caller_address(pool_factory.contract_address, users.owner, CheatSpan::TargetCalls(1));
+        pool_factory.set_oracle_class_hash('NewOracleClassHash');
+        assert!(pool_factory.oracle_class_hash() == 'NewOracleClassHash');
+    }
+
+    #[test]
+    #[should_panic(expected: 'Caller is not the owner')]
+    fn test_pool_factory_set_oracle_class_hash_not_owner() {
+        let Env { pool_factory, .. } = setup_env(Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero());
+        pool_factory.set_oracle_class_hash('NewOracleClassHash');
+    }
+
+    #[test]
     fn test_pool_factory_create_pool() {
         let Env {
             pool_factory, oracle, config, users, ..,

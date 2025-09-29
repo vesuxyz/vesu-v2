@@ -4,8 +4,12 @@ use vesu::interest_rate_model::InterestRateConfig;
 
 #[starknet::interface]
 pub trait IPoolFactory<TContractState> {
+    fn set_pool_class_hash(ref self: TContractState, pool_class_hash: felt252);
     fn pool_class_hash(self: @TContractState) -> felt252;
+    fn set_v_token_class_hash(ref self: TContractState, v_token_class_hash: felt252);
     fn v_token_class_hash(self: @TContractState) -> felt252;
+    fn set_oracle_class_hash(ref self: TContractState, oracle_class_hash: felt252);
+    fn oracle_class_hash(self: @TContractState) -> felt252;
     fn v_token_for_asset(self: @TContractState, pool: ContractAddress, asset: ContractAddress) -> ContractAddress;
     fn asset_for_v_token(self: @TContractState, pool: ContractAddress, v_token: ContractAddress) -> ContractAddress;
     fn update_v_token(
@@ -278,6 +282,14 @@ mod PoolFactory {
 
     #[abi(embed_v0)]
     impl PoolFactoryImpl of IPoolFactory<ContractState> {
+        /// Sets the class hash of the pool contract
+        /// # Arguments
+        /// * `pool_class_hash` - class hash of the pool contract
+        fn set_pool_class_hash(ref self: ContractState, pool_class_hash: felt252) {
+            self.ownable.assert_only_owner();
+            self.pool_class_hash.write(pool_class_hash);
+        }
+
         /// Returns the class hash of the pool contract
         /// # Returns
         /// * `pool_class_hash` - class hash of the pool contract
@@ -285,11 +297,33 @@ mod PoolFactory {
             self.pool_class_hash.read()
         }
 
+        /// Sets the class hash of the vToken contract
+        /// # Arguments
+        /// * `v_token_class_hash` - class hash of the vToken contract
+        fn set_v_token_class_hash(ref self: ContractState, v_token_class_hash: felt252) {
+            self.ownable.assert_only_owner();
+            self.v_token_class_hash.write(v_token_class_hash);
+        }
         /// Returns the class hash of the vToken contract
         /// # Returns
         /// * `v_token_class_hash` - class hash of the vToken contract
         fn v_token_class_hash(self: @ContractState) -> felt252 {
             self.v_token_class_hash.read()
+        }
+
+        /// Sets the class hash of the oracle contract
+        /// # Arguments
+        /// * `oracle_class_hash` - class hash of the oracle contract
+        fn set_oracle_class_hash(ref self: ContractState, oracle_class_hash: felt252) {
+            self.ownable.assert_only_owner();
+            self.oracle_class_hash.write(oracle_class_hash);
+        }
+
+        /// Returns the class hash of the oracle contract
+        /// # Returns
+        /// * `oracle_class_hash` - class hash of the oracle contract
+        fn oracle_class_hash(self: @ContractState) -> felt252 {
+            self.oracle_class_hash.read()
         }
 
         /// Returns the vToken address for a given collateral asset
