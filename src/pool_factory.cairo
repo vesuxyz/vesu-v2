@@ -70,7 +70,7 @@ mod PoolFactory {
     use vesu::data_model::{AssetParams, PairConfig, PairParams, VTokenParams};
     use vesu::interest_rate_model::InterestRateConfig;
     use vesu::pool::{IEICDispatcherTrait, IEICLibraryDispatcher, IPoolDispatcher, IPoolDispatcherTrait};
-    use vesu::pool_factory::IPoolFactory;
+    use vesu::pool_factory::{IPoolFactory, IPoolFactoryDispatcher, IPoolFactoryDispatcherTrait};
     use vesu::units::INFLATION_FEE;
 
     #[storage]
@@ -545,7 +545,7 @@ mod PoolFactory {
             }
             replace_class_syscall(new_implementation).unwrap_syscall();
             // Check to prevent mistakes when upgrading the contract
-            let new_name = IPoolDispatcher { contract_address: get_contract_address() }.upgrade_name();
+            let new_name = IPoolFactoryDispatcher { contract_address: get_contract_address() }.upgrade_name();
             assert(new_name == self.upgrade_name(), 'invalid upgrade name');
             self.emit(ContractUpgraded { new_implementation });
         }
