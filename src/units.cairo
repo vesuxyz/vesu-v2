@@ -1,4 +1,3 @@
-pub const SCALE_DECIMALS: u8 = 18;
 pub const SCALE: u256 = 1_000_000_000_000_000_000; // 1e18
 pub const SCALE_128: u128 = 1_000_000_000_000_000_000; // 1e18
 pub const PERCENT: u256 = 10_000_000_000_000_000; // 1e16

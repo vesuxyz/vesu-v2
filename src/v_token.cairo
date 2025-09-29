@@ -195,7 +195,7 @@ pub mod VToken {
             self.pool_contract.read()
         }
 
-        /// Approves the pool contract to spend the vToken
+        /// Approves the pool contract to spend the underlying asset of the vToken
         fn approve_pool(ref self: ContractState) {
             assert!(
                 IERC20Dispatcher { contract_address: self.asset.read() }

@@ -765,7 +765,7 @@ mod Pool {
             if collateral_value < debt_value {
                 // limit the bad debt by the outstanding collateral and debt values (in usd)
                 if collateral_value < u256_mul_div(
-                    debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Floor,
+                    debt_to_repay, context.debt_asset_price.value, context.debt_asset_config.scale, Rounding::Ceil,
                 ) {
                     bad_debt =
                         u256_mul_div(
@@ -1208,7 +1208,7 @@ mod Pool {
             if fee_shares == 0 {
                 fee_shares = asset_config.fee_shares;
             }
-            let fee_amount = calculate_collateral(fee_shares, asset_config, true);
+            let fee_amount = calculate_collateral(fee_shares, asset_config, false);
 
             // Deduct the fee shares and amount from the total collateral shares and reserve
             asset_config.fee_shares -= fee_shares;
