@@ -1,16 +1,16 @@
 import { BigNumber } from "bignumber.js";
 import { isArray, mapValues } from "lodash-es";
 import { BigNumberish, uint256 } from "starknet";
-import { AssetIndexes, CreatePoolParams, i257, u256 } from ".";
+import { CreatePoolParams, i257, u256 } from ".";
 
 export const SCALE = 10n ** 18n;
 export const PERCENT = 10n ** 16n;
 export const FRACTION = 10n ** 13n;
 export const YEAR_IN_SECONDS = 360 * 24 * 60 * 60;
 
-interface ProtocolConfig {
+export interface ProtocolConfig {
   poolFactory: string | undefined;
-  pool: string | undefined;
+  pools: string[] | undefined;
   oracle: string | undefined;
   pragma: {
     oracle: string | undefined;
@@ -19,39 +19,7 @@ interface ProtocolConfig {
   assets: string[] | undefined;
 }
 
-export class EnvAssetParams {
-  constructor(
-    public name: string,
-    public symbol: string,
-    public decimals: bigint,
-    public mint: bigint,
-    public pragmaKey: BigNumberish,
-    public price: bigint,
-    public isLegacy: boolean,
-    public feeRate: bigint,
-    public address: string | undefined = undefined,
-  ) {}
-
-  get scale() {
-    return 10n ** this.decimals;
-  }
-
-  erc20Params() {
-    const { name, symbol, decimals } = this;
-    return { name, symbol, decimals, initial_supply: toU256(this.mint * this.scale) };
-  }
-}
-
-export interface PoolConfig {
-  deployParams: CreatePoolParams;
-}
-
-export interface Config {
-  name: string;
-  protocol: ProtocolConfig;
-  env?: EnvAssetParams[];
-  pool: PoolConfig;
-}
+export interface PoolConfig extends CreatePoolParams {}
 
 export function toU256(x: BigNumberish): u256 {
   return uint256.bnToUint256(x.toString());
@@ -78,19 +46,6 @@ function stringifyAddresses(value: any): any {
     return "";
   }
   return value.address ? value.address : value.oracle.address;
-}
-
-export function mapAssetPairs<T>(
-  assets: EnvAssetParams[],
-  callback: (collateral: EnvAssetParams, debt: EnvAssetParams, indexes: AssetIndexes) => T | undefined,
-) {
-  return assets
-    .flatMap((collateral, collateral_asset_index) =>
-      assets.map((debt, debt_asset_index) => {
-        return callback(collateral, debt, { collateral_asset_index, debt_asset_index });
-      }),
-    )
-    .filter(Boolean) as T[];
 }
 
 export function toUtilizationScale(value: number) {

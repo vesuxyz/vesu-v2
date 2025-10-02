@@ -1,15 +1,15 @@
 import fs from "fs";
-import { setup } from "../lib";
+import { poolConfig, setup } from "../lib";
 
 const deployer = await setup("mainnet");
 const protocol = await deployer.deployProtocol();
-await protocol.addAssetsToOracle(deployer.config.pool.deployParams.pragma_oracle_params);
+await protocol.addAssetsToOracle(poolConfig.pragma_oracle_params);
 await deployer.setApprovals(protocol.poolFactory, protocol.assets);
-await protocol.createPool();
+const [pool] = await protocol.createPool(poolConfig);
 
 const deployment = {
   poolFactory: protocol.poolFactory.address,
-  pool: protocol.pool?.address || "0x0",
+  pools: [pool.address],
   oracle: protocol.oracle.address,
   assets: protocol.assets.map((asset) => asset.address),
   pragma: {
@@ -18,8 +18,4 @@ const deployment = {
   },
 };
 
-fs.writeFileSync(
-  // `deployment_${shortString.decodeShortString(await deployer.provider.getChainId()).toLowerCase()}.json`,
-  `deployment.json`,
-  JSON.stringify(deployment, null, 2),
-);
+fs.writeFileSync(`deployment.json`, JSON.stringify(deployment, null, 2));

@@ -2,8 +2,9 @@ import { Amount, setup, toU256 } from "../lib";
 
 const deployer = await setup("mainnet");
 const protocol = await deployer.loadProtocol();
-const pool = protocol.pool!;
 const assets = protocol.assets;
+const pool = protocol.pools.find((pool) => pool.address.toLowerCase() === process.env.POOL!.toLowerCase());
+if (!pool) throw new Error("Unknown pool");
 
 const liquidityToDeposit = 10n ** 9n;
 const { lender } = deployer;

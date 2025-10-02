@@ -30,7 +30,7 @@ yarn
 scarb run test
 ```
 
-## Deployment
+## Scripts
 
 ### Prerequisite
 
@@ -41,7 +41,13 @@ Copy and update the contents of `.env.example` to `.env`.
 Declare and deploy all contracts under `src` using the account with `PRIVATE_KEY` and `ADDRESS` specified in `.env`
 
 ```sh
-scarb run deployProtocol
-scarb run deploySepolia
 scarb run deployMainnet
+POOL=<POOL_ADDRESS> scarb run verifyPool
+```
+
+### Check the pool state
+
+```sh
+scarb run printPoolParams
+scarb run checkSecurityInvariants
 ```

@@ -1,14 +1,11 @@
 import assert from "assert";
-import { AssetConfig, InterestRateConfig, ProtocolContracts, SCALE, YEAR_IN_SECONDS } from ".";
+import { Contract } from "starknet";
+import { AssetConfig, InterestRateConfig, SCALE, YEAR_IN_SECONDS } from ".";
 
 const UTILIZATION_SCALE = 10n ** 5n;
 const UTILIZATION_SCALE_TO_SCALE = 10n ** 13n;
 
-export async function calculateRates(
-  { pool }: ProtocolContracts,
-  asset: string,
-  interest_rate_config: InterestRateConfig,
-) {
+export async function calculateRates(pool: Contract, asset: string, interest_rate_config: InterestRateConfig) {
   const { "0": asset_config } = await pool?.asset_config_unsafe(asset);
   const utilization = calculateUtilization(asset_config);
   const { last_updated: lastUpdated, last_full_utilization_rate: lastFullUtilizationRate } = asset_config;

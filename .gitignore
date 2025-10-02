@@ -1,6 +1,8 @@
 # snforge
 target/
 .snfoundry_cache/
+snfoundry.toml
+accounts.json
 
 # secrets
 .env

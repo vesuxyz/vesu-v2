@@ -1,10 +1,10 @@
 import { Contract } from "starknet";
-import { CreatePoolParams, Deployer, Pool, PragmaContracts, PragmaOracleParams, ProtocolContracts, toAddress } from ".";
+import { CreatePoolParams, Deployer, PragmaContracts, PragmaOracleParams, ProtocolContracts, toAddress } from ".";
 
 export class Protocol implements ProtocolContracts {
   constructor(
     public poolFactory: Contract,
-    public pool: Contract | undefined,
+    public pools: Contract[],
     public oracle: Contract,
     public pragma: PragmaContracts,
     public assets: Contract[],
@@ -12,12 +12,11 @@ export class Protocol implements ProtocolContracts {
   ) {}
 
   static from(contracts: ProtocolContracts, deployer: Deployer) {
-    const { poolFactory, pool, oracle, pragma, assets } = contracts;
-    return new Protocol(poolFactory, pool, oracle, pragma, assets, deployer);
+    const { poolFactory, pools, oracle, pragma, assets } = contracts;
+    return new Protocol(poolFactory, pools, oracle, pragma, assets, deployer);
   }
 
-  async createPool({ devnetEnv = false, printParams = false } = {}) {
-    let { deployParams } = this.deployer.config.pool;
+  async createPool(deployParams: CreatePoolParams, { devnetEnv = false, printParams = false } = {}) {
     if (devnetEnv) {
       deployParams = this.patchPoolParamsWithEnv(deployParams);
       if (printParams) {
@@ -62,13 +61,8 @@ export class Protocol implements ProtocolContracts {
     const events = poolFactory.parseEvents(receipt);
     const createPoolSig = "vesu::pool_factory::PoolFactory::CreatePool";
     const createPoolEvent = events.find((event) => event[createPoolSig] != undefined);
-    this.pool = await this.deployer.loadContract(toAddress(createPoolEvent?.[createPoolSig]?.pool! as BigInt));
-    const pool = new Pool(this, params);
+    const pool = await this.deployer.loadContract(toAddress(createPoolEvent?.[createPoolSig]?.pool! as BigInt));
     return [pool, response] as const;
-  }
-
-  async loadPool() {
-    return new Pool(this, this.deployer.config.pool.deployParams);
   }
 
   patchPoolParamsWithEnv({ asset_params, owner, ...others }: CreatePoolParams): CreatePoolParams {
