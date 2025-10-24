@@ -125,14 +125,22 @@ source = "registry+https://scarbs.xyz/"
 checksum = "sha256:bf799c794139837f397975ffdf6a7ed5032d198bbf70e87a8f44f144a9dfc505"
 
 [[package]]
+name = "sncast_std"
+version = "0.48.1"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:52e65441cbd8b7daf24d2d09db8cd1dcf9e4769d8a9a0049e22643071f967309"
+
+[[package]]
 name = "snforge_scarb_plugin"
-version = "0.46.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.46.0#8586208d79496a1ccca23b9211e4f6ac910a8070"
+version = "0.48.1"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:2dd27e8215eea8785b3930e9f452e11b429ca262b1c1fbb071bfc173b9ebc125"
 
 [[package]]
 name = "snforge_std"
-version = "0.46.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.46.0#8586208d79496a1ccca23b9211e4f6ac910a8070"
+version = "0.48.1"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:89f759fa685d48ed0ba7152d2ac2eb168da08dfa8b84b2bee96e203dc5b2413e"
 dependencies = [
  "snforge_scarb_plugin",
 ]
@@ -143,5 +151,6 @@ version = "0.1.0"
 dependencies = [
  "alexandria_math",
  "openzeppelin",
+ "sncast_std",
  "snforge_std",
 ]
