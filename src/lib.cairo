@@ -16,6 +16,7 @@ pub mod vendor {
     pub mod pragma;
 }
 
+#[cfg(test)]
 pub mod test {
     pub mod mock_asset;
     pub mod mock_oracle;
