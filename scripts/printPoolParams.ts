@@ -13,7 +13,7 @@ async function getNameAndSymbol(asset: Contract) {
   try {
     name = shortString.decodeShortString(name);
     symbol = shortString.decodeShortString(symbol);
-  } catch (error) { }
+  } catch (error) {}
   return { name, symbol };
 }
 
