@@ -29,7 +29,7 @@ export class Protocol implements ProtocolContracts {
 
   async addAssetsToOracle(params: PragmaOracleParams[]) {
     const { oracle, deployer } = this;
-    oracle.connect(deployer.owner);
+    oracle.providerOrAccount = deployer.owner;
     for (const param of params) {
       const response = await oracle.add_asset(param.asset, {
         pragma_key: param.pragma_key,
@@ -46,7 +46,7 @@ export class Protocol implements ProtocolContracts {
   async createPoolFromParams(params: CreatePoolParams) {
     const { poolFactory, oracle, deployer } = this;
 
-    poolFactory.connect(deployer.owner);
+    poolFactory.providerOrAccount = deployer.owner;
     const response = await poolFactory.create_pool(
       params.name,
       params.curator,

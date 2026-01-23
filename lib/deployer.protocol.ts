@@ -53,6 +53,7 @@ export class Deployer extends BaseDeployer {
     await this.waitForTransaction(response.transaction_hash);
     this.protocolConfig.poolFactory = contracts.poolFactory.address;
     this.protocolConfig.oracle = (await this.deferOracle(contracts.poolFactory)).address;
+    this.protocolConfig.pools = []; // Initialize empty pools array
     return await this.loadProtocol();
   }
 
@@ -71,7 +72,7 @@ export class Deployer extends BaseDeployer {
   }
 
   async deferOracle(poolFactory: Contract) {
-    poolFactory.connect(this.owner);
+    poolFactory.providerOrAccount = this.owner;
     const response = await poolFactory.create_oracle(
       this.owner.address,
       this.protocolConfig.pragma.oracle!,

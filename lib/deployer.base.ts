@@ -1,20 +1,22 @@
 import fs from "fs";
 import { DeclareContractPayload, ec, encode, json } from "starknet";
 
-import { Account, Calldata, CompiledContract, Contract, hash, RpcProvider } from "starknet";
+import { Account, Calldata, CompiledContract, Contract, hash, RpcProvider, defaultDeployer } from "starknet";
 
 export class BaseDeployer extends Account {
   constructor(
     public provider: RpcProvider,
-    { address, signer }: Account,
+    account: Account,
     private alreadyDeclared: Record<string, string> = {},
   ) {
-    super(provider, address, signer);
+    super({ provider, address: account.address, signer: account.signer });
   }
 
   async loadContract(contractAddress: string) {
     const { abi } = await this.getClassAt(contractAddress);
-    return new Contract(abi, contractAddress, this.provider);
+    const contract = new Contract({ abi, address: contractAddress });
+    contract.providerOrAccount = this.provider;
+    return contract;
   }
 
   async declareCached(name: string) {
@@ -47,8 +49,9 @@ export class BaseDeployer extends Account {
     const salt = randomHex(); // use "0" for deterministic address
     const contractAddress = hash.calculateContractAddressFromHash(salt, classHash, constructorCalldata, 0);
     const { abi } = payload.contract as CompiledContract;
-    const contract = new Contract(abi, contractAddress, this.provider);
-    const calls = this.buildUDCContractPayload({ classHash, salt, constructorCalldata, unique: false });
+    const contract = new Contract({ abi, address: contractAddress });
+    contract.providerOrAccount = this.provider;
+    const { calls } = defaultDeployer.buildDeployerCall({ classHash, salt, constructorCalldata, unique: false }, this.address);
     return [contract, calls] as const;
   }
 }

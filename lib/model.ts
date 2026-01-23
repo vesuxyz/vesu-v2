@@ -82,6 +82,7 @@ export interface FeeParams {
 export interface VTokenParams {
   v_token_name: ByteArray;
   v_token_symbol: ByteArray;
+  debt_asset: string;
 }
 
 export interface CreatePoolParams {
