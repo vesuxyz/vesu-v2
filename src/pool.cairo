@@ -436,6 +436,9 @@ mod Pool {
         quote_period: u64,
         settlement_period: u64,
         max_bonus: u64,
+        refreeze_cooldown: u64,
+        max_rfq_attempts: u8,
+        max_quotes: u64,
         min_debt: u256,
     }
 
@@ -986,6 +989,10 @@ mod Pool {
             self.assert_not_paused();
 
             let ModifyPositionParams { collateral_asset, debt_asset, user, collateral, debt } = params;
+
+            // Check position is not frozen
+            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
+            assert(snapshot.frozen_at == 0, 'position-frozen');
 
             let mut context = self.context(collateral_asset, debt_asset, user);
 
@@ -1718,6 +1725,9 @@ mod Pool {
                         quote_period: config.quote_period,
                         settlement_period: config.settlement_period,
                         max_bonus: config.max_bonus,
+                        refreeze_cooldown: config.refreeze_cooldown,
+                        max_rfq_attempts: config.max_rfq_attempts,
+                        max_quotes: config.max_quotes,
                         min_debt: config.min_debt,
                     },
                 );
@@ -1896,75 +1906,71 @@ mod Pool {
             let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
             assert(snapshot.frozen_at != 0, 'position-not-frozen');
 
-            // Load position (for collateral_shares and nominal_debt)
-            let position = self.positions.read((collateral_asset, debt_asset, user));
+            // Load current context
+            let mut context = self.context(collateral_asset, debt_asset, user);
 
-            // Calculate debt amount using frozen rate accumulator
-            let debt_config = self.asset_configs.read(debt_asset);
-            let debt_amount = calculate_debt(position.nominal_debt, snapshot.rate_accumulator, debt_config.scale, true);
+            // Calculate frozen debt (what liquidator pays)
+            let frozen_debt = calculate_debt(
+                context.position.nominal_debt, snapshot.rate_accumulator, context.debt_asset_config.scale, true,
+            );
 
-            // Calculate collateral amount from shares
-            let collateral_config = self.asset_configs.read(collateral_asset);
-            let collateral_amount = calculate_collateral(position.collateral_shares, collateral_config, false);
+            // Calculate current collateral amount
+            let collateral_amount = calculate_collateral(
+                context.position.collateral_shares, context.collateral_asset_config, false,
+            );
 
             // Validate collateral_to_liquidator doesn't exceed max (frozen prices + max_bonus)
             let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
-            let debt_value_in_collateral = (debt_amount * snapshot.debt_price) / snapshot.collateral_price;
+            let debt_value_in_collateral = (frozen_debt * snapshot.debt_price) / snapshot.collateral_price;
             let max_collateral_with_bonus = (debt_value_in_collateral * rfq_config.max_bonus.into()) / SCALE;
 
             assert(collateral_to_liquidator <= max_collateral_with_bonus, 'collateral-exceeds-max');
             assert(collateral_to_liquidator <= collateral_amount, 'insufficient-collateral');
 
-            // Transfer debt from RFQ module to pool
-            IERC20Dispatcher { contract_address: debt_asset }
-                .transfer_from(caller, get_contract_address(), debt_amount);
-
-            // Transfer collateral to RFQ module
-            IERC20Dispatcher { contract_address: collateral_asset }.transfer(caller, collateral_to_liquidator);
-
-            // Calculate bad debt if collateral insufficient
+            // Calculate bad debt from collateral shortfall (using frozen prices)
             let collateral_value = (collateral_amount * snapshot.collateral_price) / SCALE;
-            let debt_value = (debt_amount * snapshot.debt_price) / SCALE;
-            let bad_debt = if debt_value > collateral_value {
-                debt_amount - ((collateral_value * SCALE) / snapshot.debt_price)
+            let frozen_debt_value = (frozen_debt * snapshot.debt_price) / SCALE;
+            let bad_debt = if frozen_debt_value > collateral_value {
+                frozen_debt - ((collateral_value * SCALE) / snapshot.debt_price)
             } else {
                 0
             };
 
-            // Calculate collateral shares to liquidator
-            let collateral_shares_to_liquidator = calculate_collateral_shares(
-                collateral_to_liquidator, collateral_config, true,
-            );
+            // Create amounts for update_position (same pattern as liquidate_position)
+            // Use frozen_debt in Assets denomination (do not account for interest accrued during freeze)
+            let collateral = Amount {
+                denomination: AmountDenomination::Assets,
+                value: I257Trait::new(collateral_to_liquidator, true),
+            };
+            let debt = Amount {
+                denomination: AmountDenomination::Assets,
+                value: I257Trait::new(frozen_debt, true),
+            };
 
-            // Calculate remaining collateral shares (excess stays in position)
-            let remaining_collateral_shares = position.collateral_shares - collateral_shares_to_liquidator;
+            // Update position accounting (handles reserve, shares, totals, pair balances)
+            let response = self.update_position(ref context, collateral, debt, bad_debt, true);
+            let UpdatePositionResponse {
+                collateral_delta, collateral_shares_delta, debt_delta, mut nominal_debt_delta, bad_debt,
+            } = response;
 
-            // Update position state (clear debt, keep remaining collateral)
-            let new_position = Position { collateral_shares: remaining_collateral_shares, nominal_debt: 0 };
-            self.positions.write((collateral_asset, debt_asset, user), new_position);
+            // Wipe any residual nominal_debt (freeze interest in nominal terms)
+            let residual_nominal_debt = context.position.nominal_debt;
+            if residual_nominal_debt > 0 {
+                context.position.nominal_debt = 0;
+                self.positions.write((collateral_asset, debt_asset, user), context.position);
 
-            // Update pair totals (remove liquidated collateral and all debt)
-            let mut pair = self.pairs.read((collateral_asset, debt_asset));
-            pair.total_collateral_shares -= collateral_shares_to_liquidator;
-            pair.total_nominal_debt -= position.nominal_debt;
-            self.pairs.write((collateral_asset, debt_asset), pair);
+                context.debt_asset_config.total_nominal_debt -= residual_nominal_debt;
+                self.asset_configs.write(debt_asset, context.debt_asset_config);
 
-            // Update asset configs
-            let mut collateral_config = self.asset_configs.read(collateral_asset);
-            collateral_config.total_collateral_shares -= collateral_shares_to_liquidator;
-            self.asset_configs.write(collateral_asset, collateral_config);
+                let mut pair = self.pairs.read((collateral_asset, debt_asset));
+                pair.total_nominal_debt -= residual_nominal_debt;
+                self.pairs.write((collateral_asset, debt_asset), pair);
 
-            let mut debt_config = self.asset_configs.read(debt_asset);
-            debt_config.total_nominal_debt -= position.nominal_debt;
-            if bad_debt > 0 {
-                debt_config.reserve -= bad_debt;
+                // Include residual in nominal_debt_delta for accurate event emission
+                nominal_debt_delta =
+                    nominal_debt_delta - I257Trait::new(residual_nominal_debt, false);
             }
-            self.asset_configs.write(debt_asset, debt_config);
 
-            // Reset snapshot (unfreeze position and reset attempt counter after successful settlement)
-            self.position_snapshots.write((collateral_asset, debt_asset, user), Default::default());
-
-            // Emit LiquidatePosition event (same as regular liquidation)
             self
                 .emit(
                     LiquidatePosition {
@@ -1972,16 +1978,22 @@ mod Pool {
                         debt_asset,
                         user,
                         liquidator: caller,
-                        collateral_delta: -(I257Trait::new(collateral_to_liquidator, false)),
-                        collateral_shares_delta: -(I257Trait::new(collateral_shares_to_liquidator, false)),
-                        debt_delta: I257Trait::new(debt_amount, false),
-                        nominal_debt_delta: I257Trait::new(position.nominal_debt, false),
+                        collateral_delta,
+                        collateral_shares_delta,
+                        debt_delta,
+                        nominal_debt_delta,
                         bad_debt,
                     },
                 );
 
+            // Settle collateral and debt balances (transfers tokens to/from RFQ module)
+            self.settle_position(collateral_asset, collateral_delta, debt_asset, debt_delta, bad_debt);
+
+            // Reset snapshot (unfreeze position and reset attempt counter after successful settlement)
+            self.position_snapshots.write((collateral_asset, debt_asset, user), Default::default());
+
             // Return liquidation details
-            (debt_asset, debt_amount, collateral_asset, collateral_to_liquidator, bad_debt)
+            (debt_asset, frozen_debt, collateral_asset, collateral_to_liquidator, bad_debt)
         }
     }
 }

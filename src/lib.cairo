@@ -7,6 +7,7 @@ pub mod oracle;
 pub mod packing;
 pub mod pool;
 pub mod pool_factory;
+pub mod rfq_module;
 pub mod units;
 
 pub mod v_token;
