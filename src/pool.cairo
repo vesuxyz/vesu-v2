@@ -139,9 +139,6 @@ pub trait IPool<TContractState> {
     fn unfreeze_position(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     );
-    fn unfreeze_position_early(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
-    );
     fn settle_liquidation(
         ref self: TContractState,
         collateral_asset: ContractAddress,
@@ -1823,49 +1820,16 @@ mod Pool {
             let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
             assert(snapshot.frozen_at != 0, 'position-not-frozen');
 
-            // Load RFQ config
-            let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
-
-            // Check RFQ period has expired
-            let current_time = get_block_timestamp();
-            let total_rfq_period = rfq_config.quote_period + rfq_config.settlement_period;
-            let expiry_time = snapshot.frozen_at + total_rfq_period;
-
-            assert(current_time > expiry_time, 'rfq-period-not-expired');
-
-            // Update snapshot to track unfreeze time (for cooldown) and preserve attempt count
-            let updated_snapshot = PositionSnapshot {
-                frozen_at: 0,
-                rate_accumulator: 0,
-                collateral_price: 0,
-                debt_price: 0,
-                last_unfreeze_at: current_time, // Record unfreeze time for cooldown
-                rfq_attempt_count: snapshot.rfq_attempt_count, // Preserve attempt count
-            };
-            self.position_snapshots.write((collateral_asset, debt_asset, user), updated_snapshot);
-
-            // Emit event
-            self
-                .emit(
-                    PositionUnfrozen {
-                        collateral_asset, debt_asset, user, unfrozen_at: current_time,
-                    },
-                );
-        }
-
-        fn unfreeze_position_early(
-            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
-        ) {
-            // Check caller is RFQ module
+            // RFQ module can unfreeze at any time, others must wait for RFQ period to expire
             let caller = get_caller_address();
             let rfq_module = self.rfq_module.read();
-            assert(caller == rfq_module, 'caller-not-rfq-module');
-
-            self.assert_not_paused();
-
-            // Load snapshot
-            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
-            assert(snapshot.frozen_at != 0, 'position-not-frozen');
+            if caller != rfq_module {
+                let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
+                let current_time = get_block_timestamp();
+                let total_rfq_period = rfq_config.quote_period + rfq_config.settlement_period;
+                let expiry_time = snapshot.frozen_at + total_rfq_period;
+                assert(current_time > expiry_time, 'rfq-period-not-expired');
+            }
 
             // Update snapshot to track unfreeze time (for cooldown) and preserve attempt count
             let current_time = get_block_timestamp();

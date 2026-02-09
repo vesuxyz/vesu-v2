@@ -265,7 +265,7 @@ mod RfqModule {
             let rfq_config = pool.rfq_config(collateral_asset, debt_asset);
             assert(rfq_config.quote_period > 0, 'rfq-not-configured');
 
-            // Calculate debt and collateral amounts using common functions (H1)
+            // Calculate debt and collateral amounts using common functions
             let debt_asset_config = pool.asset_config(debt_asset);
             let collateral_asset_config = pool.asset_config(collateral_asset);
             let debt_amount = calculate_debt(
@@ -445,7 +445,7 @@ mod RfqModule {
             let mut rfq = self.rfq_by_id.read(rfq_id);
             assert(rfq.state == RfqState::QuoteSelected, 'not-ready-to-settle');
 
-            // Check timing (M3: revert instead of silently expiring)
+            // Ensure settlement deadline not passed
             let now = get_block_timestamp();
             assert(now <= rfq.settlement_deadline, 'settlement-period-expired');
 
@@ -501,7 +501,7 @@ mod RfqModule {
             self.emit(LiquidatorWhitelisted { liquidator, whitelisted: allowed });
         }
 
-        // H3: expire_rfq now unfreezes the position, cancel_rfq removed
+        // expire_rfq unfreezes the position
         fn expire_rfq(ref self: ContractState, rfq_id: u64) {
             let mut rfq = self.rfq_by_id.read(rfq_id);
             let now = get_block_timestamp();
@@ -521,7 +521,7 @@ mod RfqModule {
 
             // Unfreeze position early
             let pool = IPoolDispatcher { contract_address: self.pool.read() };
-            pool.unfreeze_position_early(rfq.collateral_asset, rfq.debt_asset, rfq.user);
+            pool.unfreeze_position(rfq.collateral_asset, rfq.debt_asset, rfq.user);
 
             if is_quoting_expired {
                 self
@@ -554,7 +554,6 @@ mod RfqModule {
             self.emit(CuratorSet { curator });
         }
 
-        // H2: Upgrade support
         fn upgrade_name(self: @ContractState) -> felt252 {
             'Vesu RFQ Module'
         }
