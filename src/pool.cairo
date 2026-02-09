@@ -436,6 +436,7 @@ mod Pool {
         quote_period: u64,
         settlement_period: u64,
         max_bonus: u64,
+        min_debt: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -1717,6 +1718,7 @@ mod Pool {
                         quote_period: config.quote_period,
                         settlement_period: config.settlement_period,
                         max_bonus: config.max_bonus,
+                        min_debt: config.min_debt,
                     },
                 );
         }
@@ -1741,7 +1743,7 @@ mod Pool {
             assert(ctx.collateral_asset_price.is_valid, 'invalid-collateral-price');
             assert(ctx.debt_asset_price.is_valid, 'invalid-debt-price');
 
-            let (_, collateral_value, _, debt_value) = calculate_collateral_and_debt_value(ctx);
+            let (_, collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(ctx);
 
             assert(
                 !is_collateralized(collateral_value, debt_value, ctx.max_ltv.into()), 'position-not-insolvent',
@@ -1758,6 +1760,9 @@ mod Pool {
             // Check RFQ config exists for this pair
             let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
             assert(rfq_config.quote_period > 0, 'rfq-not-configured');
+
+            // Check position debt meets minimum threshold
+            assert(debt >= rfq_config.min_debt, 'debt-below-min');
 
             // Check refreeze cooldown period has passed
             let current_time = get_block_timestamp();

@@ -61,6 +61,7 @@ pub struct RfqConfig {
     pub max_bonus: u64, // [SCALE] - maximum liquidation bonus (e.g., 1.1e18 = 10% bonus)
     pub refreeze_cooldown: u64, // [seconds] - cooldown period after unfreeze before re-freeze allowed
     pub max_rfq_attempts: u8, // maximum number of RFQ attempts before disabling RFQ for position
+    pub min_debt: u256, // [asset scale] - minimum debt amount required to freeze and process RFQ liquidation
 }
 
 /// Position snapshot taken at freeze time
