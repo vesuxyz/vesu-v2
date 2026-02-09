@@ -124,7 +124,8 @@ mod RfqModule {
         QuoteSubmitted: QuoteSubmitted,
         QuoteSelected: QuoteSelected,
         LiquidationSettled: LiquidationSettled,
-        RfqExpired: RfqExpired,
+        QuotingExpired: QuotingExpired,
+        SettlementExpired: SettlementExpired,
         LiquidatorWhitelisted: LiquidatorWhitelisted,
         CuratorSet: CuratorSet,
         ContractUpgraded: ContractUpgraded,
@@ -186,12 +187,23 @@ mod RfqModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct RfqExpired {
+    struct QuotingExpired {
         #[key]
         rfq_id: u64,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         user: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct SettlementExpired {
+        #[key]
+        rfq_id: u64,
+        collateral_asset: ContractAddress,
+        debt_asset: ContractAddress,
+        user: ContractAddress,
+        winner: ContractAddress,
+        winning_collateral_out: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -494,16 +506,14 @@ mod RfqModule {
             let mut rfq = self.rfq_by_id.read(rfq_id);
             let now = get_block_timestamp();
 
-            // Check if RFQ can be expired
-            let can_expire = if rfq.state == RfqState::Quoting {
-                now > rfq.quoting_deadline && self.quote_count_by_rfq.read(rfq_id) == 0
-            } else if rfq.state == RfqState::QuoteSelected {
-                now > rfq.settlement_deadline
-            } else {
-                false
-            };
+            // Check if RFQ can be expired and determine expiry reason
+            let is_quoting_expired = rfq.state == RfqState::Quoting
+                && now > rfq.quoting_deadline
+                && self.quote_count_by_rfq.read(rfq_id) == 0;
+            let is_settlement_expired = rfq.state == RfqState::QuoteSelected
+                && now > rfq.settlement_deadline;
 
-            assert(can_expire, 'cannot-expire-rfq');
+            assert(is_quoting_expired || is_settlement_expired, 'cannot-expire-rfq');
 
             // Expire RFQ
             rfq.state = RfqState::Expired;
@@ -513,15 +523,29 @@ mod RfqModule {
             let pool = IPoolDispatcher { contract_address: self.pool.read() };
             pool.unfreeze_position_early(rfq.collateral_asset, rfq.debt_asset, rfq.user);
 
-            self
-                .emit(
-                    RfqExpired {
-                        rfq_id,
-                        collateral_asset: rfq.collateral_asset,
-                        debt_asset: rfq.debt_asset,
-                        user: rfq.user,
-                    },
-                );
+            if is_quoting_expired {
+                self
+                    .emit(
+                        QuotingExpired {
+                            rfq_id,
+                            collateral_asset: rfq.collateral_asset,
+                            debt_asset: rfq.debt_asset,
+                            user: rfq.user,
+                        },
+                    );
+            } else {
+                self
+                    .emit(
+                        SettlementExpired {
+                            rfq_id,
+                            collateral_asset: rfq.collateral_asset,
+                            debt_asset: rfq.debt_asset,
+                            user: rfq.user,
+                            winner: rfq.winner,
+                            winning_collateral_out: rfq.winning_collateral_out,
+                        },
+                    );
+            }
         }
 
         fn set_curator(ref self: ContractState, curator: ContractAddress) {
