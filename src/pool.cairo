@@ -1713,6 +1713,7 @@ mod Pool {
             assert(config.quote_period > 0, 'invalid-quote-period');
             assert(config.settlement_period > 0, 'invalid-settlement-period');
             assert(config.max_bonus.into() >= SCALE, 'max-bonus-below-100-percent');
+            assert(config.max_quotes > 0, 'invalid-max-quotes');
             self.rfq_configs.write((collateral_asset, debt_asset), config);
             self
                 .emit(
@@ -1884,18 +1885,23 @@ mod Pool {
             );
 
             // Validate collateral_to_liquidator doesn't exceed max (frozen prices + max_bonus)
+            // Normalize for different asset scales: debt_value_in_collateral =
+            //   (frozen_debt * debt_price * collateral_scale) / (debt_scale * collateral_price)
             let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
-            let debt_value_in_collateral = (frozen_debt * snapshot.debt_price) / snapshot.collateral_price;
+            let collateral_scale = context.collateral_asset_config.scale;
+            let debt_scale = context.debt_asset_config.scale;
+            let debt_value_in_collateral = (frozen_debt * snapshot.debt_price * collateral_scale)
+                / (debt_scale * snapshot.collateral_price);
             let max_collateral_with_bonus = (debt_value_in_collateral * rfq_config.max_bonus.into()) / SCALE;
 
             assert(collateral_to_liquidator <= max_collateral_with_bonus, 'collateral-exceeds-max');
             assert(collateral_to_liquidator <= collateral_amount, 'insufficient-collateral');
 
-            // Calculate bad debt from collateral shortfall (using frozen prices)
-            let collateral_value = (collateral_amount * snapshot.collateral_price) / SCALE;
-            let frozen_debt_value = (frozen_debt * snapshot.debt_price) / SCALE;
+            // Calculate bad debt from collateral shortfall (using frozen prices, normalized by asset scales)
+            let collateral_value = (collateral_amount * snapshot.collateral_price) / collateral_scale;
+            let frozen_debt_value = (frozen_debt * snapshot.debt_price) / debt_scale;
             let bad_debt = if frozen_debt_value > collateral_value {
-                frozen_debt - ((collateral_value * SCALE) / snapshot.debt_price)
+                frozen_debt - ((collateral_value * debt_scale) / snapshot.debt_price)
             } else {
                 0
             };

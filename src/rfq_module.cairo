@@ -58,6 +58,8 @@ pub struct Rfq {
     pub frozen_at: u64,
     pub collateral_price: u256,
     pub debt_price: u256,
+    pub collateral_scale: u256,
+    pub debt_scale: u256,
     pub created_at: u64,
     pub quoting_deadline: u64,
     pub settlement_deadline: u64,
@@ -113,6 +115,7 @@ mod RfqModule {
         quote_by_id: Map<u64, Quote>,
         quote_count_by_rfq: Map<u64, u64>,
         quote_ids_by_rfq: Map<(u64, u64), u64>,
+        has_quoted: Map<(u64, ContractAddress), bool>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
@@ -293,6 +296,8 @@ mod RfqModule {
                 frozen_at: snapshot.frozen_at,
                 collateral_price: snapshot.collateral_price,
                 debt_price: snapshot.debt_price,
+                collateral_scale: collateral_asset_config.scale,
+                debt_scale: debt_asset_config.scale,
                 created_at: now,
                 quoting_deadline,
                 settlement_deadline,
@@ -334,6 +339,9 @@ mod RfqModule {
             // Check liquidator is whitelisted
             assert(self.is_whitelisted.read(caller), 'not-whitelisted');
 
+            // Enforce single quote per liquidator per RFQ
+            assert(!self.has_quoted.read((rfq_id, caller)), 'already-quoted');
+
             // Load RFQ
             let rfq = self.rfq_by_id.read(rfq_id);
             assert(rfq.state == RfqState::Quoting, 'not-in-quoting');
@@ -353,7 +361,10 @@ mod RfqModule {
             assert(current_quote_count < rfq_config.max_quotes, 'max-quotes-reached');
 
             // Validate quote doesn't exceed max_bonus
-            let debt_value_in_collateral = (rfq.debt_amount * rfq.debt_price) / rfq.collateral_price;
+            // Normalize for different asset scales: debt_value_in_collateral =
+            //   (debt_amount * debt_price * collateral_scale) / (debt_scale * collateral_price)
+            let debt_value_in_collateral = (rfq.debt_amount * rfq.debt_price * rfq.collateral_scale)
+                / (rfq.debt_scale * rfq.collateral_price);
             let max_collateral_out = (debt_value_in_collateral * rfq_config.max_bonus.into()) / SCALE;
 
             assert(collateral_out <= max_collateral_out, 'quote-exceeds-max-bonus');
@@ -366,6 +377,7 @@ mod RfqModule {
 
             // Store quote
             self.quote_by_id.write(quote_id, quote);
+            self.has_quoted.write((rfq_id, caller), true);
 
             let idx = self.quote_count_by_rfq.read(rfq_id);
             self.quote_ids_by_rfq.write((rfq_id, idx), quote_id);
@@ -400,11 +412,7 @@ mod RfqModule {
             let mut best_liquidator: ContractAddress = Zero::zero();
 
             let mut i: u64 = 0;
-            loop {
-                if i >= quote_count {
-                    break;
-                }
-
+            while i < quote_count {
                 let quote_id = self.quote_ids_by_rfq.read((rfq_id, i));
                 let quote = self.quote_by_id.read(quote_id);
 
@@ -452,15 +460,9 @@ mod RfqModule {
             // Check caller is winner
             assert(caller == rfq.winner, 'not-winner');
 
-            // Update RFQ state before external calls (CEI pattern)
-            rfq.state = RfqState::Settled;
-            self.rfq_by_id.write(rfq_id, rfq);
-            let position_key = PositionKey {
-                collateral_asset: rfq.collateral_asset, debt_asset: rfq.debt_asset, user: rfq.user,
-            };
-            self.active_rfq_by_position.entry(position_key).write(0);
-
-            // Transfer debt tokens from winner to this contract
+            // Transfer debt tokens from winner before updating state. This ensures that during
+            // a potential ERC20 transfer hook, the active_rfq is still set, preventing reentrancy
+            // from creating orphaned RFQs via create_rfq.
             let this_address = get_contract_address();
             let pool_address = self.pool.read();
             IERC20Dispatcher { contract_address: rfq.debt_asset }
@@ -468,6 +470,14 @@ mod RfqModule {
 
             // Approve Pool to pull debt tokens
             IERC20Dispatcher { contract_address: rfq.debt_asset }.approve(pool_address, rfq.debt_amount);
+
+            // Update RFQ state
+            rfq.state = RfqState::Settled;
+            self.rfq_by_id.write(rfq_id, rfq);
+            let position_key = PositionKey {
+                collateral_asset: rfq.collateral_asset, debt_asset: rfq.debt_asset, user: rfq.user,
+            };
+            self.active_rfq_by_position.entry(position_key).write(0);
 
             // Call Pool.settle_liquidation
             let pool = IPoolDispatcher { contract_address: pool_address };
@@ -477,6 +487,13 @@ mod RfqModule {
             // Transfer winning collateral to winner
             IERC20Dispatcher { contract_address: collateral_asset }
                 .transfer(rfq.winner, rfq.winning_collateral_out);
+
+            // Refund excess debt tokens to winner when bad_debt > 0. The pool only pulls
+            // (frozen_debt - bad_debt) from this contract, leaving bad_debt tokens stranded.
+            if bad_debt > 0 {
+                IERC20Dispatcher { contract_address: rfq.debt_asset }
+                    .transfer(rfq.winner, bad_debt);
+            }
 
             // Emit event
             self
@@ -519,9 +536,14 @@ mod RfqModule {
             rfq.state = RfqState::Expired;
             self.rfq_by_id.write(rfq_id, rfq);
 
-            // Unfreeze position early
+            // Unfreeze position if still frozen. The position may have already been unfrozen
+            // via pool.unfreeze_position directly (after the full RFQ period expired). In that
+            // case, skipping the call prevents a revert and allows the RFQ to be properly expired.
             let pool = IPoolDispatcher { contract_address: self.pool.read() };
-            pool.unfreeze_position(rfq.collateral_asset, rfq.debt_asset, rfq.user);
+            let snapshot = pool.position_snapshot(rfq.collateral_asset, rfq.debt_asset, rfq.user);
+            if snapshot.frozen_at != 0 {
+                pool.unfreeze_position(rfq.collateral_asset, rfq.debt_asset, rfq.user);
+            }
 
             if is_quoting_expired {
                 self
@@ -589,11 +611,7 @@ mod RfqModule {
 
             let end = if offset + limit < quote_count { offset + limit } else { quote_count };
             let mut i = offset;
-
-            loop {
-                if i >= end {
-                    break;
-                }
+            while i < end {
                 quotes.append(self.quote_ids_by_rfq.read((rfq_id, i)));
                 i += 1;
             };
