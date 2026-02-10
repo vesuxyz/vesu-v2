@@ -149,9 +149,7 @@ pub trait IPool<TContractState> {
     fn position_snapshot(
         self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     ) -> PositionSnapshot;
-    fn rfq_config(
-        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-    ) -> RfqConfig;
+    fn rfq_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> RfqConfig;
     fn rfq_module(self: @TContractState) -> ContractAddress;
     fn set_rfq_config(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, config: RfqConfig,
@@ -1740,7 +1738,10 @@ mod Pool {
         // ============ RFQ Core Functions ============
 
         fn freeze_position(
-            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+            ref self: ContractState,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            user: ContractAddress,
         ) {
             self.assert_not_paused();
 
@@ -1753,9 +1754,7 @@ mod Pool {
 
             let (_, collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(ctx);
 
-            assert(
-                !is_collateralized(collateral_value, debt_value, ctx.max_ltv.into()), 'position-not-insolvent',
-            );
+            assert(!is_collateralized(collateral_value, debt_value, ctx.max_ltv.into()), 'position-not-insolvent');
 
             // Check position is not already frozen
             let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
@@ -1789,7 +1788,7 @@ mod Pool {
                 collateral_price: ctx.collateral_asset_price.value,
                 debt_price: ctx.debt_asset_price.value,
                 last_unfreeze_at: snapshot.last_unfreeze_at, // Preserve from previous snapshot
-                rfq_attempt_count: snapshot.rfq_attempt_count + 1, // Increment attempt counter
+                rfq_attempt_count: snapshot.rfq_attempt_count + 1 // Increment attempt counter
             };
 
             // Store snapshot
@@ -1813,7 +1812,10 @@ mod Pool {
         }
 
         fn unfreeze_position(
-            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+            ref self: ContractState,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            user: ContractAddress,
         ) {
             self.assert_not_paused();
 
@@ -1840,17 +1842,12 @@ mod Pool {
                 collateral_price: 0,
                 debt_price: 0,
                 last_unfreeze_at: current_time, // Record unfreeze time for cooldown
-                rfq_attempt_count: snapshot.rfq_attempt_count, // Preserve attempt count
+                rfq_attempt_count: snapshot.rfq_attempt_count // Preserve attempt count
             };
             self.position_snapshots.write((collateral_asset, debt_asset, user), updated_snapshot);
 
             // Emit event
-            self
-                .emit(
-                    PositionUnfrozen {
-                        collateral_asset, debt_asset, user, unfrozen_at: current_time,
-                    },
-                );
+            self.emit(PositionUnfrozen { collateral_asset, debt_asset, user, unfrozen_at: current_time });
         }
 
         fn settle_liquidation(
@@ -1909,13 +1906,9 @@ mod Pool {
             // Create amounts for update_position (same pattern as liquidate_position)
             // Use frozen_debt in Assets denomination (do not account for interest accrued during freeze)
             let collateral = Amount {
-                denomination: AmountDenomination::Assets,
-                value: I257Trait::new(collateral_to_liquidator, true),
+                denomination: AmountDenomination::Assets, value: I257Trait::new(collateral_to_liquidator, true),
             };
-            let debt = Amount {
-                denomination: AmountDenomination::Assets,
-                value: I257Trait::new(frozen_debt, true),
-            };
+            let debt = Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(frozen_debt, true) };
 
             // Update position accounting (handles reserve, shares, totals, pair balances)
             let response = self.update_position(ref context, collateral, debt, bad_debt, true);
@@ -1937,8 +1930,7 @@ mod Pool {
                 self.pairs.write((collateral_asset, debt_asset), pair);
 
                 // Include residual in nominal_debt_delta for accurate event emission
-                nominal_debt_delta =
-                    nominal_debt_delta - I257Trait::new(residual_nominal_debt, false);
+                nominal_debt_delta = nominal_debt_delta - I257Trait::new(residual_nominal_debt, false);
             }
 
             self

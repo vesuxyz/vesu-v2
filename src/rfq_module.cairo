@@ -92,11 +92,11 @@ mod RfqModule {
     use starknet::{
         ClassHash, ContractAddress, SyscallResultTrait, get_block_timestamp, get_caller_address, get_contract_address,
     };
-    use super::{IRfqModule, PositionKey, Quote, Rfq, RfqState};
     use vesu::common::{calculate_collateral, calculate_debt};
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::rfq_module::{IRfqModuleDispatcher, IRfqModuleDispatcherTrait};
     use vesu::units::SCALE;
+    use super::{IRfqModule, PositionKey, Quote, Rfq, RfqState};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -274,9 +274,7 @@ mod RfqModule {
             let debt_amount = calculate_debt(
                 position.nominal_debt, snapshot.rate_accumulator, debt_asset_config.scale, true,
             );
-            let collateral_amount = calculate_collateral(
-                position.collateral_shares, collateral_asset_config, false,
-            );
+            let collateral_amount = calculate_collateral(position.collateral_shares, collateral_asset_config, false);
 
             // Create RFQ
             let rfq_id = self.next_rfq_id.read();
@@ -402,9 +400,7 @@ mod RfqModule {
             let now = get_block_timestamp();
             let pool = IPoolDispatcher { contract_address: self.pool.read() };
             let rfq_config = pool.rfq_config(rfq.collateral_asset, rfq.debt_asset);
-            assert(
-                now > rfq.quoting_deadline || quote_count >= rfq_config.max_quotes, 'quoting-not-ended',
-            );
+            assert(now > rfq.quoting_deadline || quote_count >= rfq_config.max_quotes, 'quoting-not-ended');
 
             // Find best quote (lowest collateral_out)
             let mut best_quote_id: u64 = 0;
@@ -423,7 +419,7 @@ mod RfqModule {
                 }
 
                 i += 1;
-            };
+            }
 
             // Update RFQ with winner
             rfq.state = RfqState::QuoteSelected;
@@ -465,8 +461,7 @@ mod RfqModule {
             // from creating orphaned RFQs via create_rfq.
             let this_address = get_contract_address();
             let pool_address = self.pool.read();
-            IERC20Dispatcher { contract_address: rfq.debt_asset }
-                .transfer_from(caller, this_address, rfq.debt_amount);
+            IERC20Dispatcher { contract_address: rfq.debt_asset }.transfer_from(caller, this_address, rfq.debt_amount);
 
             // Approve Pool to pull debt tokens
             IERC20Dispatcher { contract_address: rfq.debt_asset }.approve(pool_address, rfq.debt_amount);
@@ -485,14 +480,12 @@ mod RfqModule {
                 .settle_liquidation(rfq.collateral_asset, rfq.debt_asset, rfq.user, rfq.winning_collateral_out);
 
             // Transfer winning collateral to winner
-            IERC20Dispatcher { contract_address: collateral_asset }
-                .transfer(rfq.winner, rfq.winning_collateral_out);
+            IERC20Dispatcher { contract_address: collateral_asset }.transfer(rfq.winner, rfq.winning_collateral_out);
 
             // Refund excess debt tokens to winner when bad_debt > 0. The pool only pulls
             // (frozen_debt - bad_debt) from this contract, leaving bad_debt tokens stranded.
             if bad_debt > 0 {
-                IERC20Dispatcher { contract_address: rfq.debt_asset }
-                    .transfer(rfq.winner, bad_debt);
+                IERC20Dispatcher { contract_address: rfq.debt_asset }.transfer(rfq.winner, bad_debt);
             }
 
             // Emit event
@@ -527,8 +520,7 @@ mod RfqModule {
             let is_quoting_expired = rfq.state == RfqState::Quoting
                 && now > rfq.quoting_deadline
                 && self.quote_count_by_rfq.read(rfq_id) == 0;
-            let is_settlement_expired = rfq.state == RfqState::QuoteSelected
-                && now > rfq.settlement_deadline;
+            let is_settlement_expired = rfq.state == RfqState::QuoteSelected && now > rfq.settlement_deadline;
 
             assert(is_quoting_expired || is_settlement_expired, 'cannot-expire-rfq');
 
@@ -549,10 +541,7 @@ mod RfqModule {
                 self
                     .emit(
                         QuotingExpired {
-                            rfq_id,
-                            collateral_asset: rfq.collateral_asset,
-                            debt_asset: rfq.debt_asset,
-                            user: rfq.user,
+                            rfq_id, collateral_asset: rfq.collateral_asset, debt_asset: rfq.debt_asset, user: rfq.user,
                         },
                     );
             } else {
@@ -609,12 +598,16 @@ mod RfqModule {
             let quote_count = self.quote_count_by_rfq.read(rfq_id);
             let mut quotes = ArrayTrait::new();
 
-            let end = if offset + limit < quote_count { offset + limit } else { quote_count };
+            let end = if offset + limit < quote_count {
+                offset + limit
+            } else {
+                quote_count
+            };
             let mut i = offset;
             while i < end {
                 quotes.append(self.quote_ids_by_rfq.read((rfq_id, i)));
                 i += 1;
-            };
+            }
 
             quotes
         }
