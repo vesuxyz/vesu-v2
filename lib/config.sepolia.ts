@@ -1,5 +1,5 @@
 import { CairoCustomEnum } from "starknet";
-import { PoolConfig, ProtocolConfig, toScale, toUtilizationScale } from ".";
+import { AddAssetParams, PairConfigParams, PoolConfig, ProtocolConfig, toScale, toUtilizationScale } from ".";
 
 // Sepolia testnet configuration
 // Update these addresses after deployment or with existing Sepolia contracts
@@ -112,4 +112,55 @@ export const poolConfig: PoolConfig = {
       debt_cap: toScale(1000000), // 1M cap
     },
   ],
+};
+
+const STRK_ADDRESS = "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d";
+const USDC_ADDRESS = "0x0512feAc6339Ff7889822cb5aA2a86C848e9D392bB0E3E237C008674feeD8343";
+
+export const addAssetConfigs: Record<string, { asset: AddAssetParams; pairs: PairConfigParams[] }> = {
+  STRK: {
+    asset: {
+      asset_params: {
+        asset: STRK_ADDRESS,
+        floor: toScale(0.01),
+        initial_full_utilization_rate: toScale(0.5),
+        max_utilization: toScale(0.95),
+        is_legacy: false,
+        fee_rate: toScale(0.2),
+      },
+      v_token_params: {
+        v_token_name: "Vesu STRK" as any,
+        v_token_symbol: "vSTRK" as any,
+        debt_asset: USDC_ADDRESS,
+      },
+      interest_rate_config: {
+        min_target_utilization: toUtilizationScale(0.78),
+        max_target_utilization: toUtilizationScale(0.82),
+        target_utilization: toUtilizationScale(0.8),
+        min_full_utilization_rate: BigInt(16075102880), // 50% APY (per-second rate)
+        max_full_utilization_rate: BigInt(96450617283), // 300% APY (per-second rate)
+        zero_utilization_rate: BigInt(0),
+        rate_half_life: BigInt(86400), // 24 hours
+        target_rate_percent: toScale(0.2), // 20%
+      },
+      pragma_oracle_params: {
+        asset: STRK_ADDRESS,
+        pragma_key: BigInt("6004514686061859652"),
+        timeout: BigInt(0),
+        number_of_sources: BigInt(0),
+        start_time_offset: BigInt(0),
+        time_window: BigInt(0),
+        aggregation_mode: new CairoCustomEnum({ Median: {}, Mean: undefined, Error: undefined }),
+      },
+    },
+    pairs: [
+      {
+        collateral_asset: STRK_ADDRESS,
+        debt_asset: USDC_ADDRESS,
+        max_ltv: toScale(0.5), // 50%
+        liquidation_factor: toScale(0.9),
+        debt_cap: BigInt(0),
+      },
+    ],
+  },
 };

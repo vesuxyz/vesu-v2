@@ -85,6 +85,21 @@ export interface VTokenParams {
   debt_asset: string;
 }
 
+export interface AddAssetParams {
+  asset_params: AssetParams;
+  v_token_params: VTokenParams;
+  interest_rate_config: InterestRateConfig;
+  pragma_oracle_params: PragmaOracleParams;
+}
+
+export interface PairConfigParams {
+  collateral_asset: string;
+  debt_asset: string;
+  max_ltv: bigint;
+  liquidation_factor: bigint;
+  debt_cap: bigint;
+}
+
 export interface CreatePoolParams {
   name: string;
   owner: string;

@@ -1,5 +1,5 @@
 import { Contract } from "starknet";
-import { CreatePoolParams, Deployer, PragmaContracts, PragmaOracleParams, ProtocolContracts, toAddress } from ".";
+import { AddAssetParams, CreatePoolParams, Deployer, PairConfigParams, PragmaContracts, PragmaOracleParams, ProtocolContracts, toAddress } from ".";
 
 export class Protocol implements ProtocolContracts {
   constructor(
@@ -38,6 +38,55 @@ export class Protocol implements ProtocolContracts {
         start_time_offset: param.start_time_offset,
         time_window: param.time_window,
         aggregation_mode: param.aggregation_mode,
+      });
+      await deployer.waitForTransaction(response.transaction_hash);
+    }
+  }
+
+  async addAssetsToPool(poolAddress: string, params: AddAssetParams[]) {
+    const { poolFactory, deployer } = this;
+    const pool = await deployer.loadContract(poolAddress);
+
+    for (const param of params) {
+      // approve pool factory to transfer inflation fee
+      const asset = await deployer.loadContract(param.asset_params.asset);
+      asset.providerOrAccount = deployer.owner;
+      const approveResponse = await asset.approve(poolFactory.address, 2000);
+      await deployer.waitForTransaction(approveResponse.transaction_hash);
+
+      // nominate pool factory as curator so it can add the asset
+      pool.providerOrAccount = deployer.owner;
+      const nominateResponse = await pool.nominate_curator(poolFactory.address);
+      await deployer.waitForTransaction(nominateResponse.transaction_hash);
+
+      // add asset via pool factory
+      poolFactory.providerOrAccount = deployer.owner;
+      const response = await poolFactory.add_asset(
+        poolAddress,
+        param.asset_params.asset,
+        param.asset_params,
+        param.interest_rate_config,
+        param.v_token_params,
+      );
+      await deployer.waitForTransaction(response.transaction_hash);
+
+      // accept curator ownership back
+      pool.providerOrAccount = deployer.owner;
+      const acceptResponse = await pool.accept_curator_ownership();
+      await deployer.waitForTransaction(acceptResponse.transaction_hash);
+    }
+  }
+
+  async addPairsToPool(poolAddress: string, params: PairConfigParams[]) {
+    const { deployer } = this;
+    const pool = await deployer.loadContract(poolAddress);
+    pool.providerOrAccount = deployer.owner;
+
+    for (const param of params) {
+      const response = await pool.set_pair_config(param.collateral_asset, param.debt_asset, {
+        max_ltv: param.max_ltv,
+        liquidation_factor: param.liquidation_factor,
+        debt_cap: param.debt_cap,
       });
       await deployer.waitForTransaction(response.transaction_hash);
     }
