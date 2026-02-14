@@ -60,7 +60,6 @@ pub struct RfqConfig {
     pub settlement_period: u64, // [seconds] - duration for settlement after quote selection
     pub max_bonus: u64, // [SCALE] - maximum liquidation bonus (e.g., 1.1e18 = 10% bonus)
     pub refreeze_cooldown: u64, // [seconds] - cooldown period after unfreeze before re-freeze allowed
-    pub max_rfq_attempts: u8, // maximum number of RFQ attempts before disabling RFQ for position
     pub max_quotes: u64, // maximum number of quotes per RFQ to prevent step limit issues
     pub min_debt: u256 // [asset scale] - minimum debt amount required to freeze and process RFQ liquidation
 }
@@ -73,7 +72,6 @@ pub struct PositionSnapshot {
     pub collateral_price: u256, // [SCALE] - collateral price at freeze
     pub debt_price: u256, // [SCALE] - debt price at freeze
     pub last_unfreeze_at: u64, // [seconds] - timestamp of last unfreeze (for cooldown)
-    pub rfq_attempt_count: u8 // number of RFQ attempts for this position
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]

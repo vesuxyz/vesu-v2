@@ -432,7 +432,6 @@ mod Pool {
         settlement_period: u64,
         max_bonus: u64,
         refreeze_cooldown: u64,
-        max_rfq_attempts: u8,
         max_quotes: u64,
         min_debt: u256,
     }
@@ -1722,7 +1721,6 @@ mod Pool {
                         settlement_period: config.settlement_period,
                         max_bonus: config.max_bonus,
                         refreeze_cooldown: config.refreeze_cooldown,
-                        max_rfq_attempts: config.max_rfq_attempts,
                         max_quotes: config.max_quotes,
                         min_debt: config.min_debt,
                     },
@@ -1778,9 +1776,6 @@ mod Pool {
                 assert(current_time >= cooldown_end, 'refreeze-cooldown-active');
             }
 
-            // Check RFQ attempt limit
-            assert(snapshot.rfq_attempt_count < rfq_config.max_rfq_attempts, 'max-rfq-attempts-reached');
-
             // Create position snapshot (only time-varying values)
             let new_snapshot = PositionSnapshot {
                 frozen_at: current_time,
@@ -1788,7 +1783,6 @@ mod Pool {
                 collateral_price: ctx.collateral_asset_price.value,
                 debt_price: ctx.debt_asset_price.value,
                 last_unfreeze_at: snapshot.last_unfreeze_at, // Preserve from previous snapshot
-                rfq_attempt_count: snapshot.rfq_attempt_count + 1 // Increment attempt counter
             };
 
             // Store snapshot
@@ -1842,7 +1836,6 @@ mod Pool {
                 collateral_price: 0,
                 debt_price: 0,
                 last_unfreeze_at: current_time, // Record unfreeze time for cooldown
-                rfq_attempt_count: snapshot.rfq_attempt_count // Preserve attempt count
             };
             self.position_snapshots.write((collateral_asset, debt_asset, user), updated_snapshot);
 
