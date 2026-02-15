@@ -280,8 +280,7 @@ mod RfqModule {
             let rfq_id = self.next_rfq_id.read();
             self.next_rfq_id.write(rfq_id + 1);
 
-            let now = get_block_timestamp();
-            let quoting_deadline = now + rfq_config.quote_period;
+            let quoting_deadline = snapshot.frozen_at + rfq_config.quote_period;
             let settlement_deadline = quoting_deadline + rfq_config.settlement_period;
 
             let rfq = Rfq {
@@ -296,7 +295,7 @@ mod RfqModule {
                 debt_price: snapshot.debt_price,
                 collateral_scale: collateral_asset_config.scale,
                 debt_scale: debt_asset_config.scale,
-                created_at: now,
+                created_at: get_block_timestamp(),
                 quoting_deadline,
                 settlement_deadline,
                 state: RfqState::Quoting,
@@ -527,6 +526,10 @@ mod RfqModule {
             // Expire RFQ
             rfq.state = RfqState::Expired;
             self.rfq_by_id.write(rfq_id, rfq);
+            let position_key = PositionKey {
+                collateral_asset: rfq.collateral_asset, debt_asset: rfq.debt_asset, user: rfq.user,
+            };
+            self.active_rfq_by_position.entry(position_key).write(0);
 
             // Unfreeze position if still frozen. The position may have already been unfrozen
             // via pool.unfreeze_position directly (after the full RFQ period expired). In that

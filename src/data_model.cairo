@@ -71,7 +71,7 @@ pub struct PositionSnapshot {
     pub rate_accumulator: u256, // [SCALE] - debt rate accumulator at freeze
     pub collateral_price: u256, // [SCALE] - collateral price at freeze
     pub debt_price: u256, // [SCALE] - debt price at freeze
-    pub last_unfreeze_at: u64, // [seconds] - timestamp of last unfreeze (for cooldown)
+    pub last_unfreeze_at: u64 // [seconds] - timestamp of last unfreeze (for cooldown)
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]

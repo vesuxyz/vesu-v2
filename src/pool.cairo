@@ -1782,7 +1782,7 @@ mod Pool {
                 rate_accumulator: ctx.debt_asset_config.last_rate_accumulator,
                 collateral_price: ctx.collateral_asset_price.value,
                 debt_price: ctx.debt_asset_price.value,
-                last_unfreeze_at: snapshot.last_unfreeze_at, // Preserve from previous snapshot
+                last_unfreeze_at: snapshot.last_unfreeze_at // Preserve from previous snapshot
             };
 
             // Store snapshot
@@ -1835,7 +1835,7 @@ mod Pool {
                 rate_accumulator: 0,
                 collateral_price: 0,
                 debt_price: 0,
-                last_unfreeze_at: current_time, // Record unfreeze time for cooldown
+                last_unfreeze_at: current_time // Record unfreeze time for cooldown
             };
             self.position_snapshots.write((collateral_asset, debt_asset, user), updated_snapshot);
 
