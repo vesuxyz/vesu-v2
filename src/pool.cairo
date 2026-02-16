@@ -2,7 +2,7 @@ use alexandria_math::i257::i257;
 use starknet::{ClassHash, ContractAddress};
 use vesu::data_model::{
     Amount, AssetConfig, AssetParams, AssetPrice, Context, LiquidatePositionParams, ModifyPositionParams, Pair,
-    PairConfig, Position, PositionSnapshot, RfqConfig, UpdatePositionResponse,
+    PairConfig, Position, UpdatePositionResponse,
 };
 use vesu::interest_rate_model::InterestRateConfig;
 
@@ -133,28 +133,28 @@ pub trait IPool<TContractState> {
     fn is_paused(self: @TContractState) -> bool;
 
     // RFQ Functions
-    fn freeze_position(
+    fn lock_position(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     );
-    fn unfreeze_position(
+    fn unlock_position(
         ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
     );
+    fn is_position_locked(
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+    ) -> bool;
     fn settle_liquidation(
         ref self: TContractState,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
         user: ContractAddress,
-        collateral_to_liquidator: u256,
-    ) -> (ContractAddress, u256, ContractAddress, u256, u256);
-    fn position_snapshot(
-        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
-    ) -> PositionSnapshot;
-    fn rfq_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> RfqConfig;
+        collateral_to_receive: u256,
+        frozen_debt: u256,
+        bad_debt: u256,
+        accrued_interest: u256,
+    ) -> (i257, i257, u256);
     fn rfq_module(self: @TContractState) -> ContractAddress;
-    fn set_rfq_config(
-        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, config: RfqConfig,
-    );
     fn set_rfq_module(ref self: TContractState, rfq_module: ContractAddress);
+    fn set_rfq_module_class_hash(ref self: TContractState, class_hash: ClassHash);
 
     // Upgrade Functions
     fn upgrade_name(self: @TContractState) -> felt252;
@@ -193,8 +193,8 @@ mod Pool {
     };
     use vesu::data_model::{
         Amount, AmountDenomination, AssetConfig, AssetParams, AssetPrice, Context, LiquidatePositionParams,
-        ModifyPositionParams, Pair, PairConfig, Position, PositionSnapshot, RfqConfig, UpdatePositionResponse,
-        assert_asset_config, assert_asset_config_exists, assert_pair_config,
+        ModifyPositionParams, Pair, PairConfig, Position, UpdatePositionResponse, assert_asset_config,
+        assert_asset_config_exists, assert_pair_config,
     };
     use vesu::interest_rate_model::interest_rate_model_component::InterestRateModelTrait;
     use vesu::interest_rate_model::{InterestRateConfig, interest_rate_model_component};
@@ -240,14 +240,12 @@ mod Pool {
         pending_curator: ContractAddress,
         // indicates whether the contract is paused
         paused: bool,
-        // RFQ configurations per collateral/debt pair
-        // (collateral_asset, debt_asset) -> rfq configuration
-        rfq_configs: Map<(ContractAddress, ContractAddress), RfqConfig>,
-        // Position snapshots per collateral/debt/user
-        // (collateral_asset, debt_asset, user) -> position snapshot
-        position_snapshots: Map<(ContractAddress, ContractAddress, ContractAddress), PositionSnapshot>,
-        // RFQ module address (only this address can settle frozen positions)
+        // Position lock per collateral/debt/user (locked positions cannot be modified or liquidated)
+        position_locked: Map<(ContractAddress, ContractAddress, ContractAddress), bool>,
+        // RFQ module address (only this address can lock/unlock/settle positions)
         rfq_module: ContractAddress,
+        // Allowed class hash for the RFQ module (set by owner)
+        rfq_module_class_hash: ClassHash,
         // storage for the ownable component
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
@@ -396,49 +394,33 @@ mod Pool {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct PositionFrozen {
+    struct PositionLocked {
         #[key]
         collateral_asset: ContractAddress,
         #[key]
         debt_asset: ContractAddress,
         #[key]
         user: ContractAddress,
-        frozen_at: u64,
-        collateral_shares: u256,
-        nominal_debt: u256,
-        rate_accumulator: u256,
-        collateral_price: u256,
-        debt_price: u256,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct PositionUnfrozen {
+    struct PositionUnlocked {
         #[key]
         collateral_asset: ContractAddress,
         #[key]
         debt_asset: ContractAddress,
         #[key]
         user: ContractAddress,
-        unfrozen_at: u64,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct RfqConfigSet {
-        #[key]
-        collateral_asset: ContractAddress,
-        #[key]
-        debt_asset: ContractAddress,
-        quote_period: u64,
-        settlement_period: u64,
-        max_bonus: u64,
-        refreeze_cooldown: u64,
-        max_quotes: u64,
-        min_debt: u256,
     }
 
     #[derive(Drop, starknet::Event)]
     struct RfqModuleSet {
         rfq_module: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct RfqModuleClassHashSet {
+        class_hash: ClassHash,
     }
 
     #[event]
@@ -464,10 +446,10 @@ mod Pool {
         ContractPaused: ContractPaused,
         ContractUnpaused: ContractUnpaused,
         ContractUpgraded: ContractUpgraded,
-        PositionFrozen: PositionFrozen,
-        PositionUnfrozen: PositionUnfrozen,
-        RfqConfigSet: RfqConfigSet,
+        PositionLocked: PositionLocked,
+        PositionUnlocked: PositionUnlocked,
         RfqModuleSet: RfqModuleSet,
+        RfqModuleClassHashSet: RfqModuleClassHashSet,
     }
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -984,9 +966,8 @@ mod Pool {
 
             let ModifyPositionParams { collateral_asset, debt_asset, user, collateral, debt } = params;
 
-            // Check position is not frozen
-            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
-            assert(snapshot.frozen_at == 0, 'position-frozen');
+            // Check position is not locked
+            assert(!self.position_locked.read((collateral_asset, debt_asset, user)), 'position-locked');
 
             let mut context = self.context(collateral_asset, debt_asset, user);
 
@@ -1027,9 +1008,8 @@ mod Pool {
                 collateral_asset, debt_asset, user, min_collateral_to_receive, debt_to_repay, ..,
             } = params;
 
-            // Check position is not frozen
-            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
-            assert(snapshot.frozen_at == 0, 'position-frozen-use-rfq');
+            // Check position is not locked
+            assert(!self.position_locked.read((collateral_asset, debt_asset, user)), 'position-locked');
 
             let mut context = self.context(collateral_asset, debt_asset, user);
 
@@ -1683,164 +1663,52 @@ mod Pool {
             self.emit(ContractUpgraded { new_implementation });
         }
 
-        // ============ RFQ View Functions ============
-
-        fn position_snapshot(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
-        ) -> PositionSnapshot {
-            self.position_snapshots.read((collateral_asset, debt_asset, user))
-        }
-
-        fn rfq_config(
-            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
-        ) -> RfqConfig {
-            self.rfq_configs.read((collateral_asset, debt_asset))
-        }
+        // ============ RFQ Functions ============
 
         fn rfq_module(self: @ContractState) -> ContractAddress {
             self.rfq_module.read()
         }
 
-        // ============ RFQ Admin Functions ============
-
-        fn set_rfq_config(
-            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, config: RfqConfig,
-        ) {
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            assert(config.quote_period > 0, 'invalid-quote-period');
-            assert(config.settlement_period > 0, 'invalid-settlement-period');
-            assert(config.max_bonus.into() >= SCALE, 'max-bonus-below-100-percent');
-            assert(config.max_quotes > 0, 'invalid-max-quotes');
-            self.rfq_configs.write((collateral_asset, debt_asset), config);
-            self
-                .emit(
-                    RfqConfigSet {
-                        collateral_asset,
-                        debt_asset,
-                        quote_period: config.quote_period,
-                        settlement_period: config.settlement_period,
-                        max_bonus: config.max_bonus,
-                        refreeze_cooldown: config.refreeze_cooldown,
-                        max_quotes: config.max_quotes,
-                        min_debt: config.min_debt,
-                    },
-                );
+        fn is_position_locked(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+        ) -> bool {
+            self.position_locked.read((collateral_asset, debt_asset, user))
         }
 
-        fn set_rfq_module(ref self: ContractState, rfq_module: ContractAddress) {
-            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
-            self.rfq_module.write(rfq_module);
-            self.emit(RfqModuleSet { rfq_module });
-        }
-
-        // ============ RFQ Core Functions ============
-
-        fn freeze_position(
+        fn lock_position(
             ref self: ContractState,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             user: ContractAddress,
         ) {
-            self.assert_not_paused();
-
-            // Load position context
-            let ctx = self.context(collateral_asset, debt_asset, user);
-
-            // Verify position is insolvent
-            assert(ctx.collateral_asset_price.is_valid, 'invalid-collateral-price');
-            assert(ctx.debt_asset_price.is_valid, 'invalid-debt-price');
-
-            let (_, collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(ctx);
-
-            assert(!is_collateralized(collateral_value, debt_value, ctx.max_ltv.into()), 'position-not-insolvent');
-
-            // Check position is not already frozen
-            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
-            assert(snapshot.frozen_at == 0, 'position-already-frozen');
-
-            // Check RFQ module is set
-            let rfq_module = self.rfq_module.read();
-            assert(rfq_module.is_non_zero(), 'rfq-module-not-set');
-
-            // Check RFQ config exists for this pair
-            let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
-            assert(rfq_config.quote_period > 0, 'rfq-not-configured');
-
-            // Check position debt meets minimum threshold
-            assert(debt >= rfq_config.min_debt, 'debt-below-min');
-
-            // Check refreeze cooldown period has passed
-            let current_time = get_block_timestamp();
-            if snapshot.last_unfreeze_at > 0 {
-                let cooldown_end = snapshot.last_unfreeze_at + rfq_config.refreeze_cooldown;
-                assert(current_time >= cooldown_end, 'refreeze-cooldown-active');
-            }
-
-            // Create position snapshot (only time-varying values)
-            let new_snapshot = PositionSnapshot {
-                frozen_at: current_time,
-                rate_accumulator: ctx.debt_asset_config.last_rate_accumulator,
-                collateral_price: ctx.collateral_asset_price.value,
-                debt_price: ctx.debt_asset_price.value,
-                last_unfreeze_at: snapshot.last_unfreeze_at // Preserve from previous snapshot
-            };
-
-            // Store snapshot
-            self.position_snapshots.write((collateral_asset, debt_asset, user), new_snapshot);
-
-            // Emit event
-            self
-                .emit(
-                    PositionFrozen {
-                        collateral_asset,
-                        debt_asset,
-                        user,
-                        frozen_at: current_time,
-                        collateral_shares: ctx.position.collateral_shares,
-                        nominal_debt: ctx.position.nominal_debt,
-                        rate_accumulator: new_snapshot.rate_accumulator,
-                        collateral_price: new_snapshot.collateral_price,
-                        debt_price: new_snapshot.debt_price,
-                    },
-                );
-        }
-
-        fn unfreeze_position(
-            ref self: ContractState,
-            collateral_asset: ContractAddress,
-            debt_asset: ContractAddress,
-            user: ContractAddress,
-        ) {
-            self.assert_not_paused();
-
-            // Load snapshot
-            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
-            assert(snapshot.frozen_at != 0, 'position-not-frozen');
-
-            // RFQ module can unfreeze at any time, others must wait for RFQ period to expire
+            // Only RFQ module can lock
             let caller = get_caller_address();
             let rfq_module = self.rfq_module.read();
-            if caller != rfq_module {
-                let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
-                let current_time = get_block_timestamp();
-                let total_rfq_period = rfq_config.quote_period + rfq_config.settlement_period;
-                let expiry_time = snapshot.frozen_at + total_rfq_period;
-                assert(current_time > expiry_time, 'rfq-period-not-expired');
-            }
+            assert(caller == rfq_module, 'caller-not-rfq-module');
 
-            // Update snapshot to track unfreeze time (for cooldown) and preserve attempt count
-            let current_time = get_block_timestamp();
-            let updated_snapshot = PositionSnapshot {
-                frozen_at: 0,
-                rate_accumulator: 0,
-                collateral_price: 0,
-                debt_price: 0,
-                last_unfreeze_at: current_time // Record unfreeze time for cooldown
-            };
-            self.position_snapshots.write((collateral_asset, debt_asset, user), updated_snapshot);
+            self.assert_not_paused();
 
-            // Emit event
-            self.emit(PositionUnfrozen { collateral_asset, debt_asset, user, unfrozen_at: current_time });
+            assert(!self.position_locked.read((collateral_asset, debt_asset, user)), 'position-already-locked');
+            self.position_locked.write((collateral_asset, debt_asset, user), true);
+            self.emit(PositionLocked { collateral_asset, debt_asset, user });
+        }
+
+        fn unlock_position(
+            ref self: ContractState,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            user: ContractAddress,
+        ) {
+            // Only RFQ module can unlock
+            let caller = get_caller_address();
+            let rfq_module = self.rfq_module.read();
+            assert(caller == rfq_module, 'caller-not-rfq-module');
+
+            self.assert_not_paused();
+
+            assert(self.position_locked.read((collateral_asset, debt_asset, user)), 'position-not-locked');
+            self.position_locked.write((collateral_asset, debt_asset, user), false);
+            self.emit(PositionUnlocked { collateral_asset, debt_asset, user });
         }
 
         fn settle_liquidation(
@@ -1848,68 +1716,47 @@ mod Pool {
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
             user: ContractAddress,
-            collateral_to_liquidator: u256,
-        ) -> (ContractAddress, u256, ContractAddress, u256, u256) {
-            // Check caller is RFQ module
+            collateral_to_receive: u256,
+            frozen_debt: u256,
+            bad_debt: u256,
+            accrued_interest: u256,
+        ) -> (i257, i257, u256) {
+            // Only RFQ module can settle
             let caller = get_caller_address();
             let rfq_module = self.rfq_module.read();
             assert(caller == rfq_module, 'caller-not-rfq-module');
 
             self.assert_not_paused();
 
-            // Load snapshot
-            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
-            assert(snapshot.frozen_at != 0, 'position-not-frozen');
+            // Position must be locked
+            assert(self.position_locked.read((collateral_asset, debt_asset, user)), 'position-not-locked');
 
             // Load current context
             let mut context = self.context(collateral_asset, debt_asset, user);
 
-            // Calculate frozen debt (what liquidator pays)
-            let frozen_debt = calculate_debt(
-                context.position.nominal_debt, snapshot.rate_accumulator, context.debt_asset_config.scale, true,
-            );
+            // total_debt clears the entire position debt (frozen + accrued interest)
+            let total_debt = frozen_debt + accrued_interest;
 
-            // Calculate current collateral amount
-            let collateral_amount = calculate_collateral(
-                context.position.collateral_shares, context.collateral_asset_config, false,
-            );
-
-            // Validate collateral_to_liquidator doesn't exceed max (frozen prices + max_bonus)
-            // Normalize for different asset scales: debt_value_in_collateral =
-            //   (frozen_debt * debt_price * collateral_scale) / (debt_scale * collateral_price)
-            let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
-            let collateral_scale = context.collateral_asset_config.scale;
-            let debt_scale = context.debt_asset_config.scale;
-            let debt_value_in_collateral = (frozen_debt * snapshot.debt_price * collateral_scale)
-                / (debt_scale * snapshot.collateral_price);
-            let max_collateral_with_bonus = (debt_value_in_collateral * rfq_config.max_bonus.into()) / SCALE;
-
-            assert(collateral_to_liquidator <= max_collateral_with_bonus, 'collateral-exceeds-max');
-            assert(collateral_to_liquidator <= collateral_amount, 'insufficient-collateral');
-
-            // Calculate bad debt from collateral shortfall (using frozen prices, normalized by asset scales)
-            let collateral_value = (collateral_amount * snapshot.collateral_price) / collateral_scale;
-            let frozen_debt_value = (frozen_debt * snapshot.debt_price) / debt_scale;
-            let bad_debt = if frozen_debt_value > collateral_value {
-                frozen_debt - ((collateral_value * debt_scale) / snapshot.debt_price)
-            } else {
-                0
-            };
-
-            // Create amounts for update_position (same pattern as liquidate_position)
-            // Use frozen_debt in Assets denomination (do not account for interest accrued during freeze)
+            // Create amounts for update_position
             let collateral = Amount {
-                denomination: AmountDenomination::Assets, value: I257Trait::new(collateral_to_liquidator, true),
+                denomination: AmountDenomination::Assets, value: I257Trait::new(collateral_to_receive, true),
             };
-            let debt = Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(frozen_debt, true) };
+            let debt = Amount { denomination: AmountDenomination::Assets, value: I257Trait::new(total_debt, true) };
 
-            // Update position accounting (handles reserve, shares, totals, pair balances)
-            let response = self.update_position(ref context, collateral, debt, bad_debt, true);
+            // Accounting trick: pass (bad_debt + accrued_interest) as the bad_debt parameter to
+            // update_position. settle_position then pulls debt_delta.abs() - bad_debt =
+            // (frozen_debt + accrued_interest) - (bad_debt + accrued_interest) = frozen_debt - bad_debt
+            // from the caller. This ensures the Pool only pulls debt_to_repay from the RFQ module.
+            let response = self.update_position(ref context, collateral, debt, bad_debt + accrued_interest, true);
             let UpdatePositionResponse {
-                collateral_delta, collateral_shares_delta, debt_delta, mut nominal_debt_delta, bad_debt,
+                collateral_delta,
+                collateral_shares_delta,
+                debt_delta,
+                mut nominal_debt_delta,
+                bad_debt: response_bad_debt,
             } = response;
 
-            // Wipe any residual nominal_debt (freeze interest in nominal terms)
+            // Wipe any residual nominal_debt
             let residual_nominal_debt = context.position.nominal_debt;
             if residual_nominal_debt > 0 {
                 context.position.nominal_debt = 0;
@@ -1922,7 +1769,6 @@ mod Pool {
                 pair.total_nominal_debt -= residual_nominal_debt;
                 self.pairs.write((collateral_asset, debt_asset), pair);
 
-                // Include residual in nominal_debt_delta for accurate event emission
                 nominal_debt_delta = nominal_debt_delta - I257Trait::new(residual_nominal_debt, false);
             }
 
@@ -1937,18 +1783,39 @@ mod Pool {
                         collateral_shares_delta,
                         debt_delta,
                         nominal_debt_delta,
-                        bad_debt,
+                        bad_debt: response_bad_debt,
                     },
                 );
 
-            // Settle collateral and debt balances (transfers tokens to/from RFQ module)
-            self.settle_position(collateral_asset, collateral_delta, debt_asset, debt_delta, bad_debt);
+            // Settle - pulls debt_to_repay (frozen_debt - bad_debt) from caller, sends collateral to caller
+            self.settle_position(collateral_asset, collateral_delta, debt_asset, debt_delta, response_bad_debt);
 
-            // Reset snapshot (unfreeze position and reset attempt counter after successful settlement)
-            self.position_snapshots.write((collateral_asset, debt_asset, user), Default::default());
+            // Unlock position
+            self.position_locked.write((collateral_asset, debt_asset, user), false);
+            self.emit(PositionUnlocked { collateral_asset, debt_asset, user });
 
-            // Return liquidation details
-            (debt_asset, frozen_debt, collateral_asset, collateral_to_liquidator, bad_debt)
+            (collateral_delta, debt_delta, response_bad_debt)
+        }
+
+        // Warning: changing the rfq_module while positions are locked will prevent the old module from
+        // unlocking them. Only change when no positions are locked, or ensure the new module can handle
+        // existing locks.
+        fn set_rfq_module(ref self: ContractState, rfq_module: ContractAddress) {
+            assert!(get_caller_address() == self.curator.read(), "caller-not-curator");
+            // If non-zero, validate class hash matches allowed class hash
+            if rfq_module.is_non_zero() {
+                let module_class_hash = starknet::syscalls::get_class_hash_at_syscall(rfq_module).unwrap_syscall();
+                let allowed_class_hash = self.rfq_module_class_hash.read();
+                assert(module_class_hash == allowed_class_hash, 'invalid-rfq-module-class-hash');
+            }
+            self.rfq_module.write(rfq_module);
+            self.emit(RfqModuleSet { rfq_module });
+        }
+
+        fn set_rfq_module_class_hash(ref self: ContractState, class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.rfq_module_class_hash.write(class_hash);
+            self.emit(RfqModuleClassHashSet { class_hash });
         }
     }
 }

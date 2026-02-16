@@ -1,5 +1,26 @@
 use starknet::{ClassHash, ContractAddress};
 
+/// RFQ configuration per collateral/debt asset pair
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
+pub struct RfqConfig {
+    pub quote_period: u64, // [seconds] - duration for quote submission
+    pub settlement_period: u64, // [seconds] - duration for settlement after quote selection
+    pub max_bonus: u64, // [SCALE] - maximum liquidation bonus (e.g., 1.1e18 = 10% bonus)
+    pub refreeze_cooldown: u64, // [seconds] - cooldown period after unfreeze before re-freeze allowed
+    pub max_quotes: u64, // maximum number of quotes per RFQ to prevent step limit issues
+    pub min_debt: u256 // [asset scale] - minimum debt amount required to freeze and process RFQ liquidation
+}
+
+/// Position snapshot taken at freeze time
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store, Default)]
+pub struct PositionSnapshot {
+    pub frozen_at: u64, // [seconds] - timestamp when frozen (0 = not frozen)
+    pub rate_accumulator: u256, // [SCALE] - debt rate accumulator at freeze
+    pub collateral_price: u256, // [SCALE] - collateral price at freeze
+    pub debt_price: u256, // [SCALE] - debt price at freeze
+    pub last_unfreeze_at: u64 // [seconds] - timestamp of last unfreeze (for cooldown)
+}
+
 #[starknet::interface]
 pub trait IRfqModule<TContractState> {
     // Core RFQ functions
@@ -13,7 +34,10 @@ pub trait IRfqModule<TContractState> {
     // Admin functions (curator)
     fn set_whitelisted(ref self: TContractState, liquidator: ContractAddress, allowed: bool);
     fn set_curator(ref self: TContractState, curator: ContractAddress);
-    fn expire_rfq(ref self: TContractState, rfq_id: u64);
+    fn set_rfq_config(
+        ref self: TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, config: RfqConfig,
+    );
+    fn cancel_rfq(ref self: TContractState, rfq_id: u64);
 
     // Admin functions (owner)
     fn upgrade_name(self: @TContractState) -> felt252;
@@ -27,6 +51,10 @@ pub trait IRfqModule<TContractState> {
     fn get_quote(self: @TContractState, quote_id: u64) -> Quote;
     fn get_quotes_for_rfq(self: @TContractState, rfq_id: u64, offset: u64, limit: u64) -> Array<u64>;
     fn is_liquidator_whitelisted(self: @TContractState, liquidator: ContractAddress) -> bool;
+    fn rfq_config(self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress) -> RfqConfig;
+    fn position_snapshot(
+        self: @TContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+    ) -> PositionSnapshot;
     fn curator(self: @TContractState) -> ContractAddress;
     fn pool(self: @TContractState) -> ContractAddress;
 }
@@ -92,11 +120,11 @@ mod RfqModule {
     use starknet::{
         ClassHash, ContractAddress, SyscallResultTrait, get_block_timestamp, get_caller_address, get_contract_address,
     };
-    use vesu::common::{calculate_collateral, calculate_debt};
+    use vesu::common::{calculate_collateral, calculate_collateral_and_debt_value, calculate_debt, is_collateralized};
     use vesu::pool::{IPoolDispatcher, IPoolDispatcherTrait};
     use vesu::rfq_module::{IRfqModuleDispatcher, IRfqModuleDispatcherTrait};
     use vesu::units::SCALE;
-    use super::{IRfqModule, PositionKey, Quote, Rfq, RfqState};
+    use super::{IRfqModule, PositionKey, PositionSnapshot, Quote, Rfq, RfqConfig, RfqState};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -108,6 +136,8 @@ mod RfqModule {
         pool: ContractAddress,
         curator: ContractAddress,
         is_whitelisted: Map<ContractAddress, bool>,
+        rfq_configs: Map<(ContractAddress, ContractAddress), RfqConfig>,
+        position_snapshots: Map<(ContractAddress, ContractAddress, ContractAddress), PositionSnapshot>,
         next_rfq_id: u64,
         next_quote_id: u64,
         rfq_by_id: Map<u64, Rfq>,
@@ -129,6 +159,7 @@ mod RfqModule {
         LiquidationSettled: LiquidationSettled,
         QuotingExpired: QuotingExpired,
         SettlementExpired: SettlementExpired,
+        RfqConfigSet: RfqConfigSet,
         LiquidatorWhitelisted: LiquidatorWhitelisted,
         CuratorSet: CuratorSet,
         ContractUpgraded: ContractUpgraded,
@@ -185,7 +216,6 @@ mod RfqModule {
         user: ContractAddress,
         debt_amount: u256,
         collateral_received: u256,
-        collateral_paid_to_winner: u256,
         bad_debt: u256,
     }
 
@@ -207,6 +237,20 @@ mod RfqModule {
         user: ContractAddress,
         winner: ContractAddress,
         winning_collateral_out: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct RfqConfigSet {
+        #[key]
+        collateral_asset: ContractAddress,
+        #[key]
+        debt_asset: ContractAddress,
+        quote_period: u64,
+        settlement_period: u64,
+        max_bonus: u64,
+        refreeze_cooldown: u64,
+        max_quotes: u64,
+        min_debt: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -245,12 +289,32 @@ mod RfqModule {
         ) -> u64 {
             let pool = IPoolDispatcher { contract_address: self.pool.read() };
 
-            // Load position snapshot from Pool
-            let snapshot = pool.position_snapshot(collateral_asset, debt_asset, user);
-            assert(snapshot.frozen_at != 0, 'position-not-frozen');
+            // Load context from Pool (includes position, asset configs, prices, max_ltv)
+            let ctx = pool.context(collateral_asset, debt_asset, user);
 
-            // Load position from Pool (for collateral_shares and nominal_debt)
-            let (position, _, _) = pool.position(collateral_asset, debt_asset, user);
+            // Verify position is insolvent
+            // Note: assumes oracle returns non-zero prices when is_valid is true. A zero collateral_price
+            // would pass the insolvency check but cause division-by-zero in submit_quote's max_bonus validation.
+            assert(ctx.collateral_asset_price.is_valid, 'invalid-collateral-price');
+            assert(ctx.debt_asset_price.is_valid, 'invalid-debt-price');
+
+            let (_, collateral_value, debt, debt_value) = calculate_collateral_and_debt_value(ctx);
+            assert(!is_collateralized(collateral_value, debt_value, ctx.max_ltv.into()), 'position-not-insolvent');
+
+            // Load local RFQ config
+            let rfq_config = self.rfq_configs.read((collateral_asset, debt_asset));
+            assert(rfq_config.quote_period > 0, 'rfq-not-configured');
+
+            // Check position debt meets minimum threshold
+            assert(debt >= rfq_config.min_debt, 'debt-below-min');
+
+            // Check refreeze cooldown
+            let snapshot = self.position_snapshots.read((collateral_asset, debt_asset, user));
+            let current_time = get_block_timestamp();
+            if snapshot.last_unfreeze_at > 0 {
+                let cooldown_end = snapshot.last_unfreeze_at + rfq_config.refreeze_cooldown;
+                assert(current_time >= cooldown_end, 'refreeze-cooldown-active');
+            }
 
             // Check no active RFQ exists
             let position_key = PositionKey { collateral_asset, debt_asset, user };
@@ -264,23 +328,35 @@ mod RfqModule {
                 );
             }
 
-            // Load RFQ config from Pool
-            let rfq_config = pool.rfq_config(collateral_asset, debt_asset);
-            assert(rfq_config.quote_period > 0, 'rfq-not-configured');
-
-            // Calculate debt and collateral amounts using common functions
-            let debt_asset_config = pool.asset_config(debt_asset);
-            let collateral_asset_config = pool.asset_config(collateral_asset);
+            // Calculate debt and collateral amounts
             let debt_amount = calculate_debt(
-                position.nominal_debt, snapshot.rate_accumulator, debt_asset_config.scale, true,
+                ctx.position.nominal_debt,
+                ctx.debt_asset_config.last_rate_accumulator,
+                ctx.debt_asset_config.scale,
+                true,
             );
-            let collateral_amount = calculate_collateral(position.collateral_shares, collateral_asset_config, false);
+            let collateral_amount = calculate_collateral(
+                ctx.position.collateral_shares, ctx.collateral_asset_config, false,
+            );
+
+            // Create and store position snapshot
+            let new_snapshot = PositionSnapshot {
+                frozen_at: current_time,
+                rate_accumulator: ctx.debt_asset_config.last_rate_accumulator,
+                collateral_price: ctx.collateral_asset_price.value,
+                debt_price: ctx.debt_asset_price.value,
+                last_unfreeze_at: snapshot.last_unfreeze_at,
+            };
+            self.position_snapshots.write((collateral_asset, debt_asset, user), new_snapshot);
+
+            // Lock position in Pool
+            pool.lock_position(collateral_asset, debt_asset, user);
 
             // Create RFQ
             let rfq_id = self.next_rfq_id.read();
             self.next_rfq_id.write(rfq_id + 1);
 
-            let quoting_deadline = snapshot.frozen_at + rfq_config.quote_period;
+            let quoting_deadline = current_time + rfq_config.quote_period;
             let settlement_deadline = quoting_deadline + rfq_config.settlement_period;
 
             let rfq = Rfq {
@@ -290,12 +366,12 @@ mod RfqModule {
                 user,
                 debt_amount,
                 collateral_amount,
-                frozen_at: snapshot.frozen_at,
-                collateral_price: snapshot.collateral_price,
-                debt_price: snapshot.debt_price,
-                collateral_scale: collateral_asset_config.scale,
-                debt_scale: debt_asset_config.scale,
-                created_at: get_block_timestamp(),
+                frozen_at: current_time,
+                collateral_price: ctx.collateral_asset_price.value,
+                debt_price: ctx.debt_asset_price.value,
+                collateral_scale: ctx.collateral_asset_config.scale,
+                debt_scale: ctx.debt_asset_config.scale,
+                created_at: current_time,
                 quoting_deadline,
                 settlement_deadline,
                 state: RfqState::Quoting,
@@ -319,9 +395,9 @@ mod RfqModule {
                         user,
                         debt_amount,
                         collateral_amount,
-                        collateral_price: snapshot.collateral_price,
-                        debt_price: snapshot.debt_price,
-                        frozen_at: snapshot.frozen_at,
+                        collateral_price: ctx.collateral_asset_price.value,
+                        debt_price: ctx.debt_asset_price.value,
+                        frozen_at: current_time,
                         quoting_deadline,
                         settlement_deadline,
                     },
@@ -352,8 +428,8 @@ mod RfqModule {
             assert(collateral_out <= rfq.collateral_amount, 'exceeds-available-collateral');
 
             // Check quote count limit
-            let pool = IPoolDispatcher { contract_address: self.pool.read() };
-            let rfq_config = pool.rfq_config(rfq.collateral_asset, rfq.debt_asset);
+            // Note: reads rfq_config at call time — config changes by curator affect in-progress RFQs
+            let rfq_config = self.rfq_configs.read((rfq.collateral_asset, rfq.debt_asset));
             let current_quote_count = self.quote_count_by_rfq.read(rfq_id);
             assert(current_quote_count < rfq_config.max_quotes, 'max-quotes-reached');
 
@@ -396,12 +472,12 @@ mod RfqModule {
             assert(quote_count > 0, 'no-quotes-submitted');
 
             // Allow selection if quoting period ended OR max_quotes reached
+            // Note: reads rfq_config at call time — config changes by curator affect in-progress RFQs
             let now = get_block_timestamp();
-            let pool = IPoolDispatcher { contract_address: self.pool.read() };
-            let rfq_config = pool.rfq_config(rfq.collateral_asset, rfq.debt_asset);
+            let rfq_config = self.rfq_configs.read((rfq.collateral_asset, rfq.debt_asset));
             assert(now > rfq.quoting_deadline || quote_count >= rfq_config.max_quotes, 'quoting-not-ended');
 
-            // Find best quote (lowest collateral_out)
+            // Find best quote (lowest collateral_out). On ties, the earlier quote wins (first-come advantage).
             let mut best_quote_id: u64 = 0;
             let mut best_collateral_out: u256 = Bounded::MAX;
             let mut best_liquidator: ContractAddress = Zero::zero();
@@ -455,15 +531,44 @@ mod RfqModule {
             // Check caller is winner
             assert(caller == rfq.winner, 'not-winner');
 
+            let pool_address = self.pool.read();
+            let pool = IPoolDispatcher { contract_address: pool_address };
+
+            // Compute frozen_debt (debt at freeze time, already stored in rfq.debt_amount)
+            let frozen_debt = rfq.debt_amount;
+
+            // Compute current debt to find accrued interest
+            let (position, _, _) = pool.position(rfq.collateral_asset, rfq.debt_asset, rfq.user);
+            let current_rate_accumulator = pool.rate_accumulator(rfq.debt_asset);
+            let current_debt = calculate_debt(position.nominal_debt, current_rate_accumulator, rfq.debt_scale, true);
+            let accrued_interest = current_debt - frozen_debt;
+
+            // Verify collateral sufficiency: the shares-to-assets rate may have changed since RFQ creation
+            // (e.g. due to bad debt socialization), so the actual collateral could be less than rfq.collateral_amount
+            let collateral_asset_config = pool.asset_config(rfq.collateral_asset);
+            let current_collateral = calculate_collateral(position.collateral_shares, collateral_asset_config, false);
+            assert(rfq.winning_collateral_out <= current_collateral, 'insufficient-collateral');
+
+            // Compute bad debt from collateral shortfall at frozen prices
+            let collateral_value = (rfq.collateral_amount * rfq.collateral_price) / rfq.collateral_scale;
+            let frozen_debt_value = (frozen_debt * rfq.debt_price) / rfq.debt_scale;
+            let bad_debt = if frozen_debt_value > collateral_value {
+                frozen_debt - ((collateral_value * rfq.debt_scale) / rfq.debt_price)
+            } else {
+                0
+            };
+
+            // debt_to_repay = frozen_debt - bad_debt (what the liquidator actually pays)
+            let debt_to_repay = frozen_debt - bad_debt;
+
             // Transfer debt tokens from winner before updating state. This ensures that during
             // a potential ERC20 transfer hook, the active_rfq is still set, preventing reentrancy
             // from creating orphaned RFQs via create_rfq.
             let this_address = get_contract_address();
-            let pool_address = self.pool.read();
-            IERC20Dispatcher { contract_address: rfq.debt_asset }.transfer_from(caller, this_address, rfq.debt_amount);
+            IERC20Dispatcher { contract_address: rfq.debt_asset }.transfer_from(caller, this_address, debt_to_repay);
 
-            // Approve Pool to pull debt tokens
-            IERC20Dispatcher { contract_address: rfq.debt_asset }.approve(pool_address, rfq.debt_amount);
+            // Approve Pool to pull debt_to_repay
+            IERC20Dispatcher { contract_address: rfq.debt_asset }.approve(pool_address, debt_to_repay);
 
             // Update RFQ state
             rfq.state = RfqState::Settled;
@@ -473,19 +578,24 @@ mod RfqModule {
             };
             self.active_rfq_by_position.entry(position_key).write(0);
 
-            // Call Pool.settle_liquidation
-            let pool = IPoolDispatcher { contract_address: pool_address };
-            let (_, _, collateral_asset, collateral_received, bad_debt) = pool
-                .settle_liquidation(rfq.collateral_asset, rfq.debt_asset, rfq.user, rfq.winning_collateral_out);
+            // Call Pool.settle_liquidation (also unlocks position)
+            let (_, _, response_bad_debt) = pool
+                .settle_liquidation(
+                    rfq.collateral_asset,
+                    rfq.debt_asset,
+                    rfq.user,
+                    rfq.winning_collateral_out,
+                    frozen_debt,
+                    bad_debt,
+                    accrued_interest,
+                );
 
             // Transfer winning collateral to winner
-            IERC20Dispatcher { contract_address: collateral_asset }.transfer(rfq.winner, rfq.winning_collateral_out);
+            IERC20Dispatcher { contract_address: rfq.collateral_asset }
+                .transfer(rfq.winner, rfq.winning_collateral_out);
 
-            // Refund excess debt tokens to winner when bad_debt > 0. The pool only pulls
-            // (frozen_debt - bad_debt) from this contract, leaving bad_debt tokens stranded.
-            if bad_debt > 0 {
-                IERC20Dispatcher { contract_address: rfq.debt_asset }.transfer(rfq.winner, bad_debt);
-            }
+            // Clear local snapshot
+            self.position_snapshots.write((rfq.collateral_asset, rfq.debt_asset, rfq.user), Default::default());
 
             // Emit event
             self
@@ -496,10 +606,9 @@ mod RfqModule {
                         collateral_asset: rfq.collateral_asset,
                         debt_asset: rfq.debt_asset,
                         user: rfq.user,
-                        debt_amount: rfq.debt_amount,
-                        collateral_received,
-                        collateral_paid_to_winner: rfq.winning_collateral_out,
-                        bad_debt,
+                        debt_amount: frozen_debt,
+                        collateral_received: rfq.winning_collateral_out,
+                        bad_debt: response_bad_debt,
                     },
                 );
         }
@@ -510,18 +619,45 @@ mod RfqModule {
             self.emit(LiquidatorWhitelisted { liquidator, whitelisted: allowed });
         }
 
-        // expire_rfq unfreezes the position
-        fn expire_rfq(ref self: ContractState, rfq_id: u64) {
+        fn set_rfq_config(
+            ref self: ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, config: RfqConfig,
+        ) {
+            assert(get_caller_address() == self.curator.read(), 'not-curator');
+            assert(config.quote_period > 0, 'invalid-quote-period');
+            assert(config.settlement_period > 0, 'invalid-settlement-period');
+            assert(config.max_bonus.into() >= SCALE, 'max-bonus-below-100-percent');
+            assert(config.max_quotes > 0, 'invalid-max-quotes');
+            self.rfq_configs.write((collateral_asset, debt_asset), config);
+            self
+                .emit(
+                    RfqConfigSet {
+                        collateral_asset,
+                        debt_asset,
+                        quote_period: config.quote_period,
+                        settlement_period: config.settlement_period,
+                        max_bonus: config.max_bonus,
+                        refreeze_cooldown: config.refreeze_cooldown,
+                        max_quotes: config.max_quotes,
+                        min_debt: config.min_debt,
+                    },
+                );
+        }
+
+        // cancel_rfq is permissionless and is the sole path for unlocking expired/timed-out RFQs.
+        // Note: RFQs in Quoting state with existing quotes cannot be cancelled directly. In that case
+        // select_best_quote (permissionless) must be called first, followed by settlement_period expiry,
+        // before cancel_rfq becomes callable via the settlement_expired path.
+        fn cancel_rfq(ref self: ContractState, rfq_id: u64) {
             let mut rfq = self.rfq_by_id.read(rfq_id);
             let now = get_block_timestamp();
 
-            // Check if RFQ can be expired and determine expiry reason
+            // Check if RFQ can be cancelled and determine reason
             let is_quoting_expired = rfq.state == RfqState::Quoting
                 && now > rfq.quoting_deadline
                 && self.quote_count_by_rfq.read(rfq_id) == 0;
             let is_settlement_expired = rfq.state == RfqState::QuoteSelected && now > rfq.settlement_deadline;
 
-            assert(is_quoting_expired || is_settlement_expired, 'cannot-expire-rfq');
+            assert(is_quoting_expired || is_settlement_expired, 'cannot-cancel-rfq');
 
             // Expire RFQ
             rfq.state = RfqState::Expired;
@@ -531,14 +667,15 @@ mod RfqModule {
             };
             self.active_rfq_by_position.entry(position_key).write(0);
 
-            // Unfreeze position if still frozen. The position may have already been unfrozen
-            // via pool.unfreeze_position directly (after the full RFQ period expired). In that
-            // case, skipping the call prevents a revert and allows the RFQ to be properly expired.
+            // Update local snapshot (unfreeze)
+            let updated_snapshot = PositionSnapshot {
+                frozen_at: 0, rate_accumulator: 0, collateral_price: 0, debt_price: 0, last_unfreeze_at: now,
+            };
+            self.position_snapshots.write((rfq.collateral_asset, rfq.debt_asset, rfq.user), updated_snapshot);
+
+            // Unlock position in Pool
             let pool = IPoolDispatcher { contract_address: self.pool.read() };
-            let snapshot = pool.position_snapshot(rfq.collateral_asset, rfq.debt_asset, rfq.user);
-            if snapshot.frozen_at != 0 {
-                pool.unfreeze_position(rfq.collateral_asset, rfq.debt_asset, rfq.user);
-            }
+            pool.unlock_position(rfq.collateral_asset, rfq.debt_asset, rfq.user);
 
             if is_quoting_expired {
                 self
@@ -617,6 +754,18 @@ mod RfqModule {
 
         fn is_liquidator_whitelisted(self: @ContractState, liquidator: ContractAddress) -> bool {
             self.is_whitelisted.read(liquidator)
+        }
+
+        fn rfq_config(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress,
+        ) -> RfqConfig {
+            self.rfq_configs.read((collateral_asset, debt_asset))
+        }
+
+        fn position_snapshot(
+            self: @ContractState, collateral_asset: ContractAddress, debt_asset: ContractAddress, user: ContractAddress,
+        ) -> PositionSnapshot {
+            self.position_snapshots.read((collateral_asset, debt_asset, user))
         }
 
         fn curator(self: @ContractState) -> ContractAddress {

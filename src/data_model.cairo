@@ -53,27 +53,6 @@ pub fn assert_pair_config(pair_config: PairConfig) {
     );
 }
 
-/// RFQ configuration per collateral/debt asset pair
-#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
-pub struct RfqConfig {
-    pub quote_period: u64, // [seconds] - duration for quote submission
-    pub settlement_period: u64, // [seconds] - duration for settlement after quote selection
-    pub max_bonus: u64, // [SCALE] - maximum liquidation bonus (e.g., 1.1e18 = 10% bonus)
-    pub refreeze_cooldown: u64, // [seconds] - cooldown period after unfreeze before re-freeze allowed
-    pub max_quotes: u64, // maximum number of quotes per RFQ to prevent step limit issues
-    pub min_debt: u256 // [asset scale] - minimum debt amount required to freeze and process RFQ liquidation
-}
-
-/// Position snapshot taken at freeze time
-#[derive(PartialEq, Copy, Drop, Serde, starknet::Store, Default)]
-pub struct PositionSnapshot {
-    pub frozen_at: u64, // [seconds] - timestamp when frozen (0 = not frozen)
-    pub rate_accumulator: u256, // [SCALE] - debt rate accumulator at freeze
-    pub collateral_price: u256, // [SCALE] - collateral price at freeze
-    pub debt_price: u256, // [SCALE] - debt price at freeze
-    pub last_unfreeze_at: u64 // [seconds] - timestamp of last unfreeze (for cooldown)
-}
-
 #[derive(PartialEq, Copy, Drop, Serde)]
 pub struct PairParams {
     pub collateral_asset_index: usize,
