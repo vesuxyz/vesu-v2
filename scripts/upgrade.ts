@@ -15,7 +15,7 @@ console.log("Pool class hash:", poolClassHash);
 console.log("VToken class hash:", vTokenClassHash);
 console.log("Oracle class hash:", oracleClassHash);
 
-poolFactory.connect(deployer.owner);
+poolFactory.providerOrAccount = deployer.owner;
 let response = await poolFactory.upgrade(poolFactoryClassHash, new CairoOption(CairoOptionVariant.None));
 await deployer.waitForTransaction(response.transaction_hash);
 response = await poolFactory.set_pool_class_hash(poolClassHash);
@@ -26,7 +26,7 @@ response = await poolFactory.set_oracle_class_hash(oracleClassHash);
 await deployer.waitForTransaction(response.transaction_hash);
 
 for (const pool of pools) {
-  pool.connect(deployer.owner);
+  pool.providerOrAccount = deployer.owner;
   const response = await pool.upgrade(poolClassHash, new CairoOption(CairoOptionVariant.None));
   await deployer.waitForTransaction(response.transaction_hash);
 }

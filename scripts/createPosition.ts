@@ -13,7 +13,7 @@ const collateralAsset = assets[collateral_asset_index];
 const debtAsset = assets[debt_asset_index];
 
 {
-  collateralAsset.connect(lender);
+  collateralAsset.providerOrAccount = lender;
   const response = await collateralAsset.approve(pool.address, toU256(liquidityToDeposit));
   await deployer.waitForTransaction(response.transaction_hash);
 }
