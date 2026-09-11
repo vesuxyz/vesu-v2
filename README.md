@@ -26,9 +26,18 @@ yarn
 
 ### Test
 
+`Scarb.toml` is generated from `Scarb.toml.template`, which carries a `MAINNET_RPC_URL` placeholder
+rather than a real endpoint. Set `MAINNET_RPC_URL` in `.env` (see `.env.example`) and substitute it in
+before running the tests:
+
 ```sh
+./scripts/patchScarbToml.sh
 scarb run test
 ```
+
+The fork tests need an **archive** node: they read state at mainnet block 14,500,000. Without the patch
+step `snforge` refuses to start with `relative URL without a base: "MAINNET_RPC_URL"`. Note that the
+patched `Scarb.toml` will then show as modified — take care not to commit it with the endpoint in it.
 
 ## Scripts
 

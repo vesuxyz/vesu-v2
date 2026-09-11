@@ -9,6 +9,9 @@ accounts.json
 .env.*
 !.env.example
 
+# tooling
+.claude/
+
 # node
 node_modules
 yarn-error.log

@@ -4,6 +4,7 @@ pub mod interest_rate_model;
 
 pub mod math;
 pub mod oracle;
+pub mod oracle_v2;
 pub mod packing;
 pub mod pool;
 pub mod pool_factory;
@@ -12,7 +13,10 @@ pub mod units;
 pub mod v_token;
 
 pub mod vendor {
+    pub mod chainlink;
+    pub mod ekubo;
     pub mod erc20;
+    pub mod erc4626;
     pub mod pragma;
 }
 
@@ -20,6 +24,7 @@ pub mod vendor {
 pub mod test {
     pub mod mock_asset;
     pub mod mock_oracle;
+    pub mod mock_oracle_v2;
     pub mod mock_pool;
     pub mod mock_pool_factory_upgrade;
     pub mod mock_pool_upgrade;
@@ -31,6 +36,8 @@ pub mod test {
     pub mod test_liquidate_position;
     pub mod test_math;
     pub mod test_modify_position;
+    pub mod test_oracle_v2;
+    pub mod test_oracle_v2_fork;
     pub mod test_packing;
     pub mod test_pool;
     pub mod test_pool_donations;

@@ -28,8 +28,17 @@ name = "Mainnet"
 url = "MAINNET_RPC_URL"
 block_id.number = "1565065"
 
+# Pinned for the oracle fork tests. Must be recent enough that every address in Oracle_Redesign.md
+# section 4 exists: the five Endur BTC wrappers were deployed after the block the "Mainnet" profile
+# pins, where only xSTRK resolves. Needs an archive node.
+[[tool.snforge.fork]]
+name = "OracleMainnet"
+url = "MAINNET_RPC_URL"
+block_id.number = "14500000"
+
 [tool.voyager]
 oracle = { path = "src/oracle.cairo" }
+oracle-v2 = { path = "src/oracle_v2.cairo" }
 pool = { path = "src/pool.cairo" }
 pool-factory = { path = "src/pool-factory.cairo" }
 
